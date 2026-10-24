@@ -1,13 +1,17 @@
-const NAME = 'TurboFex';
-const VERSION = require('../package.json').version;
-
-function enforce() {
-  // The bot name is hard-coded so it cannot be changed from a panel or env.
-  // Editing this file or the package name stops the bot from starting.
-  if (NAME !== 'TurboFex') {
-    console.error('Bot name was changed. Refusing to start.');
-    process.exit(43);
-  }
-}
-
-module.exports = { NAME, VERSION, enforce };
+// The bot's name and links. Changing them here changes them everywhere, and updates carry the change to everyone.
+module.exports = Object.freeze({
+  botName: 'TurboFex',
+  creator: 'Nelson Fx',
+  links: {
+    telegramSupport: 'https://t.me/+7PwU2Vo9czE1NTRk',
+    telegramChannel: 'https://t.me/+e89lCBU2wLpjNWNk',
+    whatsappChannel: 'https://whatsapp.com/channel/0029VbDpuKM8qIzkoQscOE2w',
+    github: 'https://github.com/nels0nfx/TurboFex',
+  },
+  // Added under the result of some commands once they SUCCEED (turn off or change it with the "watermark" command)
+  watermark: {
+    text: '⚡ ᴘᴏᴡᴇʀᴇᴅ ʙᴡ ᴛᴜʀʙᴏꜰᴇx',
+    categories: ['media', 'audio', 'video', 'editor'],
+    commands: ['qr', 'fancy', 'play', 'mp3', 'calc', 'password'],
+  },
+});
