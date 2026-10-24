@@ -1,3 +1,0 @@
-# files from older versions that no longer exist
-whatsapp/games.js
-whatsapp/antilink.js
