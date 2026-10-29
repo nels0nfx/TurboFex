@@ -1,0 +1,27 @@
+# files from older versions that no longer exist
+whatsapp/games.js
+whatsapp/antilink.js
+core/economy.js
+core/throne.js
+core/market.js
+core/marketdata.js
+core/lottery.js
+core/quests.js
+core/predict.js
+core/drops.js
+core/governor.js
+core/community.js
+core/report.js
+core/govcmd.js
+commands/economy.js
+commands/economy2.js
+commands/economy3.js
+commands/economy4.js
+commands/engage.js
+commands/governor.js
+commands/luck.js
+commands/market.js
+tests/market.test.js
+tests/luck.test.js
+tests/engage.test.js
+tests/v043.test.js

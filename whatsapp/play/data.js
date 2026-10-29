@@ -1,0 +1,53 @@
+// Word lists and quiz questions for the games
+const WORDS = {
+  Animals: ['elephant', 'giraffe', 'zebra', 'cheetah', 'hippo', 'rhino', 'buffalo', 'leopard', 'crocodile', 'penguin', 'dolphin', 'monkey', 'kangaroo', 'ostrich'],
+  Food: ['pizza', 'burger', 'sandwich', 'banana', 'mango', 'pineapple', 'chocolate', 'spaghetti', 'pancake', 'avocado', 'sausage', 'popcorn'],
+  Countries: ['nigeria', 'kenya', 'ghana', 'zambia', 'botswana', 'namibia', 'egypt', 'morocco', 'brazil', 'canada', 'france', 'germany', 'australia'],
+  Tech: ['keyboard', 'internet', 'battery', 'android', 'browser', 'website', 'password', 'software', 'network', 'monitor', 'download'],
+};
+
+// [question, correct answer, wrong, wrong, wrong]
+const QUESTIONS = [
+  ['Which planet is known as the Red Planet?', 'Mars', 'Venus', 'Jupiter', 'Mercury'],
+  ['How many continents are there?', '7', '5', '6', '8'],
+  ['What is the largest ocean on Earth?', 'Pacific Ocean', 'Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean'],
+  ['Which animal is the tallest in the world?', 'Giraffe', 'Elephant', 'Ostrich', 'Camel'],
+  ['What is H2O commonly called?', 'Water', 'Salt', 'Oxygen', 'Hydrogen'],
+  ['How many days are in a leap year?', '366', '365', '364', '367'],
+  ['Which is the largest mammal?', 'Blue whale', 'Elephant', 'Giraffe', 'Great white shark'],
+  ['Who painted the Mona Lisa?', 'Leonardo da Vinci', 'Pablo Picasso', 'Vincent van Gogh', 'Michelangelo'],
+  ['What is the capital of Nigeria?', 'Abuja', 'Lagos', 'Kano', 'Ibadan'],
+  ['What is the capital of Kenya?', 'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru'],
+  ['Which is the longest river in Africa?', 'Nile', 'Congo', 'Niger', 'Zambezi'],
+  ['How many players does one football (soccer) team have on the pitch?', '11', '9', '10', '12'],
+  ['Which gas do plants take in from the air?', 'Carbon dioxide', 'Oxygen', 'Nitrogen', 'Helium'],
+  ['Which country gave the Statue of Liberty to the USA?', 'France', 'England', 'Spain', 'Italy'],
+  ['What is the smallest prime number?', '2', '1', '3', '0'],
+  ['How many sides does a hexagon have?', '6', '5', '7', '8'],
+  ['Which planet is closest to the Sun?', 'Mercury', 'Venus', 'Earth', 'Mars'],
+  ['What is the hardest natural substance?', 'Diamond', 'Gold', 'Iron', 'Quartz'],
+  ['In which year did humans first land on the Moon?', '1969', '1959', '1975', '1981'],
+  ['Which is the largest country by area?', 'Russia', 'Canada', 'China', 'Brazil'],
+  ['Who wrote "Romeo and Juliet"?', 'William Shakespeare', 'Charles Dickens', 'Mark Twain', 'Jane Austen'],
+  ['What is the chemical symbol for gold?', 'Au', 'Ag', 'Gd', 'Go'],
+  ['How many strings does a standard guitar have?', '6', '4', '5', '8'],
+  ['Which is the largest hot desert in the world?', 'Sahara', 'Kalahari', 'Gobi', 'Namib'],
+  ['What is the capital of Ghana?', 'Accra', 'Kumasi', 'Tamale', 'Takoradi'],
+  ['What is the largest living bird?', 'Ostrich', 'Eagle', 'Penguin', 'Flamingo'],
+  ['How many minutes are in two hours?', '120', '100', '90', '150'],
+  ['Which organ pumps blood around the body?', 'Heart', 'Liver', 'Lungs', 'Kidney'],
+  ['What colour do you get by mixing blue and yellow?', 'Green', 'Purple', 'Orange', 'Brown'],
+  ['Which ocean lies between Africa and Australia?', 'Indian Ocean', 'Atlantic Ocean', 'Pacific Ocean', 'Arctic Ocean'],
+  ['The Great Pyramid of Giza is in which country?', 'Egypt', 'Morocco', 'Sudan', 'Libya'],
+  ['At what temperature does water freeze, in degrees Celsius?', '0', '10', '-10', '32'],
+  ['Which mountain is the highest above sea level?', 'Mount Everest', 'Kilimanjaro', 'Mont Blanc', 'Mount Fuji'],
+  ['What is the capital of Egypt?', 'Cairo', 'Alexandria', 'Luxor', 'Giza'],
+  ['How many bones does an adult human body have?', '206', '150', '300', '412'],
+  ['Which country is the city of Johannesburg in?', 'South Africa', 'Zimbabwe', 'Namibia', 'Botswana'],
+  ['What is the largest planet in our solar system?', 'Jupiter', 'Saturn', 'Neptune', 'Earth'],
+  ['Who was the first president of democratic South Africa?', 'Nelson Mandela', 'Thabo Mbeki', 'Jacob Zuma', 'F. W. de Klerk'],
+  ['Which language has the most native speakers?', 'Mandarin Chinese', 'English', 'Spanish', 'Hindi'],
+  ['How many hours are there in a week?', '168', '144', '120', '196'],
+];
+
+module.exports = { WORDS, QUESTIONS };

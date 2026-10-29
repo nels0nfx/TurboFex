@@ -1,0 +1,253 @@
+TurboFex v0.7.10 - updates come straight from the pushed files
+CHANGED IN 0.7.10
+- CHANGED: the bot updates from the FILES in the GitHub repo. Push the files, raise the version in package.json, and every bot that starts sees it (it reads only package.json to check, and downloads the branch from GitHub when the version differs). The file turbofex-latest.zip is no longer needed; it (and GitHub Releases) is only a fallback when the files cannot be read
+
+TurboFex v0.7.9 - God announcements tag people for real
+CHANGED IN 0.7.9
+- FIXED: when God acts from a private chat (bless, curse, give, take, set purse, set rank, items, estates), the announcement in the group ("The heavens have spoken") showed the person as plain text @number. The person is now tagged for real, the same way the bot tags people when it answers in a group, so WhatsApp shows their name
+
+TurboFex v0.7.8 - fixes the start-up crash, linking with a session ID from the pairing site
+CHANGED IN 0.7.8
+- FIXED: the bot crashed on start with "Cannot find module './market'". core/scheduler.js still loaded the removed market file and never loaded the Empire's job ticker (core/realm/ticker.js), so the realm jobs could not run either
+- FIXED: updates can no longer ship this kind of crash. Before an update is installed, every relative require() in its files must point to a file inside the update, otherwise the update is rejected and nothing is changed
+- NEW: linking is done with the pairing site. Link on https://turbofex-pair.onrender.com (built in, nothing to set), copy the session ID and paste it in the file session_id.txt (the bot creates it with the steps inside; the SESSION_ID variable also works). The console no longer asks for a number or shows a pairing code or QR. A bot without a login prints the steps and waits (also after WhatsApp logs it out). session_id.txt is never touched by updates The bot's number and owner come from the linked login
+- NEW: a NEW session ID replaces the current login (the old one is kept in data/session-previous). An ID that was already used is remembered and does nothing. A sleeping pairing site is waited for (up to 45 s, three tries)
+- CHANGED: the old console linking only runs when CONSOLE_LINK=1 is set (PAIR_METHOD and NUMBER then work as before)
+- NEW: tests for the scheduler, the session ID (also against the real pairing site code) and the update check
+
+TurboFex v0.7.7 - the Empire of Fex: a brand new economy, and God
+CHANGED IN 0.7.7
+- REMOVED the whole old coin economy: coins, jobs, gamble, rob, market and stocks, throne, governor, couples, pets, bounties, drops, quests, lottery, predictions, reports and their commands. Its saved data is deleted once, when this version starts first. Ranks and levels, games and everything else are untouched
+- NEW the Empire of Fex (phase 1): every group is a realm with its own citizens, money (Aurum) and treasury. Commands: daily, purse (balance), profile, bank, deposit, withdraw, give, wealth, shop, buy, realm. Ranks by net worth (Commoner, Citizen, Merchant, Noble, Lord) pay more. The bank pays interest, the shop sells a Fortune Charm, a Merchant's Satchel and titles. Chatting earns a little Aurum. Everybody starts from zero
+- NEW God (the bot owner, "god" command, also in a private chat with "god realm <number>"): every number of the Empire has a safe minimum and maximum and can be changed for all realms or one realm ("god set core.dailyBase 400 here"); every feature can be switched on or off; God can give, take, set the purse, set a rank, bless or curse a citizen, wipe a citizen or a realm (asks for the word "confirm"), close or open realms, and move citizens from one realm to another. Everything God changes is written in the Divine Ledger ("god ledger"), and the realm is told when God acts from somewhere else
+- NEW for the next phases: a settings registry (every feature registers its numbers, nothing is hard-coded), a job ticker for the scheduler, a common reply format and one command wrapper that checks the realm, the feature switch and private chats in one place
+- NEW the Empire, phase 2 - careers: choose Farmer, Miner, Scribe, Guard, Smith or Healer ("career"), then "work" for Aurum and goods. Careers have levels (more pay), a tool for each career (shop or workbench, +25% pay, wears out), a meal bonus, a bonus for the first work of the day, a waiting time, and a weekly bonus ("weekly"). Better careers need a higher rank. The Smith turns 2 Ore into 1 Iron
+- NEW phase 2 - estates: Farm, Mine, Weaver's Hut, Tavern and Forge ("estates", "collect") make Grain, Ore, Cloth, Wine and Iron while you are away. Buy, upgrade (5 levels) and sell them. The number of estates and the good ones depend on the rank. The realm keeps a tax of the goods in its granary (the government of a later phase will spend it). The Forge needs Ore from your bag
+- NEW phase 2 - goods, the bag and crafting: "inventory" (a bag with a size that grows with the rank), "sell" goods to the realm, "recipes" and "craft" (bread, tonic, fine tunic, sword and the six tools), "use" bread or tonic. Goods, items and estates count in your net worth, so they raise your rank
+- NEW God controls for all of it: every price, output, pay, level, waiting time, tax, storage, bag size and rank limit is a setting with a safe range (for one realm or all realms), every recipe can be closed, and "god item", "god estate", "god career" and "god stock" change citizens and look at the granary. Moving citizens now moves the bag, estates and careers too
+- CHANGED: the Empire's commands have their own spam limit, set by God (8 commands in 20 seconds by default). Bets in blackjack and duel now use Aurum of the group and stop when the realm is closed
+- FIXED: the captcha test no longer fails at random
+
+TurboFex v0.4.1 - clear profit numbers, quests, the throne, predictions, alerts and dividends
+CHANGED IN 0.4.1
+- NEW "profit" (pnl, gains): are you winning? Your profit overall, this week and in the last 24 hours, in plain numbers with a green or red verdict, and how it adds up
+- NEW "guide" (learn, howto): the market explained in 1 minute, with pages: guide stocks / profit / mood / property / loans / tips
+- After you buy, the bot tells you the break-even price. The portfolio shows profit overall and in 24 hours. The market and the news show a tip for the current mood
+- NEW "quests" (missions): every day 3 quests for the group (chat, daily, jobs, win a gamble, invest, sell for a profit, collect). Coins are paid by themselves, all 3 give a bonus, 12 quests in a week give a weekly prize
+- NEW "throne" (king): take the throne of the group, the old king gets 70% of the price back, the king earns 100 coins an hour (throne collect) and can write a decree
+- NEW "predict": admins ask a yes/no question, members bet coins, the winners share the pool (5% is taken). Everybody is refunded if nobody is on the other side, or it is cancelled or never settled
+- NEW "alert" (watch): alert TECH above 300 pings you in the group when the price gets there (up to 5, sent even when the news is off)
+- NEW: dividends. Telecom, bank, farm, pharma, power, retail and cement stocks pay a small dividend every day. Take it with "collect"
+- FIXED: market tests, break-even and ledger for markets that were saved before this version
+
+TurboFex v0.4.0 - the market economy, per-group coins, owner luck and a cheaper economy
+CHANGED IN 0.4.0
+- NEW owner command "luck": set the gamble chance of one person, from your private chat or a group. luck 2348012345678 80 / luck 2348012345678 70 1d alpha / luck off 2348012345678 / luck list. They are not told.
+- NEW owner command "ecoboost": multipliers for pay (work, fish, hunt, mine, daily), chat coins and shop prices. ecoboost pay 1.5 / shop 0.5 / chat 2 / reset
+- Coins are easier to earn: daily 500 (+50 a day in a row, up to 1000), work 150-400, fish 40-250, hunt 60-350, mine 100-500, chatting 5 coins (level up 100)
+- Things are cheaper: Lucky Charm 800, VIP 2,500, Legend 10,000, Rich 25,000; businesses and property cost half
+- NEW: the market. An admin or the owner switches it on in a group with "economy on". Every group then has its own mood (Boom, Stable, Recession, Inflation, Crash), news, prices and investors
+- NEW commands: economy, market, invest, sell, portfolio, bonds, property, business, collect, loan, repay. "news economy" shows the latest market headline
+- 10 made-up stocks (telecom, bank, farm, tech, oil, transport, pharma, cement, retail, power), 4 coins with wild swings, bonds, 4 kinds of property and 4 businesses
+- The mood moves prices, bond yield, loan interest, shop prices, job pay, rent and business profit. News is posted in the group when the mood changes ("economy news off" mutes it)
+- Prices update every 30 minutes for everybody at the same time. A bot that was off plays the updates back (at most 2 days)
+- Coin sinks and protection: trading fee, property stamp duty and tax, business tax, loan fee and interest; one trade uses at most 25% of the wallet, 30 seconds between trades, no price can fall more than 12% (stocks) or 25% (coins) in 24 hours
+- Loans: up to half of what you own, 7 days. While you owe you cannot give, gamble, bank or rob. Too much debt sells your investments (margin call)
+- Weekly prize: the best profit in % of the week (Monday to Sunday) wins coins and the 👑 title
+- CHANGED: coins are now per group (one purse per person in every group). A person's old bot-wide coins move into the first group where they use coins again. In a private chat the old purse is still used
+- CHANGED: shop prices and job pay (work, fish, hunt, mine) follow the mood in groups where the market is on. Marriage is per group too
+
+TurboFex v0.3.8 - 42 new commands, repeating schedules, link previews and fixes
+CHANGED IN 0.3.8
+- NEW: AI category with the chatbot NelsonFx: ai, chatbot, imagine, memegen, quotecard, summarize, grammar
+- NEW: Economy is its own category: work, fish, hunt, mine, bank, deposit, withdraw, rob, lottery, inventory, marry, divorce (and balance, daily, give, gamble, shop, buy, richest moved here)
+- NEW games: blackjack, higherlower, mines, typerace, flags, capitals, bingo
+- NEW group tools: disable, enable, captcha, antiraid, autosticker, purge, pin, unpin
+- NEW tools: crypto, prayer, verse, urban, timein, morse, binary, bmi, split, readqr (needs npm install for the QR reader)
+- NEW owner: leaveall, maintenance, setmenu, blocklist
+- autotyping / autorecording: no longer shown while a command runs; shown when someone writes to the bot; "autotyping test" shows every step and what WhatsApp refused
+- game intros now tag the players
+
+CHANGED IN 0.3.7
+- Games: the countdown message keeps its tags when it is edited (Game on! ... GO!)
+- No prefix mode: the bot answers its commands while a game runs; only the lobby words join / quit / start belong to the game
+- Tags in private chats (richest, balance, notices to the owner...): the phone number is tagged, so WhatsApp shows the name saved in the phone or the number; a hidden id is written as the name
+- ping shows where the time goes: bot time and WhatsApp time
+- Faster: group info after a group change waits at most 250 ms (it was up to 8 seconds); the typing indicator waits 500 ms (was 1000)
+- Cleaned: unused functions and imports removed
+
+CHANGED IN 0.3.6
+- Games: only admins (and the owner) can start a game, everybody else joins by typing join
+- No prefix mode: "join", "quit", "start" and a player's own words go to the game, not to a command with the same name (join was also a command, so members could not join)
+- autotyping / autorecording now also show when someone WRITES to the bot (private chats by default; "autotyping where dms / groups / all"), not only while a command is answered
+
+CHANGED IN 0.3.5
+- ONE number: the bot's number is also the owner (no separate owner number or pairing number). OWNER_NUMBER and PAIRING_NUMBER still work for older setups
+- First start: the bot asks for the number, then asks pairing code or QR code and shows only the one chosen (PAIR_METHOD and NUMBER skip the questions)
+- setprefix none: the old prefix no longer works
+- richest shows only the members of the group it is used in
+- All games need joining again (riddle, emojiquiz, wordle too)
+- antibot rewritten: antibot add / remove / list / check / strict, detects more bots
+- Faster: finding who sent a message no longer walks through the whole member list (bigger groups gain the most)
+
+FIXES IN 0.3.4
+- autotyping and autorecording now really show: the bot subscribes to the chat, shows "typing..." or "recording..." until the answer is sent
+- autoreact: choose where it works (autoreact where all / groups / dms / selected, autoreact add / remove / list for chats and people)
+- richest and mutelist tag the members (WhatsApp shows their name); nobody's number is written
+- silence: the member is told the first time they write
+- tagadmins follows private mode (owner only when the bot is private)
+- setapi: send an API key to the bot and it saves it; removebg <key> works too
+- lyrics: real lyrics through a licensed Musixmatch key (free plan shows part of the song); a link without a key
+- image: only a picture that matches the words you wrote (best match, not a random one)
+- riddle, emojiquiz and wordle: anyone can play without joining, members can start them in private mode
+- antispam: antispam off / delete / warn / kick, limit, seconds, repeat, reset
+- pmblocker: not for people in your contacts, people you have written to, or people you allow (pmblocker allow / deny / list)
+
+FORMATTING
+- The replies of the new commands now use the same WhatsApp formatting as the rest (bold titles and labels, commands in monospace, hints in italics)
+NEW COMMANDS (42)
+- Owner: autotyping, autorecording, alwaysonline, autoread, autobio, autoreact, pmblocker
+- Economy: balance, daily, give, gamble, shop, buy, richest (coins come from chatting where ranks are on, the daily bonus and duels)
+- Group: antibot, antitag, tagadmins, exportrank, silence, unsilence, mutelist
+- Media: lyrics (link only), tts, tovn, ocr, removebg (needs REMOVEBG_API_KEY), image, ssweb, shorten
+- Lookup and fun: news, github, ip, horoscope, quote, fact, meme
+- Games: riddle, emojiquiz, wordle, connect4, duel (with coin bet), roast
+
+CHANGED (fixes in 0.3.1)
+- Play: looks at 10 results and picks the real song (no covers, remixes, slowed, long mixes); more ways past YouTube blocks without cookies (extra clients, Piped servers); SoundCloud/Audius only for close matches
+- Group commands (rank, top, rules, setrules, report, birthday, setbirthday, giveaway) are in the GROUP category; Community category removed; no numbers beside categories
+- Members can use rank, top, rules, report, birthday, setbirthday, feedback when the bot is private
+- Tags show names: group tags use the group's id type; notices to the owner write the name
+- Link previews show the full card (bigger picture)
+- Status: views are instant in their own lane; nothing waits after the daily like limit
+- Server guard: a high host load average alone no longer blocks commands
+- Rank: messages typed on the bot account earn XP; phone and hidden ids merge
+- The "no content / view-once" guess is off by default (EMPTY_NOTICE=1 turns it on)
+NEW
+- region: change the bot time zone (region Nigeria)
+- schedule: weekdays, weekends, weekly mon,thu, monthly 1, every 2h; the owner can schedule a bot command (schedule daily 07:00 run joke)
+- setprefix none: use the bot with no prefix
+- Birthday wishes use WhatsApp's tag-all
+- Notes up to 4000 characters
+
+NEW
+- Link previews: every message with a link now shows the preview card (picture, title, description). The WhatsApp library only makes them when an optional package is installed, which is why none ever showed. The bot makes them itself and only reads public web addresses (linkpreview on / off / test)
+- Security: ratelimit, anticall, privacy, antipromote, antidemote, antimedia, slowmode
+- Community (new category): rules, setrules, report, rank, top, giveaway, birthday, setbirthday, feedback
+- Lookup (new category): weather, define, wiki, currency, translate
+- Media and tools: dl (video download), take (change a sticker's pack and author), attp (text sticker), setgpp (group picture), note, todo
+- Owner: stats (usage, busiest groups, last errors), broadcast (all groups, paced, with confirmation), linkpreview
+CHANGED
+- Downloads (play, dl) refuse private and internal addresses
+- Menu: new categories Security, Community and Lookup (alphabetical like the others)
+- promote and demote respect antipromote / antidemote
+
+TurboFex v0.3.0 - production release
+NEW
+- Login backup: a copy of the WhatsApp login is made daily (last 3 kept, never sent over WhatsApp) and restored automatically if the login file gets damaged. Commands: loginbackup, sessionclean. Old encryption files of chats silent for 90+ days are cleaned monthly
+- Safer updates: a downloaded update is checked before any file is replaced (every file must compile, required files must exist). A broken zip is rejected and nothing changes
+- Sticker credit: the stickers the bot makes show a pack name and author. Change it with stickerpack
+- Reactions: new "smart" mode (cmdreact smart): only slow commands get a reaction. Fewer messages, less ban risk
+- Status safety: daily like limit (statuslimit, default 200) and a pause between likes. Views are never limited
+- Tests and CI: 61 automated tests run on every push (npm test), a README for GitHub
+CHANGED
+- Every command reply now uses WhatsApp formatting (bold titles and labels, bullets, commands and examples in monospace). Content commands (jokes, translations, text tools) keep their content untouched
+- Menu categories are listed alphabetically
+- statusinfo rewritten and fixed
+FIXED
+- "flip" was defined by two commands (coin and picture flip) and "mute" by two (group close and video mute): one silently replaced the other. The coin command keeps "coin", the group command keeps "close"
+- Two login backups in the same second no longer fail
+
+TurboFex v0.2.9 - pairing code and QR together
+CHANGED
+- Linking shows the QR code AND, when PAIRING_NUMBER is set, a pairing code. The bot now checks WhatsApp's answer to the code request: if WhatsApp refuses it (as it does at the moment) you are told at once to use the QR instead of being given a code that can never work. If WhatsApp (or a library update) accepts codes again, the code simply works. PAIRING_CODE=1 is no longer needed
+
+TurboFex v0.2.8 - linking a new device works again (QR)
+FIXED
+- "Couldn't link device": since 28 July 2026 WhatsApp changed how new devices are linked and the WhatsApp library does not handle the new step. The bot now handles it itself: after you scan, it makes a new secret and shows the QR again, and the next scan completes the link. Linking now uses a QR code (the 8-letter pairing code is refused by WhatsApp at the moment, the library hands out a code that was never registered). While linking, the current WhatsApp Web version is looked up and the standard device identity is used
+CHANGED
+- relink is switched off: it logs the bot out first, and a failed new link would leave the bot offline. Use "vv" for view-once files
+- To try a pairing code anyway set PAIRING_CODE=1 (with PAIRING_NUMBER)
+
+TurboFex v0.2.7 - professional menu, formatted replies, AFK
+CHANGED
+- New menu: short lines that fit a phone screen (the long lines wrapped), no emojis in the categories, the details in an aligned monospace block, WhatsApp formatting throughout. "list" and "menu <command>" use the same style
+- Command replies get WhatsApp formatting automatically: bold title, bold labels, symbol bullets and commands in monospace. Replies that are content (fun, games, media, text tools) are left as they are. A command can opt out with format: false
+- The "update complete" / restart message uses the same style
+- AFK: everybody who messages or mentions you is told ONCE per AFK session, never again. AFK now stays ON until you send "afk off" (writing again no longer switches it off, and there is no "welcome back" message)
+
+TurboFex v0.2.6 - anti-edit, simple ping, locked bot name
+FIXED
+- Anti-edit: newer WhatsApp seals every edit in a secret envelope that the WhatsApp library cannot open, so the bot never saw the new text. The bot now opens it itself, using the secret key of the original message. It only works for messages the bot saw BEFORE they were edited (the saved copies are lost when the bot restarts). If the original was not saved you get a notice saying so instead of silence
+CHANGED
+- ping now shows just one line: Pong and the response time in ms
+- The bot name is locked: it comes only from the code (core/brand.js). If it is edited, the bot refuses to start until the file is restored or the bot is updated
+- "status" shows how many edits arrived sealed and how many could not be read
+
+TurboFex v0.2.5 - faster replies in groups
+FIXED
+- Encryption keys are now written to disk a moment AFTER sending instead of before it. On a host with a slow disk, replies in busy groups queued behind those writes (seconds). Everything is written when the bot stops or restarts. Switch off with FAST_KEYS=off
+- When someone joins, leaves or is promoted/demoted, or the group name/settings change, the saved group info is updated directly instead of being thrown away and fetched again (that fetch made the next reply slow)
+- Anti-delete picture/video saving: at most 2 at a time and only files under 2 MB, so a busy group cannot slow the bot down
+- Our own replies are no longer sent back to the bot as incoming events
+NEW
+- ping (owner) in a group shows where the time goes: "Group info" and "Encrypt and send"
+
+TurboFex v0.2.4 - instant status view, status like
+FIXED
+- Status view is now instant. The "statusdelay" setting used to hold back the view as well as the like; now the view always goes out at once and the delay (if you set one) only applies to the like and save
+- Status like: on accounts using hidden LID addresses, WhatsApp refuses a like whose recipient list mixes LID and phone-number addresses. The like now uses a LID-only list first, then phone numbers only, then the old list, reading WhatsApp's real answer after each. "statusinfo" shows the route that worked, how many likes were refused and how long the view took
+
+TurboFex v0.2.3 - status, "Waiting for this message", play and view-once
+FIXED
+- "Waiting for this message" in your private chat: notifications (copies, restart/update messages) were sent to your phone number, which many phones cannot open. They now go to you the way WhatsApp itself addresses you, and every private message to a known person uses that form
+- Reconnects every ~50 minutes: WhatsApp's new "status" notices were never acknowledged, so WhatsApp cut the connection. They are acknowledged now (this also explains repeated "Finished syncing" notices and the bot "sleeping")
+- Status like: the WhatsApp library has a known bug where likes on statuses are refused by WhatsApp while looking successful. The bot now reads WhatsApp's answer and, when refused, sends the like straight to the poster instead. "statusinfo" shows how many were refused and which route works
+- Status speed: statuses are handled 3 at a time (after a reconnect dozens arrive together), expired ones are skipped, and statusinfo shows how long WhatsApp took to bring the last status to the bot
+- Group speed: the list of who has which devices is now remembered for 30 minutes instead of 5, so the first message to a group after a quiet period no longer waits for WhatsApp
+- play: if YouTube blocks the server, the same song is looked up on SoundCloud and Audius. New "ytcookies" command saves a cookies.txt so YouTube works again
+NEW
+- relink android: one command logs the bot out and restarts it with the identity that can receive view-once files (you link it again once). The "no content" notice is now sent at most every 6 hours
+TurboFex v0.2.2 - status, anti-edit and play
+FIXED
+- Auto like status: back to the recipient list that worked before, and the like no longer waits behind the view. View and like now start together (the real "viewed" receipt goes first), so statuses are viewed and liked in about a second instead of several
+- Anti-edit: edit notices are no longer dropped as "already seen", and every shape WhatsApp uses for edits is understood. The console now logs each edit event it receives and "status" shows how many arrived
+CHANGED
+- play now ALWAYS sends audio, from a song name or from a link on almost any site (YouTube, TikTok, SoundCloud, Instagram, Facebook...). It uses the free yt-dlp tool, which the bot downloads once by itself the first time play is used and keeps up to date. Limits: 60 MB / 60 minutes (PLAY_MAX_MB, PLAY_MAX_SECONDS). If the downloader fails, a song name falls back to free music from Audius
+
+TurboFex v0.2.1 - view-once and group speed
+FIXED
+- View-once: a message that arrived with no content (WhatsApp does not give view-once files to linked devices) used to be thrown away silently. Now you are told, with the fix. Console also logs every view-once it sees
+- Group speed: the hourglass reaction only appears when a command takes longer than a moment, so quick commands (ping, menu) send just one reaction and the reply is no longer slowed down by it
+
+TurboFex v0.2.0 - speed, private-by-default, new menu, reactions, server protection
+CHANGED
+- Default prefix is now "." and the default mode is PRIVATE. In private mode the bot gives NO reply to anyone but the owner (running games, auto-replies and group protection still work)
+- New professional menu: small-caps fonts, a symbol per category, no prefix in front of every command. Technical details (RAM, platform) are shown to the owner only
+- Messages for normal users no longer show developer details (error reasons, "npm install", config.js...). The owner still sees them
+- WhatsApp library upgraded to 7.0.0-rc14 (needed for group status). The bot loads both old and new library versions
+FIXED
+- Bot "sleeping": a health check every minute reconnects a dead connection, group info is no longer fetched while you wait, messages that waited during a reconnect are answered, reconnects back off instead of looping
+- Repeated "Finished syncing with WhatsApp" notification: no more reconnect loops (another running copy of the bot now makes this one wait longer instead of fighting it)
+- Auto view status: the real "viewed" receipt is now sent directly, so the poster sees it even when the bot account has read receipts off. Auto like waits a moment after viewing and retries with a smaller list
+- Anti-edit: edits wrapped by WhatsApp are now understood; you are told if a copy cannot be sent
+- View-once: new command "vv" (reply to a view-once). Auto view-once now tells you when WhatsApp did not give the file to this device, instead of staying silent. Optional BOT_BROWSER=android (link again) lets the bot receive them
+- gstatus, antigstatus, antigm: work with the new library
+NEW
+- Server protection: heavy commands are blocked with a clear message when a tool is missing, memory is low, the server is overloaded or too many run at once ("server" command to see it or switch it off)
+- Command reactions: hourglass while working, tick when done, warning/cross on problems ("cmdreact on / clean / off")
+- Watermark under the result of media/audio/video/editor commands (and qr, fancy, play...) once they worked ("watermark on / off / text")
+- The bot now messages you "update complete" after an update, and "I am back" with a short menu and links after a restart ("restartmsg on / off")
+
+TurboFex v0.1.8 - fixes for slowness, "Waiting for this message", status, watchers and play
+FIXED
+- "Waiting for this message": the bot now keeps what it sent so WhatsApp can ask for it again (it was missing). The timing overrides added in v0.1.7 that could make connections and sends fail were removed
+- Slow sending (group replies took ~27 s): encryption keys are now kept in memory instead of being read from the disk every time
+- Missed commands: a command never waits behind another command (or a long job) in the same chat any more. Only game answers stay in order
+- Anti-delete: the copy is now a REPLY to the original message in its chat, names who sent it AND who deleted it (the admin or the sender), and also catches deletions that WhatsApp reports as updates. Never shown twice
+- Anti-edit: now also catches edits that WhatsApp reports as message updates or as wrapped messages, and replies to the original
+- Auto view-once: when WhatsApp refuses the download you are told why instead of silence
+- Status auto view/like/save: counters and a fallback way of marking a status as seen; the status owner is added to the like list in both id forms. !statusinfo shows what arrived and any problem
+- .block: phone numbers behind hidden ids are learned from messages, contacts and your groups (kept on disk), so blocking in a private chat now has the number. More request shapes are tried and the reply lists exactly what was tried
+- play: a song name now sends REAL AUDIO when it is on Audius (free music by independent artists); otherwise it shows YouTube links and says why
+- Auto repair of "Bad MAC" runs at most every 3 hours (each repair makes the next sends slower while WhatsApp sets up new keys)
