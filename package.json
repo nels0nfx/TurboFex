@@ -1,6 +1,6 @@
 {
   "name": "turbofex",
-  "version": "0.7.10",
+  "version": "0.7.11",
   "description": "TurboFex - WhatsApp group management bot by Nelson Fx",
   "main": "index.js",
   "scripts": {

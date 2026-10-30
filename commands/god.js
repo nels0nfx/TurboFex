@@ -10,6 +10,8 @@ const groups = require('../whatsapp/groups');
 const stuff = require('../core/realm/stuff');
 const estates = require('../core/realm/estates');
 const careers = require('../core/realm/careers');
+const market = require('../core/realm/market');
+const auction = require('../core/realm/auction');
 const { resolveTarget } = require('../whatsapp/utils');
 
 const godCoreStock = (g) => god.realmStock(g);
@@ -62,6 +64,8 @@ const HELP = (p) =>
       `\`${p}god bless @user 50 12\` • \`${p}god curse @user 30 6\` • \`${p}god clear @user\``,
       `\`${p}god item @user bread 5\` (a minus takes it away) • \`${p}god estate @user farm 3\` (0 removes it) • \`${p}god career @user smith\``,
       `\`${p}god stock\` – the goods the realm kept as tax`,
+      `\`${p}god price grain 12\` • \`${p}god event [name]\` • \`${p}god herald\` • \`${p}god market reset confirm\``,
+      `\`${p}god auction end 3\` • \`${p}god auction cancel 3\``,
       `\`${p}god wipe @user confirm\` • \`${p}god wipe realm confirm\``,
       '',
       '*The realms*',
@@ -240,6 +244,67 @@ module.exports = [
         if (word !== 'none' && !cr) return reply(ui.warn(`Choose: ${careers.CAREERS.map((x) => x.id).join(', ')} or none`));
         god.setCareer(group, target, cr ? cr.id : null);
         return reply(ui.card('☀️', 'Career set', [ui.tag(target), cr ? `${cr.icon} *${cr.name}*` : 'no career']), who);
+      }
+
+      // ---------------------------------------------------------- the market and the auctions
+      if (sub === 'price') {
+        if (!group) return needRealm();
+        const it = stuff.find(args[1] || '');
+        const value = Number((args[2] || '').replace(/,/g, ''));
+        if (!it || it.kind !== 'good' || !(value > 0)) return reply(ui.card('📈', 'Set a price', ['Sets the price of a good right now (it keeps moving after that, within the limits God set).'], [`\`${prefix}god price grain 12\` – goods: ${market.GOODS().join(', ')}`]));
+        const r = god.marketPrice(group, it.id, value);
+        await announce(ctx, group, `The price of ${it.name} was set to ${r.price}.`);
+        return reply(ui.card('📈', 'Price set', [`${it.icon} *${it.name}:* ${r.before.toFixed(2)} → *${r.price}*`, r.price !== value ? `_Held inside the limits (the lowest and highest price God set)._` : null].filter(Boolean)));
+      }
+      if (sub === 'event') {
+        if (!group) return needRealm();
+        const word = (args[1] || '').toLowerCase();
+        if (word === 'list') return reply(ui.card('⚡', 'Market events', market.EVENTS.map((e) => `*${e.id}* – ${e.text}`), [`\`${prefix}god event drought\` – make it happen now`, `\`${prefix}god event\` – a random one`]));
+        if (word && !market.eventById(word)) return reply(ui.warn(`I do not know that event. See \`${prefix}god event list\`.`));
+        const r = god.marketEvent(group, word || null);
+        const owners = [...new Set(r.rows.flatMap((x) => market.owners(group, x.id)))].slice(0, 12);
+        await announce(ctx, group, `⚡ ${r.event.text}!`, owners);
+        return reply(ui.card('⚡', 'Event started', [`_${r.event.text}_`, ...r.rows.map((x) => `${stuff.get(x.id).icon} ${stuff.get(x.id).name} ${x.pct >= 0 ? '▲ +' : '▼ −'}${Math.abs(x.pct).toFixed(0)}%`)], [`\`${prefix}god herald\` – post the news in the group now`]));
+      }
+      if (sub === 'herald') {
+        if (!group) return needRealm();
+        const ed = market.edition(group, true, prefix);
+        try {
+          await sock.sendMessage(group, { text: ed.text, mentions: ed.mentions });
+        } catch (err) {
+          return reply(ui.warn('I could not post in that group.'));
+        }
+        return reply(ui.card('📰', 'The Herald was posted', [`*${await nameOf(sock, group)}*`, `${ed.mentions.length} people tagged.`]));
+      }
+      if (sub === 'market') {
+        if (!group) return needRealm();
+        if ((args[1] || '').toLowerCase() !== 'reset') return reply(ui.card('📈', 'Market', [], [`\`${prefix}god market reset ${CONFIRM}\` – every price starts again at the normal value`]));
+        if (!args.some((a) => a.toLowerCase() === CONFIRM)) return reply(ui.warn(`Prices and news start again. Send the same command with the word *${CONFIRM}* at the end.`));
+        god.marketReset(group);
+        await announce(ctx, group, 'The market started again at the normal prices.');
+        return reply(ui.card('📈', 'Market reset', [`*${await nameOf(sock, group)}*`, 'Every price is at the normal value again.']));
+      }
+      if (sub === 'auction') {
+        if (!group) return needRealm();
+        const how = (args[1] || '').toLowerCase();
+        const id = parseInt(args[2], 10);
+        if (!['end', 'cancel'].includes(how) || !(id > 0)) {
+          const rows = auction.active(group).map((a) => `*#${a.id}* ${stuff.get(a.item).icon} ${stuff.get(a.item).name} ×${a.qty} – ${a.bid ? `bid ${ui.fmt(a.bid)}` : 'no bids'} • ${ui.dur(a.ends - Date.now())}`);
+          return reply(ui.card('🔨', 'Auctions', rows.length ? rows : ['Nothing is running.'], [`\`${prefix}god auction end 3\` – close it now as it stands`, `\`${prefix}god auction cancel 3\` – everything goes back`]));
+        }
+        const r = god.auctionEnd(group, id, how);
+        if (!r.ok) return reply(ui.warn('There is no such auction.'));
+        if (how === 'end') {
+          const m = auction.message(r.results);
+          try {
+            await sock.sendMessage(group, m);
+          } catch (err) {
+            // the result is in the ledger anyway
+          }
+          return reply(ui.card('🔨', 'Auction closed', [`#${id} was closed now.`]));
+        }
+        await announce(ctx, group, `Auction #${id} was cancelled. Goods and bids went back.`);
+        return reply(ui.card('🔨', 'Auction cancelled', [`#${id}: the goods and the best bid went back.`]));
       }
 
       // ---------------------------------------------------------- citizens

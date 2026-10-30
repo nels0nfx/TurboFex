@@ -62,7 +62,7 @@ Push the new files to the GitHub repo and raise `version` in `package.json`. Bot
 
 ## The Empire of Fex
 Every group is a **realm** with its own citizens, money (**Aurum**) and treasury. It is open in every group by default (admins close it with `.realm off`).
-The Empire is built in phases: the foundation and God (phase 1), careers, estates, goods and crafting (phase 2). The market, the government, guilds and more come next.
+The Empire is built in phases: the foundation and God (phase 1), careers, estates, goods and crafting (phase 2), the market, the Herald news, trading and auctions (phase 3). The government, guilds and more come next.
 
 | Command | What it does |
 |---|---|
@@ -89,6 +89,20 @@ Ranks (by net worth, goods and estates count too): Commoner, Citizen, Merchant, 
 | `.sell grain 10` / `.sell all` | Sell to the realm (the market of a later phase will move prices) |
 | `.use bread` / `.use tonic` | A meal pays more for a few hours; a tonic skips the waiting of your next work |
 
+### The market, the Herald, trading and auctions
+Goods (Grain, Ore, Iron, Wine, Cloth) have a price in every realm. It moves when citizens buy and sell, comes back towards the normal value, has a small random swing, and is hit by events (a drought, a new seam, a war...). Prices are worked out when somebody looks and by the bot for realms that switched the Herald on.
+
+| Command | What it does |
+|---|---|
+| `.market` / `.market grain` | The prices (🟢 cheap, 🔴 dear), the change of the last day, what you hold; one good in detail |
+| `.market buy grain 10` | Buy from the realm (a little above the price; the extra goes to the treasury) |
+| `.sell grain 10` / `.sell all` | Sell to the realm at the price now (selling pushes the price down) |
+| `.herald` | The Realm Herald: prices, breaking news, who is affected. `.herald on` / `.herald off` (admins) post it in the group after every price update (about every 30 minutes). People who hold a good that moved, or own the estate that makes it, are tagged |
+| `.trade @user grain 20 150` | Offer 20 Grain for 150 Aurum. The other citizen sends `.trade accept` or `.trade decline`. `.trade list`, `.trade cancel` |
+| `.auction` / `.auction sell sword 1 200` / `.auction bid 3 250` | Auctions: the best bid wins when the time is over (the realm keeps a cut). `.auction info 3`, `.auction cancel 3` |
+
+God controls: `.god price grain 12`, `.god event [name|list]`, `.god herald`, `.god market reset confirm`, `.god auction end|cancel <number>`. Every number (update time, swing, how fast prices come back, how far trades move them, the lowest and highest price, the buying markup, event chance and strength, the Herald's tags, the trade fee and time, the auction time, cut, minimum raise and limits) is a setting: `.god settings market`, `herald`, `trade`, `auction`.
+
 ### God (the bot owner)
 God does not rule the realms. God sets the limits and can change anything that exists, in a group or in a private chat.
 Every feature has an on/off switch and every number has a safe minimum and maximum. Every change is written in the ledger.
@@ -100,6 +114,7 @@ Every feature has an on/off switch and every number has a safe minimum and maxim
 | `.god set core.dailyBase 400` / `... here` | Change a number for all realms / for one realm only (`reset` puts it back) |
 | `.god off shop here` / `.god on shop` | Switch a whole feature |
 | `.god give @user 500`, `take`, `purse`, `rank @user lord`, `bless @user 50 12`, `curse` | Change citizens |
+| `.god price grain 12`, `.god event drought`, `.god herald`, `.god auction end 3` | Move a price, start a market event, post the Herald now, close or cancel an auction |
 | `.god item @user bread 5`, `.god estate @user farm 3`, `.god career @user smith`, `.god stock` | Give or take goods, set an estate or a career, see the realm's granary |
 | `.god wipe @user confirm`, `.god wipe realm confirm` | Delete a citizen or a whole realm |
 | `.god realm 2` | In a private chat: choose the realm every Empire command works on |

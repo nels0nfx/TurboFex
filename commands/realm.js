@@ -229,7 +229,7 @@ module.exports = [
           ui.card(
             '📖',
             'How the Empire works',
-            ['Every group is a *realm* with its own citizens, money and treasury. The money is *Aurum*.', '', '*Start here*', `\`${prefix}daily\` – a gift every day (more days in a row = bigger)`, `\`${prefix}purse\` • \`${prefix}profile\` • \`${prefix}wealth\``, `\`${prefix}deposit\` • \`${prefix}withdraw\` – the bank pays interest`, `\`${prefix}give @user 100\` • \`${prefix}shop\` • \`${prefix}buy\``, '', '*Earn and build*', `\`${prefix}career\` • \`${prefix}work\` • \`${prefix}weekly\` – a profession, pay and goods`, `\`${prefix}estates\` • \`${prefix}collect\` – buildings that make goods while you are away`, `\`${prefix}inventory\` • \`${prefix}craft\` • \`${prefix}sell\` • \`${prefix}use\` – the bag and the workbench`, '', '*Ranks*', 'Commoner → Citizen → Merchant → Noble → Lord. A higher rank pays more, opens careers and estates, and gives a bigger bag.', '', '_More is coming: the market, the government, guilds and more._'],
+            ['Every group is a *realm* with its own citizens, money and treasury. The money is *Aurum*.', '', '*Start here*', `\`${prefix}daily\` – a gift every day (more days in a row = bigger)`, `\`${prefix}purse\` • \`${prefix}profile\` • \`${prefix}wealth\``, `\`${prefix}deposit\` • \`${prefix}withdraw\` – the bank pays interest`, `\`${prefix}give @user 100\` • \`${prefix}shop\` • \`${prefix}buy\``, '', '*Earn and build*', `\`${prefix}career\` • \`${prefix}work\` • \`${prefix}weekly\` – a profession, pay and goods`, `\`${prefix}estates\` • \`${prefix}collect\` – buildings that make goods while you are away`, `\`${prefix}inventory\` • \`${prefix}craft\` • \`${prefix}sell\` • \`${prefix}use\` – the bag and the workbench`, '', '*Prices and people*', `\`${prefix}market\` • \`${prefix}market buy grain 10\` • \`${prefix}sell all\` – prices move with buying, selling and events`, `\`${prefix}herald\` – the market news (admins: \`${prefix}herald on\` posts it here)`, `\`${prefix}trade @user grain 20 150\` • \`${prefix}auction\` – trade with citizens`, '', '*Ranks*', 'Commoner → Citizen → Merchant → Noble → Lord. A higher rank pays more, opens careers and estates, and gives a bigger bag.', '', '_More is coming: the government, guilds and more._'],
             [],
             'Chatting earns a little Aurum too. God sets the limits of everything.'
           )
@@ -237,7 +237,7 @@ module.exports = [
       }
       const people = require('../core/realm/state').citizensOf(group).length;
       await reply(
-        ui.card('⚜️', 'The Empire of Fex', [`*Realm:* ${on ? '✅ open' : '🔒 closed'}`, `*Citizens:* ${people}`, `*Treasury:* ${ui.money(A.treasury(group))}`, `*Currency:* ${ui.AURUM} ${ui.SIGN}`], [`\`${prefix}realm guide\` – how it works`, isAdmin || isOwner || isRealOwner ? `\`${prefix}realm off\` / \`${prefix}realm on\`` : null].filter(Boolean))
+        ui.card('⚜️', 'The Empire of Fex', [`*Realm:* ${on ? '✅ open' : '🔒 closed'}`, `*Citizens:* ${people}`, `*Treasury:* ${ui.money(A.treasury(group))}`, `*Currency:* ${ui.AURUM} ${ui.SIGN}`, `*Herald (market news):* ${require('../core/realm/market').heraldOn(group) ? '✅ posted here' : 'off'}`], [`\`${prefix}realm guide\` – how it works`, isAdmin || isOwner || isRealOwner ? `\`${prefix}realm off\` / \`${prefix}realm on\`` : null].filter(Boolean))
       );
     },
   },

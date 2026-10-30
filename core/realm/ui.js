@@ -19,6 +19,16 @@ const bar = (a, b, size = 10) => {
   return `${'█'.repeat(f)}${'░'.repeat(size - f)}`;
 };
 
+// a tiny chart of the last values: ▁▂▃▄▅▆▇█
+const spark = (values, size = 12) => {
+  const v = values.slice(-size);
+  if (v.length < 2) return '';
+  const lo = Math.min(...v);
+  const hi = Math.max(...v);
+  const bars = '▁▂▃▄▅▆▇█';
+  return v.map((x) => bars[hi === lo ? 3 : Math.round(((x - lo) / (hi - lo)) * 7)]).join('');
+};
+
 // card('🎁', 'Daily gift', ['*Earned:* +300 Aurum', ...], ['`.purse` – your money'], 'a note')
 function card(icon, title, rows = [], hints = [], note = '') {
   const out = [`${icon} *${title}*`];
@@ -31,4 +41,4 @@ const warn = (text) => `⚠️ *${text}*`;
 const info = (text) => `ℹ️ *${text}*`;
 const wait = (what, ms) => `⏳ *${what}* Try again in *${dur(ms)}*.`;
 
-module.exports = { AURUM, SIGN, fmt, money, num, tag, signed, dur, bar, card, warn, info, wait };
+module.exports = { spark, AURUM, SIGN, fmt, money, num, tag, signed, dur, bar, card, warn, info, wait };

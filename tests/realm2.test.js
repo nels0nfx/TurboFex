@@ -56,6 +56,7 @@ store.setMode('public');
 test('goods: values and the realm price are set by God, the bag has a size that grows with the rank', () => {
   const g = newGroup();
   const a = person();
+  settings.set('market.on', false, g); // the market moves prices (see realm3.test.js); here the normal values are tested
   assert.strictEqual(stuff.valueOf(g, 'iron'), 32);
   assert.strictEqual(stuff.sellPrice(g, 'iron'), 28);
   settings.set('goods.value_iron', 100, g);

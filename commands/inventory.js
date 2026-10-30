@@ -87,7 +87,7 @@ module.exports = [
   }),
   realmCommand({
     name: 'sell',
-    aliases: ['trade'],
+    aliases: ['dump'],
     feature: 'goods',
     description: 'Sell goods or items to the realm: sell grain 10 / sell grain all / sell all',
     async run({ args, reply, myJid, prefix }, { group }) {

@@ -16,11 +16,13 @@ settings.register('goods', {
 });
 
 const stuff = new Map();
-const valueMods = []; // the market of a later phase adds a function (group, id) => multiplier
+const valueMods = []; // the market adds a function (group, id) => multiplier
+const tradeHooks = []; // the market hears every sale: (group, id, n) => ...
+const onSell = (fn) => tradeHooks.push(fn);
 
 function define(def) {
   stuff.set(def.id, def);
-  settings.extend('goods', `value_${def.id}`, { label: `Value of ${def.name}`, def: def.value, min: 0, max: 10000000, unit: 'Aurum' });
+  settings.extend('goods', `value_${def.id}`, { label: `Normal value of ${def.name}` + (def.kind === 'good' ? ' (the market price comes back to it; use "god price" to move the price now)' : ''), def: def.value, min: 0, max: 10000000, unit: 'Aurum' });
 }
 const addValueMod = (fn) => valueMods.push(fn);
 
@@ -85,6 +87,7 @@ function sell(group, jid, id, n) {
   const total = each * n;
   take(group, jid, id, n);
   A.add(group, jid, total);
+  for (const fn of tradeHooks) fn(group, id, n);
   return { ok: true, item: it, n, each, total };
 }
 
@@ -95,4 +98,4 @@ A.registerWorth((group, key) => {
   return Object.entries(c.inv).reduce((t, [id, n]) => t + (get(id) ? sellPrice(group, id) * n : 0), 0);
 });
 
-module.exports = { define, addValueMod, get, list, find, valueOf, sellPrice, bag, countOf, used, bagSize, add, take, setCount, sell };
+module.exports = { define, addValueMod, onSell, get, list, find, valueOf, sellPrice, bag, countOf, used, bagSize, add, take, setCount, sell };

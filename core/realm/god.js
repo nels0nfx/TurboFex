@@ -7,6 +7,8 @@ const A = require('./aurum');
 const stuff = require('./stuff');
 const estates = require('./estates');
 const careers = require('./careers');
+const market = require('./market');
+const auction = require('./auction');
 
 settings.register('god', {
   title: 'God',
@@ -161,6 +163,40 @@ function setCareer(group, jid, id) {
 // the goods the realm keeps from the estate tax (the government of a later phase spends them)
 const realmStock = (group) => ({ ...(S.realmOf(group).stock || {}) });
 
+
+// ---- the market and the auctions
+function marketPrice(group, id, value) {
+  const r = market.setPrice(group, id, value);
+  if (r.ok) ledger.log({ action: 'price', realm: group, target: id, detail: `${r.before} → ${r.price}` });
+  return r;
+}
+// an event happens now (id = one of market.EVENTS, or null for a random one)
+function marketEvent(group, id = null) {
+  market.advance(group);
+  const m = market.market(group);
+  const r = market.fire(group, m, id);
+  if (r) ledger.log({ action: 'market event', realm: group, target: r.event.id, detail: r.event.text });
+  return r;
+}
+function marketReset(group) {
+  market.resetMarket(group);
+  ledger.log({ action: 'market reset', realm: group });
+  return { ok: true };
+}
+// "end" = the auction closes now as it stands; "cancel" = everything goes back (the goods and the money of the best bid)
+function auctionEnd(group, id, how) {
+  const a = auction.find(group, id);
+  if (!a) return { ok: false };
+  if (how === 'cancel') {
+    const r = auction.cancel(group, null, id, true);
+    ledger.log({ action: 'auction cancel', realm: group, target: String(id) });
+    return r;
+  }
+  const results = auction.resolve(group, Date.now(), [id]);
+  ledger.log({ action: 'auction end', realm: group, target: String(id) });
+  return { ok: true, results };
+}
+
 // ---- moving the progress of citizens from one realm to another (who = a key, or null for everybody)
 function moveRealm(from, to, who = null, mode = 'move') {
   const moved = [];
@@ -210,4 +246,4 @@ function realmsWithData() {
   return out;
 }
 
-module.exports = { giveStuff, setEstate, setCareer, realmStock, selected, select, setSetting, resetSetting, realmSwitch, give, take, setPurse, setRank, fate, wipeCitizen, wipeRealm, moveRealm, realmsWithData };
+module.exports = { marketPrice, marketEvent, marketReset, auctionEnd, giveStuff, setEstate, setCareer, realmStock, selected, select, setSetting, resetSetting, realmSwitch, give, take, setPurse, setRank, fate, wipeCitizen, wipeRealm, moveRealm, realmsWithData };

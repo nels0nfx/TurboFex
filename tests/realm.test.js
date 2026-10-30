@@ -477,10 +477,10 @@ test('every Empire command is in the Empire category, has a description, and non
   }
   const all = new Set();
   for (const f of fs.readdirSync(path.join(__dirname, '..', 'commands'))) for (const c of [].concat(require(`../commands/${f}`))) { all.add(c.name); (c.aliases || []).forEach((x) => all.add(x)); }
-  for (const old of ['gamble', 'rob', 'throne', 'gov', 'governor', 'invest', 'portfolio', 'heist', 'pet', 'spin', 'bounty', 'ecoboost', 'kingincome', 'ecotransfer', 'luck', 'lottery', 'market', 'predict', 'quests']) assert.ok(!all.has(old), `${old} should be gone`);
+  for (const old of ['gamble', 'rob', 'throne', 'gov', 'governor', 'invest', 'portfolio', 'heist', 'pet', 'spin', 'bounty', 'ecoboost', 'kingincome', 'ecotransfer', 'luck', 'lottery', 'predict', 'quests']) assert.ok(!all.has(old), `${old} should be gone`); // (a new, different "market" came with phase 3)
   for (const nu of ['purse', 'daily', 'profile', 'bank', 'deposit', 'withdraw', 'give', 'wealth', 'shop', 'buy', 'realm', 'god']) assert.ok(all.has(nu), `${nu} should exist`);
 });
 
-test('the version is 0.7.10', () => {
-  assert.strictEqual(require('../package.json').version, '0.7.10');
+test('the version is 0.7.11', () => {
+  assert.strictEqual(require('../package.json').version, '0.7.11');
 });
