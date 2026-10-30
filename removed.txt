@@ -20,7 +20,6 @@ commands/economy4.js
 commands/engage.js
 commands/governor.js
 commands/luck.js
-commands/market.js
 tests/market.test.js
 tests/luck.test.js
 tests/engage.test.js

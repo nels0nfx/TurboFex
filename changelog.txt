@@ -1,3 +1,9 @@
+TurboFex v0.8.2 - the market and herald commands are back
+CHANGED IN 0.8.2
+- FIXED: "market" and "herald" were silent on every bot that updated by itself. removed.txt still listed commands/market.js (the file of the OLD market), so each update installed the new file and then deleted it. The line is gone, and the bot no longer deletes any file that the same update contains. Bots that already updated get the file back with this version
+- NEW test: removed.txt may never list a file the project has, and market, herald, trade and auction must be loaded commands
+- CHANGED: the version is 0.8.2 (the CI badge was removed from the README: the workflow is not used)
+
 TurboFex v0.7.11 - the Empire, phase 3: the Realm Market, the Herald news, trading and auctions
 CHANGED IN 0.7.11
 - NEW the Realm Market ("market", "market grain", "market buy grain 10"): every realm has its own price for Grain, Ore, Iron, Wine and Cloth. A price moves when citizens buy (up) and sell (down), comes back towards the normal value, swings a little by chance, and is hit by events (drought, bumper harvest, mine collapse, new seam, war, peace, festival, fashion, caravan, famine, boom, slump). Prices are worked out when somebody looks (at most 96 updates for a realm nobody looked at) and by the bot for realms with a Herald. Buying costs a little above the price; the extra goes to the realm's treasury. "sell" now pays the market price, and goods in the bag and the rank follow it

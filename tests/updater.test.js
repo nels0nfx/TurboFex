@@ -65,3 +65,24 @@ test('the update is found from the pushed files of the repo, no zip needed', asy
     delete process.env.UPDATE_REPO;
   }
 });
+
+// v0.7.11 shipped commands/market.js while removed.txt still listed it, so every update deleted the new market and herald commands
+test('removed.txt never lists a file that the project contains', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const root = path.join(__dirname, '..');
+  const listed = fs.readFileSync(path.join(root, 'removed.txt'), 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  assert.ok(listed.length > 0);
+  const present = listed.filter((rel) => fs.existsSync(path.join(root, rel)));
+  assert.deepStrictEqual(present, [], 'these files are shipped but also listed as removed');
+});
+test('an update never deletes a file it ships itself, but still removes old files', () => {
+  const { filesToRemove } = require('../core/updater');
+  const text = '# old\ncommands/market.js\ncore/economy.js\n../evil.js\nconfig.js\ndata/x.json\n';
+  assert.deepStrictEqual(filesToRemove(text, new Set(['commands/market.js'])), ['core/economy.js']);
+  assert.deepStrictEqual(filesToRemove(text), ['commands/market.js', 'core/economy.js'], 'without the guard it would delete it');
+});
+test('market, herald, trade and auction are all loaded commands', () => {
+  const { isKnownCommand } = require('../whatsapp/handler');
+  for (const c of ['market', 'herald', 'trade', 'auction']) assert.ok(isKnownCommand(c), c);
+});

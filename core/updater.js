@@ -271,6 +271,18 @@ function validateEntries(entries, prefix) {
   }
 }
 
+// The paths in removed.txt that may be deleted. A path that the update itself contains is never deleted: removed.txt once listed
+// commands/market.js (the old market) and so deleted the NEW market and herald commands on every bot that updated.
+function filesToRemove(text, shipped = new Set()) {
+  const out = [];
+  for (const line of String(text).split(/\r?\n/)) {
+    const rel = line.trim();
+    if (!rel || rel.startsWith('#') || rel.includes('..') || KEEP.has(rel.split('/')[0]) || shipped.has(rel)) continue;
+    out.push(rel);
+  }
+  return out;
+}
+
 async function applyUpdate(info) {
   let buffer = info.buffer;
   if (!buffer) {
@@ -319,12 +331,11 @@ async function applyUpdate(info) {
     files++;
   }
 
-  // files that no longer exist in the new version are listed in removed.txt
+  // files that no longer exist in the new version are listed in removed.txt (never a file that this update ships itself)
   const removedList = entries.find((e) => e.entryName === `${prefix}removed.txt`);
   if (removedList) {
-    for (const line of removedList.getData().toString('utf8').split(/\r?\n/)) {
-      const rel = line.trim();
-      if (!rel || rel.startsWith('#') || rel.includes('..') || KEEP.has(rel.split('/')[0])) continue;
+    const shipped = new Set(entries.filter((e) => !e.isDirectory && e.entryName.startsWith(prefix)).map((e) => e.entryName.slice(prefix.length)));
+    for (const rel of filesToRemove(removedList.getData().toString('utf8'), shipped)) {
       const dest = path.resolve(ROOT, rel);
       if (!dest.startsWith(rootDir) || !fs.existsSync(dest) || fs.statSync(dest).isDirectory()) continue;
       const copy = path.join(rbDir, 'files', rel);
@@ -393,4 +404,4 @@ async function autoUpdateOnStart() {
 }
 
 module.exports = {
-  fromRepoBranch, validateEntries, getLatest, applyUpdate, autoUpdateOnStart, reasonText, isNewer };
+  fromRepoBranch, filesToRemove, validateEntries, getLatest, applyUpdate, autoUpdateOnStart, reasonText, isNewer };

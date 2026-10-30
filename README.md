@@ -1,6 +1,4 @@
-# ⚡ TurboFex v0.7.10
-
-[![CI](https://github.com/nels0nfx/TurboFex/actions/workflows/ci.yml/badge.svg)](https://github.com/nels0nfx/TurboFex/actions/workflows/ci.yml)
+# ⚡ TurboFex v0.8.2
 
 WhatsApp group management and assistant bot by **Nelson Fx** (Trinity Flow). It runs on Node.js with the
 [Baileys](https://github.com/WhiskeySockets/Baileys) library and is built to run for months without attention:

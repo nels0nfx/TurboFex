@@ -481,6 +481,6 @@ test('every Empire command is in the Empire category, has a description, and non
   for (const nu of ['purse', 'daily', 'profile', 'bank', 'deposit', 'withdraw', 'give', 'wealth', 'shop', 'buy', 'realm', 'god']) assert.ok(all.has(nu), `${nu} should exist`);
 });
 
-test('the version is 0.7.11', () => {
-  assert.strictEqual(require('../package.json').version, '0.7.11');
+test('the version is 0.8.2', () => {
+  assert.strictEqual(require('../package.json').version, '0.8.2');
 });
