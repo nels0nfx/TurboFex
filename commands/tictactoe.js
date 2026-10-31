@@ -13,7 +13,7 @@ module.exports = {
 
     if (words[0] === 'end') {
       if (!existing) return reply('ℹ️ There is no game running here.');
-      if (isGroup && !isAdmin && !isOwner && !games.canEnd(existing, myIds)) return reply('⚠️ Only the players or a group admin can end the game.');
+      if (isGroup && !isAdmin && !isOwner && !games.canEnd(existing, myIds)) return; // not allowed: stay silent
       games.end(jid);
       return reply('🛑 Game ended.');
     }

@@ -285,8 +285,10 @@ test('realm off: every command of the Empire stops in that group, only there, an
   const g = newGroup();
   const g2 = newGroup();
   const a = person();
+  const beforeOff = sock.texts().length;
   await say(sock, g, a, '.realm off');
-  assert.match(last(sock), /Only group admins/);
+  assert.strictEqual(sock.texts().length, beforeOff, 'a member who is not an admin gets no answer at all');
+  assert.ok(!/closed/.test(String(last(sock))), 'and the realm stayed open');
   await say(sock, g, OWNER, '.realm off');
   assert.match(last(sock), /realm is closed/);
   for (const c of ['.purse', '.daily', '.profile', '.bank', '.deposit 5', '.give @1 5', '.wealth', '.shop', '.buy charm']) {
@@ -317,8 +319,9 @@ test('God in a group and in a private chat: choose a realm, set rules, change pe
   const g = newGroup();
   const a = person();
   // others cannot use God
+  const beforeGod = sock.texts().length;
   await say(sock, g, a, '.god');
-  assert.match(last(sock), /Only the main bot owner/);
+  assert.strictEqual(sock.texts().length, beforeGod, 'a stranger who tries God gets no answer at all');
   await dm(sock, a, '.purse');
   assert.match(last(sock), /works in groups/);
   // God in a private chat: no realm chosen yet
@@ -481,6 +484,6 @@ test('every Empire command is in the Empire category, has a description, and non
   for (const nu of ['purse', 'daily', 'profile', 'bank', 'deposit', 'withdraw', 'give', 'wealth', 'shop', 'buy', 'realm', 'god']) assert.ok(all.has(nu), `${nu} should exist`);
 });
 
-test('the version is 0.9.1', () => {
-  assert.strictEqual(require('../package.json').version, '0.9.1');
+test('the version is 0.9.2', () => {
+  assert.strictEqual(require('../package.json').version, '0.9.2');
 });

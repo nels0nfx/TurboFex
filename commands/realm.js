@@ -216,7 +216,7 @@ module.exports = [
       const sub = (args[0] || '').toLowerCase();
       if (!group) return reply(isGroup || !isRealOwner ? ui.warn('The Empire works in groups.') : ui.card('☀️', 'Choose a realm first', [], [`\`${prefix}god realm 1\``]));
       if (sub === 'on' || sub === 'off') {
-        if (!isAdmin && !isOwner && !isRealOwner) return reply(ui.warn('Only group admins can open or close the realm.'));
+        if (!isAdmin && !isOwner && !isRealOwner) return; // not allowed: stay silent
         if (sub === 'off') {
           S.setOn(group, false);
           return reply(ui.card('🔒', 'The realm is closed', ['Every command of the Empire, the paid chatting and the bets in games are stopped in this group. Nothing was deleted.'], [`\`${prefix}realm on\` opens it again`]));

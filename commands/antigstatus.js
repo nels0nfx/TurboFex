@@ -12,7 +12,7 @@ module.exports = [
     async run(ctx) {
       await setActionMode(ctx, { key: 'antigstatusMode', label: 'Anti group status', trigger: 'posts a group status' });
       if (store.getGroup(ctx.jid).antigstatusMode !== 'off' && !libraryKnows('groupStatusMessageV2')) {
-        await ctx.reply('⚠️ The WhatsApp library on this server cannot see group statuses yet, so this setting cannot work. The bot owner must update the bot (npm install).');
+        await ctx.reply(ctx.isOwner ? '⚠️ The WhatsApp library on this server cannot see group statuses yet, so this setting cannot work. Run npm install to get the newer library, then restart.' : '⚠️ This protection is saved, but it cannot work on this bot at the moment.');
       }
     },
   },
@@ -25,7 +25,7 @@ module.exports = [
     async run(ctx) {
       await setActionMode(ctx, { key: 'antigmMode', label: 'Anti group mention', trigger: 'mentions this group in a status' });
       if (store.getGroup(ctx.jid).antigmMode !== 'off' && !libraryKnows('groupStatusMentionMessage')) {
-        await ctx.reply('⚠️ The WhatsApp library on this server cannot see group mentions in statuses yet, so this setting cannot work. The bot owner must update the bot (npm install).');
+        await ctx.reply(ctx.isOwner ? '⚠️ The WhatsApp library on this server cannot see group mentions in statuses yet, so this setting cannot work. Run npm install to get the newer library, then restart.' : '⚠️ This protection is saved, but it cannot work on this bot at the moment.');
       }
     },
   },

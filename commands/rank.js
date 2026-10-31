@@ -15,7 +15,7 @@ module.exports = [
     async run({ jid, msg, args, reply, prefix, isAdmin, isOwner, myJid }) {
       const a = (args[0] || '').toLowerCase();
       if (a === 'on' || a === 'off') {
-        if (!isAdmin && !isOwner) return reply('⚠️ Only group admins can switch ranks on or off.');
+        if (!isAdmin && !isOwner) return; // not allowed: stay silent
         store.update(jid, (g) => {
           g.rank = a === 'on';
         });

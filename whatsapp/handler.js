@@ -241,6 +241,12 @@ async function handleMessageInner(sock, msg) {
   // (Commands marked "everyone" - rank, top, rules, report, birthday... - are meant for members, so they work in private mode too.)
   if (store.getMode() === 'private' && !isOwner && !cmd.everyone) return;
 
+  // Restricted commands: anybody who is not allowed to use one gets NO answer at all (no warning, no explanation).
+  // This check comes first, so nothing else (rate limit, "turned off", maintenance, group-only) can answer them either.
+  if (cmd.realOwnerOnly && !isRealOwner) return;
+  if (cmd.ownerOnly && !isOwner) return;
+  if (cmd.adminOnly && !(isAdmin || isOwner)) return;
+
   // Commands an admin switched off in this group (disable), and maintenance mode: only the owner uses the bot
   if (!isOwner && isGroup && store.getGroup(jid).disabled.includes(cmd.name)) return rawReply(`⛔ *The command ${cmd.name} is turned off in this group.*`);
   if (!isOwner && store.getAuto('maintenance')) {
@@ -265,12 +271,9 @@ async function handleMessageInner(sock, msg) {
     }
   }
 
-  if (cmd.groupOnly && !isGroup) return rawReply('⚠️ This command only works in groups.');
-  if (cmd.realOwnerOnly && !isRealOwner) return rawReply('⚠️ Only the main bot owner can use this command.');
-  if (cmd.ownerOnly && !isOwner) return rawReply('⚠️ Only the bot owner can use this command.');
-  if (cmd.adminOnly && !(isAdmin || isOwner)) return rawReply('⚠️ Only group admins can use this command.');
+  if (cmd.groupOnly && !isGroup) return rawReply('⚠️ This command only works in groups. Add me to a group and try it there.');
   if (cmd.botAdminRequired && !isBotAdmin) {
-    return rawReply('⚠️ Please make me a group admin first, then try again.');
+    return rawReply(isAdmin || isOwner ? '⚠️ I need to be a group admin to do that. Please make me an admin, then try again.' : '⚠️ I cannot do that right now. Please ask a group admin to make me an admin first.');
   }
 
   const tStart = Date.now();

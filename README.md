@@ -1,208 +1,116 @@
-# ⚡ TurboFex v0.9.1
+# ⚡ TurboFex v0.9.2
 
-WhatsApp group management and assistant bot by **Nelson Fx** (Trinity Flow). It runs on Node.js with the
-[Baileys](https://github.com/WhiskeySockets/Baileys) library and is built to run for months without attention:
-it reconnects by itself, backs up its login, updates itself safely and protects the server it runs on.
+**TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
+It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and even
+runs a small "Empire" game where every group becomes its own realm with its own money.
 
-> Unofficial bots can get a number banned. Use a spare number for the bot, never your main one.
+<!-- counts: 262 commands, 14 categories -->
+Members can use **262 commands in 14 categories** (the bot owner has even more, such as settings and diagnostics).
+Send `.menu` to see them all.
 
-## Features
-- **300+ commands** in 16 categories (group management incl. ranks and birthdays, security, lookup, status tools, games, media, audio/video/picture editing, budget, tools...). Send `.menu`.
-- **The Empire of Fex (per group):** every group is a realm with its own money (Aurum), ranks, bank and shop. God (the bot owner) sets the limits of everything. See "The Empire of Fex" below.
-- **Link previews:** every message with a link shows the preview card (picture, title, description).
-- **Private by default.** Only the owner can use commands; everybody else gets no reply at all. `.mode public` opens it up.
-- **Formatted replies.** Every command reply uses WhatsApp formatting (bold titles and labels, `▸` bullets, commands in monospace).
-- **Safe in production:** server protection for heavy commands, safe self-update with automatic rollback, daily login backup, write-behind key store for fast replies.
-- **Watchers:** auto view-once, anti-delete and anti-edit (also for the new sealed edits), auto view / like / save for statuses.
-- **Reactions** (⏳ then ✅), **watermark** under results, **sticker credit**, **AFK** that tells each person once.
+> ⚠️ **Please read:** WhatsApp does not officially allow bots, and a number used for a bot can be banned.
+> Use a **spare number** for the bot, never your main one.
 
-## Requirements
-- Node.js **20 or newer**
-- A WhatsApp number for the bot
-- Optional tools (only the commands that need them are affected if missing): `sharp` (pictures), `ffmpeg` (audio/video), `qrcode`
+## What TurboFex can do
 
-## Quick start
-1. Download the **hosting ZIP** from the repo's **Releases** page (the file named `TurboFex-hosting-vX.Y.Z.zip` under *Assets*), upload it to the host's main folder and unarchive it. On a Pterodactyl panel (Spaceify and similar) use the **Files** tab and **Unarchive**. `index.js` must end up directly in the main folder (`/home/container`).
-   - Do **not** use *Code > Download ZIP* or the *Source code (zip)* link: GitHub wraps those in an extra `TurboFex-main` folder, and the host then fails with `Cannot find module '/home/container/index.js'`. If you already did, open the `TurboFex-main` folder, select everything inside it, move it up one level, and delete the empty folder.
-2. Make sure the host runs `npm install`, then start it with `npm start`.
-3. Link the bot with a **session ID** from the pairing site (next section). The console never asks for a number or a pairing code.
-4. Add the bot to a group, make it admin, and send `.ping`.
-
-### Linking the bot (session ID)
-1. Open the **pairing site**, https://turbofex-pair.onrender.com (a bot that is not linked also prints this in the console).
-2. Link your WhatsApp number there (pairing code or QR) and copy the session ID, like `TFX-K7M2-9QXA-4BNP`. The site also sends it to your own WhatsApp chat.
-3. Open the file **`session_id.txt`** in the bot's main folder (the bot creates it for you when it starts without a login) and paste the ID after `SESSION_ID=`. Save it. (The `SESSION_ID` variable of the host works too and wins when both are set. A `config.env` file with the line `SESSION_ID=TFX-...` works as well.)
-4. **Restart** the bot. It downloads the login, saves it in `session/`, and your number becomes the bot's number and its owner.
-
-- A session ID works **once** and expires after **5 minutes**, so paste it and restart right away. After the first start the bot keeps its login, so the ID can stay in the file; an old ID does nothing.
-- To move the bot to **another number**, or after WhatsApp logged it out, link again on the site and paste the **new** ID in `session_id.txt`. The old login is kept in `data/session-previous`.
-- A bot that is not linked prints these steps and waits. It never asks for a number in the console.
-- The old console linking (number question, pairing code or QR in the console) is still there for developers: set `CONSOLE_LINK=1` (and optionally `NUMBER`, `PAIR_METHOD=code|qr`).
-
-### Updating the bot
-Push the new files to the GitHub repo and raise `version` in `package.json`. Bots check on every start (and with `.update`), download the repo from GitHub when the version differs, check it, and restart. No zip file is needed. `.gitignore` should contain `node_modules/`, `session/`, `data/`, `.env`, `config.env` and `session_id.txt`.
-
-## Configuration
-Settings can come from the host's variables or from an optional **`config.env`** file in the main folder (one `KEY=value` per line, `#` for notes, for example `SESSION_ID=TFX-K7M2-9QXA-4BNP`, `PREFIX=.`, `TIMEZONE=Africa/Lagos`). A variable set on the host always wins over the file.
-
-| Setting (`config.js`) | Environment variable | Meaning |
-|---|---|---|
-| `sessionIdFile` | `SESSION_ID` (variable) | The session ID from the pairing site: the file `session_id.txt` (or the variable, which wins) |
-| `pairSiteUrl` | `PAIR_SITE_URL` | Address of the pairing site (built in: https://turbofex-pair.onrender.com) |
-| `number` | `NUMBER` | The bot's number, which is also its owner. Empty = taken from the linked login |
-| `consoleLink` | `CONSOLE_LINK=1` | Old console linking (number question, pairing code or QR). `PAIR_METHOD=code\|qr` only counts with it |
-| `prefix` | `PREFIX` | Command prefix (default `.`; `.setprefix` changes it while running) |
-| `timezone` | `TIMEZONE` | For the menu clock and auto open/close |
-| | `BOT_BROWSER` | Device identity used when linking (`android` can receive view-once files) |
-| | `FAST_KEYS=off` | Turns off the write-behind key store |
-| | `RESTORE_LOGIN=1` | Start once to restore the login from the last backup |
-| | `YTDLP_PATH`, `YTDLP_COOKIES` | Your own yt-dlp binary, a cookies.txt for YouTube |
-| | `PLAY_MAX_MB`, `PLAY_MAX_SECONDS` | Limits for `.play` (default 60 MB / 60 min) |
-| | `DL_MAX_MB`, `DL_MAX_SECONDS` | Limits for `.dl` videos (default 60 MB / 30 min) |
-| | `TURBOFEX_DATA` | Folder for saved data (default `data/`) |
-
-## The Empire of Fex
-Every group is a **realm** with its own citizens, money (**Aurum**) and treasury. It is open in every group by default (admins close it with `.realm off`).
-The Empire is built in phases: the foundation and God (phase 1), careers, estates, goods and crafting (phase 2), the market, the Herald news, trading and auctions (phase 3), the government and the court (phase 4), and society: seasons, festivals, nobility, guilds and dungeons (phase 5).
-
-| Command | What it does |
+| | |
 |---|---|
-| `.daily` | A gift every day, bigger with more days in a row and a higher rank |
-| `.purse` / `.profile` | Your Aurum, bank, net worth and rank / everything about a citizen (`@user` to see another) |
-| `.deposit 500` / `.withdraw all` / `.bank` | The bank pays interest every day (the space is limited; a Merchant's Satchel adds more) |
-| `.give @user 100` | Give Aurum (a small fee goes to the realm's treasury) |
-| `.wealth` | The richest citizens of the realm |
-| `.shop` / `.buy charm` | Fortune Charm (more pay), Merchant's Satchel (bigger bank), titles |
-| `.realm` / `.realm guide` / `.realm off` / `.realm on` | The realm itself; admins open and close it |
+| 👥 **Group management** | Welcome and goodbye messages, rules, warnings, kick / promote / demote, open and close the group, tag everyone, polls, giveaways, scheduled messages, birthdays, and chat levels (`.rank`, `.top`). |
+| 🛡️ **Protection** | Anti-link, banned words, anti-spam, anti-bot, anti-raid, slow mode, verification questions for new members. All of them are **off until an admin switches them on**. |
+| ⚜️ **Empire of Fex** | A game inside every group: earn Aurum (the money), choose a career, own estates, craft goods, trade, bid at auctions, hold elections, join guilds and enter dungeons. Start with `.daily`. |
+| 🎮 **Games and fun** | Wordle, hangman, trivia, tic-tac-toe, connect four, slots, riddles, quizzes, jokes, truth or dare, and more. |
+| 🧰 **Tools and lookups** | Weather, dictionary, Wikipedia, currency, translation, QR codes, calculator, reminders, notes and to-dos. |
+| 🎨 **Media** | Stickers, picture editing, audio and video effects, and downloads (`.play`, `.dl`). Some of these need extra tools on the computer or host that runs the bot; if one is missing, the bot says the feature is not available. |
 
-Ranks (by net worth, goods and estates count too): Commoner, Citizen, Merchant, Noble, Lord. A higher rank pays more, opens better careers and estates, allows more estates and gives a bigger bag. Chatting earns a little Aurum too.
+The exact list is always in `.menu` and `.list`; they are built from the commands your version really has.
 
-### Careers, estates and crafting
-| Command | What it does |
-|---|---|
-| `.career` / `.career farmer` / `.career quit` | Choose a profession: Farmer, Miner, Scribe, Guard, Smith, Healer (the better ones need a higher rank) |
-| `.work` | Work for Aurum and goods. Levels, tools (`.buy hoe`), meals and the first work of the day pay more |
-| `.weekly` | A big bonus once a week |
-| `.estates` / `.estates buy farm` / `upgrade` / `sell` | Farm, Mine, Weaver's Hut, Tavern and Forge make goods while you are away |
-| `.collect` | Take what your estates made (the realm keeps a tax, kept in its granary) |
-| `.inventory` | Your bag: goods, items, tools, and how much it is worth |
-| `.recipes` / `.craft bread 3` | The workbench: bread, tonic, tunic, sword and tools made from goods |
-| `.sell grain 10` / `.sell all` | Sell to the realm (the market of a later phase will move prices) |
-| `.use bread` / `.use tonic` | A meal pays more for a few hours; a tonic skips the waiting of your next work |
+## Get started
 
-### The market, the Herald, trading and auctions
-Goods (Grain, Ore, Iron, Wine, Cloth) have a price in every realm. It moves when citizens buy and sell, comes back towards the normal value, has a small random swing, and is hit by events (a drought, a new seam, a war...). Prices are worked out when somebody looks and by the bot for realms that switched the Herald on.
+You need a WhatsApp number for the bot and a place where the bot can keep running (a hosting panel or a computer that stays on).
 
-| Command | What it does |
-|---|---|
-| `.market` / `.market grain` | The prices (🟢 cheap, 🔴 dear), the change of the last day, what you hold; one good in detail |
-| `.market buy grain 10` | Buy from the realm (a little above the price; the extra goes to the treasury) |
-| `.sell grain 10` / `.sell all` | Sell to the realm at the price now (selling pushes the price down) |
-| `.herald` | The Realm Herald: prices, breaking news, who is affected. `.herald on` / `.herald off` (admins) post it in the group after every price update (about every 30 minutes). People who hold a good that moved, or own the estate that makes it, are tagged |
-| `.trade @user grain 20 150` | Offer 20 Grain for 150 Aurum. The other citizen sends `.trade accept` or `.trade decline`. `.trade list`, `.trade cancel` |
-| `.auction` / `.auction sell sword 1 200` / `.auction bid 3 250` | Auctions: the best bid wins when the time is over (the realm keeps a cut). `.auction info 3`, `.auction cancel 3` |
+1. **Get the bot.** Download the *hosting ZIP* (`TurboFex-hosting-...zip`) from the **Releases** page of https://github.com/nels0nfx/TurboFex and upload it to your host.
+   Do not use the green *Code > Download ZIP* button: it adds an extra folder and the host cannot start the bot.
+2. **Start the bot.** The first time, it tells you it is not linked to WhatsApp yet and creates a file called `session_id.txt`.
+3. **Link your WhatsApp.** Open the pairing site **https://turbofex-pair.onrender.com** and follow its steps. In WhatsApp go to
+   *Linked devices > Link a device*. If the pairing code is not accepted, use the **QR code** option. When it finishes, the site gives you a **session ID** that looks like `TFX-K7M2-9QXA-4BNP`.
+4. **Give the ID to the bot.** Open `session_id.txt`, paste the ID after `SESSION_ID=`, save, and **restart the bot straight away**.
+5. **Try it.** Add the bot to a group, make it a group admin, and send **`.ping`**, then **`.help`**.
 
-God controls: `.god price grain 12`, `.god event [name|list]`, `.god herald`, `.god market reset confirm`, `.god auction end|cancel <number>`. Every number (update time, swing, how fast prices come back, how far trades move them, the lowest and highest price, the buying markup, event chance and strength, the Herald's tags, the trade fee and time, the auction time, cut, minimum raise and limits) is a setting: `.god settings market`, `herald`, `trade`, `auction`.
+Good to know about the session ID:
+- It works **once** and **expires after 5 minutes**, so paste it and restart right away. If it expired, just link again on the site and use the new ID.
+- After the first successful start the bot keeps its login, so you do not need the ID again.
+- The pairing site runs on a free host and can take up to a minute to wake up.
+- Never share your session ID or pairing code with anyone.
 
-### The government and the court (phase 4)
-A realm with no Sovereign can hold an **election**; the winner rules for a term and appoints a **Treasurer**, a **Marshal** and a **Steward**. The Treasurer sets the income tax and spends the treasury, the Marshal jails, the Steward and the Sovereign pass laws, and the citizens can call for a **referendum** or an **impeachment**. Citizens can also **sue** each other: a jury of citizens votes. A prisoner cannot work, collect, trade, auction or claim the daily gift.
-
-| Command | What it does |
-|---|---|
-| `.government` | The Sovereign, the officers, the tax, the treasury, the laws and what is going on |
-| `.election` / `.election start` / `.stand` / `.vote @user` | Choose a Sovereign (standing costs a fee that goes to the treasury) |
-| `.appoint treasurer @user` / `.dismiss marshal` / `.decree text` / `.salary` | The Sovereign's work; the rulers claim a daily salary from the treasury |
-| `.tax` / `.tax 5` | Income tax on the daily gift, work and the weekly bonus (the Treasurer sets it, God limits it) |
-| `.treasury` / `.treasury grant @user 100` / `.treasury relief 500` / `.treasury log` | The treasury and what the Treasurer may spend each day |
-| `.law` / `.law festival` / `.referendum prosperity` / `.referendum yes` | Laws (festival, trade holiday, harvest decree, amnesty; big laws like the Age of Prosperity and the Royal Levy need the citizens' vote) |
-| `.impeach` / `.impeach yes` | Citizens sign a petition, then vote to remove the Sovereign |
-| `.jail` / `.jail @user 30` / `.pardon @user` | The Marshal jails, the Sovereign pardons |
-| `.court` / `.sue @user reason` / `.court guilty 3` / `.court innocent 3` | The court: a fine for the treasury and some jail time when the jury says guilty |
-
-### Society (phase 5)
-| Command | What it does |
-|---|---|
-| `.season` / `.season hall` | The season leaderboard (points from the daily gift, work, guilds, dungeons). The best three win Aurum, the first becomes Champion. Summer pays a little more, Autumn gives estates a bigger harvest |
-| `.festival` | The realm celebrates every few days: everybody earns more for some hours |
-| `.nobility` / `.ennoble @user baron` / `.disgrace @user` | Knights, Barons, Counts and Dukes: the Sovereign gives titles (the treasury pays), seats are limited, a noble earns a little more |
-| `.guild` / `.guild create Name` / `.guild invite @user` / `.guild join Name` / `.guild deposit 100` / `.guild upgrade` / `.guild top` | Guilds with a bank and levels; every member earns a bonus |
-| `.dungeon` / `.dungeon open crypt` / `.dungeon join` | A party goes into a dungeon: a bigger party has better odds; a win shares Aurum and goods |
-
-God controls for all of it: `.god crown|dethrone|officer|election|law|jail|pardon|treasury|tax|court|title|festival|season|guild|dungeon|clearstate` (send `.god` for the list). Every number and every switch is a setting: `.god settings government`, `court`, `season`, `festival`, `nobility`, `guild`, `dungeon`. In a private chat choose the realm first with `.god realm N`.
-
-### God (the bot owner)
-God does not rule the realms. God sets the limits and can change anything that exists, in a group or in a private chat.
-Every feature has an on/off switch and every number has a safe minimum and maximum. Every change is written in the ledger.
-
-| Command | What it does |
-|---|---|
-| `.god` | The list of everything God can do |
-| `.god settings` / `.god settings core` | All features / the numbers of one feature |
-| `.god set core.dailyBase 400` / `... here` | Change a number for all realms / for one realm only (`reset` puts it back) |
-| `.god off shop here` / `.god on shop` | Switch a whole feature |
-| `.god give @user 500`, `take`, `purse`, `rank @user lord`, `bless @user 50 12`, `curse` | Change citizens |
-| `.god price grain 12`, `.god event drought`, `.god herald`, `.god auction end 3` | Move a price, start a market event, post the Herald now, close or cancel an auction |
-| `.god item @user bread 5`, `.god estate @user farm 3`, `.god career @user smith`, `.god stock` | Give or take goods, set an estate or a career, see the realm's granary |
-| `.god wipe @user confirm`, `.god wipe realm confirm` | Delete a citizen or a whole realm |
-| `.god realm 2` | In a private chat: choose the realm every Empire command works on |
-| `.god realm off` / `.god realm on all` | Close or open one realm or all of them |
-| `.god move 1 to 2 [number] [copy]` | Move the progress of citizens from one realm to another |
-| `.god ledger` | What God changed lately |
+The number you link becomes the bot's number **and its owner**.
 
 ## Using the bot
-- `.menu` shows the categories (alphabetical). `.menu group` shows one category, `.menu kick` shows help for one command, `.list` shows everything with descriptions.
-- Anti-link, anti-word, anti-spam, anti-fake, welcome and goodbye are OFF by default and are turned on per group. The bot must be a group admin to delete messages, remove people and change group settings.
-- Auto-replies, AFK notices, protections and running games still work in private mode; they are not commands.
-- **AFK:** `.afk on lunch` stays on until `.afk off`. Everybody who writes to you or mentions you is told once per AFK session.
-- **Reactions:** `.cmdreact on|smart|clean|off` (`smart` = only slow commands).
-- **Watermark:** `.watermark on|off|text ...`, added under the result of media, audio, video and editor commands.
-- **Sticker credit:** `.stickerpack My Pack | My Name` (default: bot name by Nelson Fx).
-- **Status tools:** `.autoviewstatus on`, `.autolikestatus on`, `.statusemoji`, `.statusdelay`, `.statuslimit 200`, `.statusinfo`. WhatsApp only delivers the statuses of people saved as contacts on the bot's phone.
-- **Watchers:** `.autoviewonce`, `.antidelete`, `.antiedit` plus `.viewoncejid`, `.deletejid`, `.editjid` for where copies go. `.vv` opens a view-once you reply to. Anti-edit and anti-delete only know messages the bot saw before they changed. Use these only for messages that were sent to you.
-- **Security:** `.ratelimit 20` (commands per person per minute), `.anticall reject|block`, `.privacy` (bot account privacy), `.antipromote on` / `.antidemote on` (undo promotions and demotions made by anyone except the group creator and the bot owner, the bot must be admin), `.antimedia sticker on` (block stickers, images, videos, audio or documents), `.slowmode 10` (seconds between messages of a member).
-- **Community:** `.rules` / `.setrules`, `.report <why>` (reply to a message: tags the admins), `.rank on` then `.rank` and `.top` (XP and levels for chatting), `.giveaway 2 prize`, `.setbirthday 25 Dec` and `.birthday on` (wishes at 08:00), `.feedback <message>` (to the owner, 3 a day per person).
-- **Lookup:** `.weather <city>`, `.define <word>`, `.wiki <topic>`, `.currency 100 usd ngn`, `.translate fr <text>`. They use free public services (Open-Meteo, dictionaryapi.dev, Wikipedia, exchangerate-api.com, MyMemory) which can be slow or limit use.
-- **Media and tools:** `.dl <link or name>` (video, up to 720p), `.take My Pack | Me` (new credit on a sticker), `.attp <text>` (text sticker), `.setgpp` (group picture), `.note` and `.todo` (private, in a private chat).
-- **Owner:** `.stats` (usage and last errors), `.broadcast <text>` then `.broadcast confirm` (all groups, slowly, 100 at most), `.linkpreview on|off|test <link>`.
-- **play:** `.play <name or link>` always sends audio (YouTube, TikTok, SoundCloud, Instagram and most other sites, through yt-dlp, downloaded automatically on first use). If YouTube blocks the server, send a `cookies.txt` with `.ytcookies`. Only download content you have the right to.
-- **Server protection:** heavy commands are blocked with a clear message when a tool is missing, memory is low, the server is overloaded or too many run at once. `.server` shows the state, `.server guard off` disables it.
 
-## Operating the bot
-### Updates
-- `.update` checks, `.update now` installs and restarts, and the bot checks at start (`.autoupdate off` to stop). After an update you get an "update complete" message; after a restart an "I am back" message with a short menu (`.restartmsg off` to silence restarts).
-- A downloaded update is **validated before any file is replaced** (every file must compile, required files must exist, `package.json` must be valid). A broken zip is rejected and nothing changes.
-- If a valid update still crashes the bot at start, the previous version is put back automatically.
-- `config.js`, `session/` and `data/` are never touched by updates.
+Every command starts with a symbol, called the *prefix*. The default is a dot: `.ping`.
 
-### Backups and cleanup
-- A copy of the login is made a few minutes after connecting and then daily (last 3 kept) in `data/session-backup/`. It is never sent over WhatsApp. `.loginbackup` lists the copies, `.loginbackup now` makes one.
-- If `session/` has files but `creds.json` is damaged, the last backup is restored at start. An empty `session/` means "link a fresh device". To restore on purpose start once with `RESTORE_LOGIN=1`. After WhatsApp logs the bot out the copies are deleted.
-- Once a month encryption files of chats silent for 90+ days are removed (`.sessionclean` runs it now). The login itself is never touched.
-- `.backup` saves the bot's settings.
+| Send | What you get |
+|---|---|
+| `.help` | A short guide for beginners |
+| `.menu` | All commands, by category |
+| `.menu group` | One category with a description of each command |
+| `.menu kick` | Help for one command: who can use it and where |
+| `.list` | Every command with its description |
 
-### Troubleshooting
-- Lots of `Bad MAC` lines, "Waiting for this message", or the bot stops answering: send `.repair` (clears chat sessions, you stay logged in). Make sure the number is linked to only ONE running bot.
-- `.status` shows version, library version, loaded commands, watcher counters and problems. `.statusinfo` shows status counters and the like route.
-- View-once files arrive empty on linked devices. Reply to them with `.vv`.
+If you leave something out, the bot tells you what is missing and shows an example. For instance, `.weather` alone explains that it
+needs a city and shows `.weather Lagos`.
 
-## Security
-- **`session/` and `data/` hold the bot's login and private data. Never commit or share them.** The included `.gitignore` excludes them.
-- Owner commands (`.block`, `.update`, `.restart`, `.loginbackup`...) are limited to the owner number; destructive ones to the main owner only.
-- Update notes and links come from `update.json` (the repo to update from). Point it to your own repository if you fork this project.
-- The bot only fetches PUBLIC web addresses (link previews, downloads, lookups): private, local and cloud-metadata addresses are refused, also after redirects.
-- The bot name is part of the code: it cannot be changed from a panel setting, and editing `core/brand.js` stops the bot from starting.
+### Who can use what
 
-## Development
-```
-npm test        # unit tests (no network, no WhatsApp, no install needed)
-```
-- `index.js` supervises `core/boot.js`; `whatsapp/` holds the connection, handler and features; `commands/` has one file per command (or a list of related ones); `core/` holds shared services (updater, backup, capacity guard...); `tests/` has the tests, which also run on every push (GitHub Actions).
-- A command is `{ name, aliases?, category, description, run(ctx) }`. Optional: `ownerOnly`, `realOwnerOnly`, `adminOnly`, `groupOnly`, `botAdminRequired`, `slow`, `weight: 'light'|'medium'|'heavy'`, `needs: [...]`, `format: false`, `noReact`, `watermark`. The tests check names, aliases (no duplicates), categories and descriptions.
-- Replies are formatted automatically (see `whatsapp/format.js`); write plain text and it comes out formatted, or write your own WhatsApp formatting and it is left alone.
-- **Publishing an update:** bump `version` in `package.json`, add notes at the top of `changelog.txt`, run `npm test`, then upload the new `turbofex-latest.zip` to the main page of the GitHub repo. Every bot picks it up on its next check or restart.
+- **Everyone** can use general commands, games and tools (when the bot is in *public* mode, see below).
+- **Group admins** can use the group management commands (kick, warn, open, close, welcome and so on). The bot itself must be a group admin to remove people, delete messages or change group settings.
+- **The bot owner** has extra commands for settings and for looking after the bot.
+- If you are **not allowed** to use a command, the bot simply **does not answer**. It will not tell you why.
 
-## Community and support
+### Public and private mode
+
+- **Private mode (the default):** only the owner can use commands. Everybody else gets no reply to commands, with a few exceptions made for members
+  (the Empire of Fex commands, `.rank`, `.top`, `.rules`, `.report`, `.birthday`, `.feedback`, `.roast`). Group protections, running games and auto-replies still work.
+- **Public mode:** everybody can use the commands they are allowed to. The owner switches with `.mode public` or `.mode private`.
+
+## Good things to know
+
+- **Protections are off by default.** Admins switch them on one by one, for example `.antilink delete` or `.welcome on`.
+- **The bot must be an admin** for anything that changes the group.
+- **Link previews:** when the bot sends a message with a link, it tries to add a preview card (picture, title, description).
+  It depends on the website giving that information and on being quick enough, so some links will not show one. The owner can turn it off with `.linkpreview off`.
+- **Statuses:** WhatsApp only gives the bot the statuses of people saved as contacts on the bot's phone.
+- **Anti-delete, anti-edit and view-once saving** can only save messages the bot saw before they changed, and should only be used for messages sent to you.
+- **Lookups** (weather, dictionary, Wikipedia, currency, translation) use free public services, which can be slow or busy. If one does not answer, try again in a moment.
+- **Downloads:** only download content you have the right to.
+- **Backups:** while the bot is running it keeps a copy of its WhatsApp login every day (the last 3 copies) in its own `data` folder, and it can restore from them if the login file is damaged. These copies are never sent over WhatsApp.
+- **Reconnecting and updates:** if the connection drops, the bot tries to reconnect by itself. When it starts, it checks for a new version, and if an update breaks it at start-up, the previous version is put back.
+  This is not a promise that it never stops: the host, your internet and WhatsApp itself can all interrupt it.
+
+## The Empire of Fex in short
+
+Every group is a realm with its own money (**Aurum**). Nothing is shared between groups.
+
+| Command | What it does |
+|---|---|
+| `.daily` | A gift every day, bigger when you come back several days in a row |
+| `.purse` / `.profile` | Your Aurum and rank / everything about a citizen |
+| `.career` and `.work` | Choose a profession and work for Aurum and goods |
+| `.estates` and `.collect` | Own a farm, mine or tavern that makes goods while you are away |
+| `.market`, `.sell`, `.trade`, `.auction` | Buy and sell goods, trade with others, bid at auctions |
+| `.election`, `.law`, `.court` | Choose a ruler, pass laws, take someone to court |
+| `.guild` and `.dungeon` | Join a guild, go into a dungeon with a party |
+| `.realm guide` | A guide to the whole game |
+
+Group admins can close the Empire in their group with `.realm off` and open it again with `.realm on`.
+
+## Help and community
+
 - 💬 Support group (Telegram): https://t.me/+7PwU2Vo9czE1NTRk
 - 📣 Telegram channel: https://t.me/+e89lCBU2wLpjNWNk
 - 🟢 WhatsApp channel: https://whatsapp.com/channel/0029VbDpuKM8qIzkoQscOE2w
-- 💻 GitHub: https://github.com/nels0nfx/TurboFex
+- 💻 Source code and releases: https://github.com/nels0nfx/TurboFex
+
+Developers and AI assistants: see [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) for how the project is built, and [`AGENTS.md`](AGENTS.md) for how it is released.
+
+---
+TurboFex is made by Nelson Fx (Trinity Flow). Released under the MIT license.

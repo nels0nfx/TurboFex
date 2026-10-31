@@ -33,7 +33,7 @@ module.exports = [
       const a = (args[0] || '').toLowerCase();
       if (!isGroup) return reply(`Save your own birthday with ${prefix}setbirthday 25 Dec. Use ${prefix}birthday in a group to see the upcoming ones.`);
       if (a === 'on' || a === 'off') {
-        if (!isAdmin && !isOwner) return reply('⚠️ Only group admins can switch birthday wishes on or off.');
+        if (!isAdmin && !isOwner) return; // not allowed: stay silent
         store.update(jid, (g) => {
           g.birthdays = a === 'on';
         });

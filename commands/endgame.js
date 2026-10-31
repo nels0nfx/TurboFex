@@ -8,9 +8,7 @@ module.exports = {
   async run({ jid, reply, myIds, isGroup, isAdmin, isOwner }) {
     const game = games.get(jid);
     if (!game) return reply('ℹ️ There is no game running here.');
-    if (isGroup && !isAdmin && !isOwner && !games.canEnd(game, myIds)) {
-      return reply('⚠️ Only the person who started the game, or a group admin, can end it.');
-    }
+    if (isGroup && !isAdmin && !isOwner && !games.canEnd(game, myIds)) return; // not allowed: stay silent
     games.end(jid);
     await reply('🛑 Game ended.');
   },

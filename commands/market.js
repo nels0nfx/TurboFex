@@ -80,7 +80,7 @@ module.exports = [
     async run({ args, reply, prefix, isAdmin, isOwner, isRealOwner }, { group }) {
       const sub = (args[0] || '').toLowerCase();
       if (sub === 'on' || sub === 'off') {
-        if (!isAdmin && !isOwner && !isRealOwner) return reply(ui.warn('Only group admins can switch the Herald.'));
+        if (!isAdmin && !isOwner && !isRealOwner) return; // not allowed: stay silent
         market.setHerald(group, sub === 'on');
         const every = settings.get('market.tickMinutes', group);
         return reply(sub === 'on' ? ui.card('📰', 'The Herald is on', [`The news of the market is posted here after every price update (about every ${every} minutes). People who own a good that moved are tagged.`], [`\`${prefix}herald off\` stops it`]) : ui.card('📰', 'The Herald is off', ['No more news is posted. You can still read it with the herald command.']));

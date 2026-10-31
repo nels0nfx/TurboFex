@@ -5,7 +5,7 @@ module.exports = {
   category: 'tools',
   description: 'Remove a scheduled message: unschedule 3',
   async run({ jid, args, reply, prefix, isGroup, isAdmin, isOwner }) {
-    if (isGroup && !(isAdmin || isOwner)) return reply('⚠️ Only group admins can remove scheduled messages.');
+    if (isGroup && !(isAdmin || isOwner)) return; // not allowed: stay silent
     const id = parseInt(args[0], 10);
     if (!Number.isInteger(id)) return reply(`Which one? See ${prefix}schedules for the numbers.\nExample: ${prefix}unschedule 3`);
     const item = store.schedules().find((s) => s.id === id && s.jid === jid);

@@ -86,7 +86,7 @@ test('schedule: only the owner can schedule a command, admins can schedule text'
   sent.length = 0;
   await handler.handleMessage(sock, msg('27811111111@s.whatsapp.net', '.schedule daily 07:00 run ping'));
   await settle();
-  assert.ok(texts().some((t) => /Only the bot owner can schedule a command/.test(t)));
+  assert.strictEqual(texts().length, 0, 'a member who tries to schedule a command gets no answer at all');
   const before = store.schedules().length;
   await handler.handleMessage(sock, msg(OWNER, '.schedule weekdays 07:00 run ping'));
   await settle();

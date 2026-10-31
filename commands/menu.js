@@ -23,8 +23,7 @@ function block(section, lines) {
 module.exports = {
   name: 'menu',
   category: 'general',
-  aliases: ['help'],
-  description: 'Show the command menu (try: menu group, or menu kick)',
+  description: 'Show the command menu (try: menu group, or menu kick for help with one command)',
   async run({ reply, commandList, prefix, args, isOwner, isAdmin }) {
     const sections = groupByCategory(commandList, isOwner);
     const all = sections.flatMap((s) => s.cmds);

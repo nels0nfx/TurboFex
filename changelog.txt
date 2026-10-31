@@ -1,8 +1,22 @@
+TurboFex v0.9.2 - public product cleanup: silent permissions, clean ping and help, honest README, project guide
+CHANGED IN 0.9.2
+- CHANGED restricted commands are SILENT: a person who may not use an owner-only, admin-only or main-owner command gets no reply at all (no warning, no explanation, no "slow down"). The check now happens before the rate limit, the "turned off" notice, the maintenance notice and the "groups only" notice. The same for the restricted parts inside commands (rank, herald, realm on/off, delete, schedule, filter, stop, unschedule, birthday on/off, antipromote/antidemote, endgame, locked promote/demote)
+- CHANGED .ping shows one clear number ("Response time") instead of the bot / WhatsApp split. The split is written to the console for the owner, and .status still shows the average and slowest times
+- NEW .help is a short friendly guide for beginners (how to use commands, how to find them, what to try first, tips for admins and the owner). .menu keeps the full list; .menu <command> shows help for one command
+- FIXED antigstatus / antigm no longer tell group admins to run npm install; only the owner sees the technical hint
+- FIXED the "needs a group admin" notice no longer tells a plain member to do something only an admin can do
+- NEW PROJECT_GUIDE.md: architecture, files, pairing, commands, permissions, data, configuration, testing, deployment, known limitations and rules for future AI assistants
+- NEW README.md rewritten for ordinary users. It no longer claims "300+ commands in 16 categories" (members can use 262 commands in 14 categories, checked by a test), "every message with a link shows a preview", "every command reply is formatted", or "runs for months without attention". Developer setup moved to PROJECT_GUIDE.md
+- CHECKED the session ID expiry: everything says "works once, expires after 5 minutes" (README, AGENTS.md, the generated session_id.txt, the console help, and the pairing site page). A test now guards the wording
+- TESTS new tests/v092.test.js; six older tests that expected "Only admins can..." replies now expect silence
+- STILL NEEDS A REAL WHATSAPP TEST: silence for members in a real group, .ping and .help on a phone, pairing with the QR code and with the pairing code, a link preview, one media command, one restart
+
 TurboFex v0.9.1 - hosting and session ID fixes
 CHANGED IN 0.9.1
 - NEW optional config.env file in the main folder (SESSION_ID=..., PREFIX=..., TIMEZONE=...): the same idea as other WhatsApp bots. A variable set on the host always wins over the file, and updates never touch it
 - FIXED the session ID wording: an ID from the pairing site works once and expires after 5 minutes (the bot said 24 hours)
 - NEW the README tells people to download the hosting ZIP from the Releases page, not Code > Download ZIP (that one adds a TurboFex-main folder and the host cannot find index.js)
+- NEW AGENTS.md: a project guide (how the owner pushes from Termux, how a release is made, why the green Download ZIP button fails on hosts, how the session ID and the pairing site work)
 
 TurboFex v0.9.0 - the Empire, phases 4 and 5: the government, the court, seasons, festivals, nobility, guilds and dungeons
 CHANGED IN 0.9.0

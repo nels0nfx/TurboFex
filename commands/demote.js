@@ -10,7 +10,7 @@ module.exports = {
   botAdminRequired: true,
   run: (ctx) => {
     // with antidemote on, only the bot owner can demote through the bot
-    if (store.getGroup(ctx.jid).antidemote && !ctx.isOwner) return ctx.reply('🛡️ Demoting is locked in this group (antidemote is on).');
+    if (store.getGroup(ctx.jid).antidemote && !ctx.isOwner) return; // locked for everybody but the owner: stay silent
     return changeMembers(ctx, 'demote', 'Demoted');
   },
 };

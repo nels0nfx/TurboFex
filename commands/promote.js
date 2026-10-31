@@ -10,7 +10,7 @@ module.exports = {
   botAdminRequired: true,
   run: (ctx) => {
     // with antipromote on, only the bot owner can promote through the bot
-    if (store.getGroup(ctx.jid).antipromote && !ctx.isOwner) return ctx.reply('🛡️ Promoting is locked in this group (antipromote is on).');
+    if (store.getGroup(ctx.jid).antipromote && !ctx.isOwner) return; // locked for everybody but the owner: stay silent
     return changeMembers(ctx, 'promote', 'Promoted to admin');
   },
 };

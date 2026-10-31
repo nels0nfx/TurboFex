@@ -311,7 +311,7 @@ test('games: members cannot start one, admins can, everybody joins', async () =>
       await say(M, `.${game}`); // a member
       await settle();
       assert.ok(!games.get(G2), `${mode}: a member cannot start ${game}`);
-      assert.ok(mode === 'private' || texts().some((t) => /Only group admins/.test(t)), `${mode}: ${game} tells the member why`);
+      assert.strictEqual(texts().filter((t) => !/Game on|Starting in/.test(t)).length, 0, `${mode}: ${game} - a member who may not start it gets no answer at all`);
       await say(OWNER, `.${game}`); // an admin
       await settle();
       assert.strictEqual(games.get(G2)?.phase, 'lobby', `${mode}: an admin starts ${game}`);

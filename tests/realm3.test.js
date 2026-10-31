@@ -457,8 +457,10 @@ test('commands: market, market grain, market buy, sell, herald', async () => {
   await say(sock, g, a, '.herald');
   assert.match(last(sock), /Realm Herald/);
   assert.match(last(sock), /herald on/);
+  const beforeHerald = sock.texts().length;
   await say(sock, g, a, '.herald on');
-  assert.match(last(sock), /Only group admins/);
+  assert.strictEqual(sock.texts().length, beforeHerald, 'a member who is not an admin gets no answer at all');
+  assert.strictEqual(market.heraldOn(g), false, 'and the Herald stayed off');
   await say(sock, g, OWNER, '.herald on');
   assert.match(last(sock), /Herald is on/);
   assert.strictEqual(market.heraldOn(g), true);
@@ -596,8 +598,9 @@ test('God: set a price, start an event, post the Herald, reset the market, end o
   assert.match(last(sock), /market event/);
   assert.match(last(sock), /auction/);
   // others cannot
+  const beforeGod = sock.texts().length;
   await say(sock, g, a, '.god price grain 1');
-  assert.match(last(sock), /Only the main bot owner/);
+  assert.strictEqual(sock.texts().length, beforeGod, 'a stranger who tries God gets no answer at all');
 });
 
 test('God can see and change every number of the market, the Herald, trading and auctions', async () => {

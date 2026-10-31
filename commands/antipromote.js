@@ -14,7 +14,7 @@ module.exports = {
       return reply(`*Anti-promote:* ${g.antipromote ? 'ON' : 'OFF'}\n▸ Nobody else can make new admins: it is undone at once.\n▸ \`${prefix}antipromote on\` / \`${prefix}antipromote off\`\n_Needs the bot to be an admin. Only the group creator and the bot owner can switch it._`);
     }
     // an admin must not be able to switch off the protection that stops admins from being removed
-    if (!isOwner && !isCreator(groupMetadata, myJid)) return reply('⚠️ Only the group creator or the bot owner can change this protection.');
+    if (!isOwner && !isCreator(groupMetadata, myJid)) return; // not allowed: stay silent
     store.update(jid, (x) => {
       x.antipromote = a === 'on';
     });

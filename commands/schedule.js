@@ -31,7 +31,7 @@ module.exports = {
   category: 'tools',
   description: 'Send a message or run a command at a time, once or repeating: schedule weekdays 07:30 Good morning',
   async run({ jid, rest, reply, prefix, isGroup, isAdmin, isOwner }) {
-    if (isGroup && !(isAdmin || isOwner)) return reply('⚠️ Only group admins can schedule messages.');
+    if (isGroup && !(isAdmin || isOwner)) return; // not allowed: stay silent
     if (!rest.trim()) return reply(HELP(prefix));
     const { isKnownCommand } = require('../whatsapp/handler'); // loaded late: the handler loads this file
 
@@ -47,7 +47,7 @@ module.exports = {
     if (run && !cmd) return reply(`⚠️ "${run[1]}" is not a command I know. See ${prefix}menu.`);
     if (cmd) {
       // a scheduled command runs with the owner's rights, so only the owner can set one
-      if (!isOwner) return reply('⚠️ Only the bot owner can schedule a command. Admins can schedule messages.');
+      if (!isOwner) return; // not allowed: stay silent
       if (/^(schedule|unschedule|restart|update|relink|backup|broadcast)\b/i.test(cmd)) return reply('⚠️ That command cannot be scheduled.');
       text = `${prefix}${cmd}`;
     }

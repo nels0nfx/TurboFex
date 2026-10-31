@@ -7,7 +7,7 @@ module.exports = {
   aliases: ['unfilter'],
   description: 'Remove an auto-reply from this chat: stop hello (group admins in groups)',
   async run(ctx) {
-    if (ctx.isGroup && !(ctx.isAdmin || ctx.isOwner)) return ctx.reply('⚠️ Only group admins can remove auto-replies in a group.');
+    if (ctx.isGroup && !(ctx.isAdmin || ctx.isOwner)) return; // not allowed: stay silent
     return removeFilter(ctx, store.getGroup(ctx.jid).filters, () => store.update(ctx.jid, () => {}));
   },
 };
