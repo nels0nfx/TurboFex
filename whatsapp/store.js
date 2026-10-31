@@ -214,7 +214,7 @@ function setAuto(key, value) {
 }
 
 // API keys the owner gave the bot with the setapi command (an environment variable still works too)
-const API_ENV = { removebg: 'REMOVEBG_API_KEY', ocr: 'OCR_API_KEY', musixmatch: 'MUSIXMATCH_API_KEY', gemini: 'GEMINI_API_KEY' };
+const API_ENV = { removebg: 'REMOVEBG_API_KEY', ocr: 'OCR_API_KEY', musixmatch: 'MUSIXMATCH_API_KEY', gemini: 'GEMINI_API_KEY', groq: 'GROQ_API_KEY', pollinations: 'POLLINATIONS_API_KEY' };
 const getApiKey = (name) => (getAuto('apikeys', {}) || {})[name] || process.env[API_ENV[name]] || null;
 function setApiKey(name, key) {
   const keys = { ...(getAuto('apikeys', {}) || {}) };

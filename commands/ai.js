@@ -43,7 +43,7 @@ module.exports = [
     name: 'ai',
     aliases: ['ask', 'nelsonfx', 'gpt'],
     description: 'Ask NelsonFx anything: ai what is the capital of Kenya (or reply to a message with ai)',
-    async run({ rest, msg, reply, prefix }) {
+    async run({ rest, msg, reply, prefix, isOwner }) {
       const question = rest || replied(msg);
       if (!question) return reply(`🤖 *${ai.NAME}*\n*Usage:* \`${prefix}ai <your question>\` _(or reply to a message with_ \`${prefix}ai\`_)_\n_Turn on a conversation with_ \`${prefix}chatbot on\``);
       try {
@@ -51,7 +51,7 @@ module.exports = [
         await reply(`🤖 ${answer}`);
       } catch (err) {
         console.error('ai failed:', err.message);
-        await reply(fail(ai.NAME));
+        await reply(`${fail(ai.NAME)}${isOwner ? `\n*Reason:* ${String(err.message).slice(0, 300)}\n_Run_ \`${prefix}chatbot test\` _to check every AI service._` : ''}`);
       }
     },
   },
@@ -60,7 +60,7 @@ module.exports = [
     name: 'chatbot',
     aliases: ['chat'],
     ownerOnly: true,
-    description: 'Let NelsonFx chat with people: chatbot on / off / where / add / remove / clear (owner only)',
+    description: 'Let NelsonFx chat with people: chatbot on / off / where / add / remove / clear / test (owner only)',
     async run({ args, jid, isGroup, reply, prefix }) {
       const cfg = chatbot.settings();
       const w = (args[0] || '').toLowerCase();
@@ -86,10 +86,18 @@ module.exports = [
         chatbot.forget(jid);
         return reply('✅ *I forgot this conversation.*');
       }
+      if (w === 'test') {
+        await reply('🔎 *Testing the AI services...* this can take up to a minute.');
+        const results = await ai.diagnose();
+        const lines = results.map((r) => (r.ok ? `✅ *${r.service}* works (${r.model}, ${(r.ms / 1000).toFixed(1)}s)` : `❌ *${r.service}:* ${r.error}`));
+        const anyKey = results.some((r) => r.service !== 'Free service');
+        const anyOk = results.some((r) => r.ok);
+        return reply(`🤖 *AI test*\n\n${lines.join('\n')}\n\n${anyOk ? '_The chatbot can answer._' : `_Nothing answered._${anyKey ? '' : ' No AI key is set.'} Get a free key at *aistudio.google.com/apikey* and send \`${prefix}setapi gemini <key>\``}`);
+      }
       await reply(
-        `🤖 *Chatbot – ${ai.NAME}*\n*Status:* ${state(cfg.on)}\n*Answers in:* ${placeText[cfg.scope]}\n*Chosen chats:* ${cfg.chats.length}\n*Key:* ${store.getApiKey('gemini') ? 'Gemini' : 'free service'}\n\n` +
-          `▸ \`${prefix}chatbot on\` / \`${prefix}chatbot off\`\n▸ \`${prefix}chatbot where dms\` _(dms, groups, all, selected)_\n▸ \`${prefix}chatbot add\` / \`${prefix}chatbot remove\` _(this chat)_\n▸ \`${prefix}chatbot clear\` _(forget this chat)_\n\n` +
-          `_Better answers: get a free Gemini key at aistudio.google.com/apikey and send_ \`${prefix}setapi gemini <key>\``
+        `🤖 *Chatbot – ${ai.NAME}*\n*Status:* ${state(cfg.on)}\n*Answers in:* ${placeText[cfg.scope]}\n*Chosen chats:* ${cfg.chats.length}\n*Keys:* ${['gemini', 'groq', 'pollinations'].filter((k) => store.getApiKey(k)).join(', ') || 'none (only the free service, which may not work)'}\n\n` +
+          `▸ \`${prefix}chatbot on\` / \`${prefix}chatbot off\`\n▸ \`${prefix}chatbot where dms\` _(dms, groups, all, selected)_\n▸ \`${prefix}chatbot add\` / \`${prefix}chatbot remove\` _(this chat)_\n▸ \`${prefix}chatbot clear\` _(forget this chat)_\n▸ \`${prefix}chatbot test\` _(check that the AI answers)_\n\n` +
+          `_The chatbot needs a free AI key: get one at aistudio.google.com/apikey and send_ \`${prefix}setapi gemini <key>\``
       );
     },
   },

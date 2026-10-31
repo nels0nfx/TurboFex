@@ -136,7 +136,7 @@ plus per-feature stores (levels, nicknames, joined (when members joined, for `.n
 `config.js` reads the environment; an optional `config.env` (`KEY=value`, `#` notes) is loaded first by `core/envfile.js` and never overrides a host variable. Names only, no values:
 
 `SESSION_ID`, `PAIR_SITE_URL`, `NUMBER` / `PAIRING_NUMBER`, `OWNER_NUMBER` (legacy), `PREFIX`, `TIMEZONE`, `BOT_BROWSER`, `CONSOLE_LINK`, `PAIR_METHOD`, `FAST_KEYS`, `RESTORE_LOGIN`, `YTDLP_PATH`, `YTDLP_COOKIES`,
-`PLAY_MAX_MB`, `PLAY_MAX_SECONDS`, `DL_MAX_MB`, `DL_MAX_SECONDS`, `TURBOFEX_DATA`. Settings changed at run time (`.mode`, `.setprefix`, `.linkpreview`, ...) are saved in `data/groups.json`.
+`PLAY_MAX_MB`, `PLAY_MAX_SECONDS`, `DL_MAX_MB`, `DL_MAX_SECONDS`, `TURBOFEX_DATA`, `CONSOLE_CHAT`, `CONSOLE_COLOR`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `POLLINATIONS_API_KEY`, `GEMINI_MODEL`, `GROQ_MODEL`, `POLLINATIONS_MODEL` (the keys can also be sent to the bot with `.setapi`). Settings changed at run time (`.mode`, `.setprefix`, `.linkpreview`, ...) are saved in `data/groups.json`.
 Default mode is **private**; default prefix is `.`; default timezone `Africa/Johannesburg`.
 
 ## 11. Dependencies and runtime
@@ -150,7 +150,7 @@ The unit tests do **not** need `npm install` (they use fakes), so passing tests 
 - Command errors: caught in `handler.js`; members see "Something went wrong running that command. Please try again in a moment."; the owner also sees `Reason:` (150 characters). The full error goes to the console and `whatsapp/stats.js` (`.stats`).
 - The capacity guard (`core/capacity.js`) refuses heavy commands when a tool is missing, memory is low or the server is busy; members get a plain sentence, the owner also gets the numbers.
 - `.status` (owner) shows version, load errors, timing and watcher counters. `.ping` shows one response time; the split (bot time vs WhatsApp time) is written to the console only.
-- Do not log credentials, session IDs or private message text. `core/sessionid.js` stores only a hash of a used ID.
+- Do not log credentials, session IDs or API keys. **Exception, by the owner's request (v0.9.4):** the console prints one line for every message the bot receives (time, GROUP or PRIVATE, chat name, sender, the text cut to 110 characters) in gold, white and black (`core/chatlog.js`). It goes to the console only, never to a file. Switch it off with `CONSOLE_CHAT=off`, or drop the colours with `CONSOLE_COLOR=off` (or `NO_COLOR=1`). `core/sessionid.js` stores only a hash of a used ID.
 
 ## 13. Updating and rollback
 
@@ -195,6 +195,8 @@ The host needs to run `npm install`, keep the process alive, and keep `session/`
 9. **No uptime guarantee:** the bot reconnects and can roll back a bad update, but nothing proves it runs for months unattended.
 10. **Usage hints** were checked for 325 commands with no arguments (most already show an example). Wrong-argument cases and every text string were not exhaustively reviewed.
 11. Only the owner sees console diagnostics; there is no log file or log rotation.
+13. **The AI (`.ai`, `.chatbot`) needs a free key.** The old key-free Pollinations address now wants a key, and Google shut down `gemini-2.0-flash` on 1 June 2026 (and `gemini-2.5-flash` is listed for 16 October 2026). `core/ai.js` tries Gemini, then Groq, then Pollinations (with a key), then the old key-free address, and for each service it walks a list of models and remembers the one that worked. Model names change often: if answers stop, run `.chatbot test` (owner) to see the status of each service, and update the lists in `core/ai.js` (or set `GEMINI_MODEL` / `GROQ_MODEL`). This was checked against public documentation on 31 Oct 2026; no AI service was called during testing (the tests use fakes). When the AI fails the chatbot now says so in the chat (at most once every 2 minutes per chat); the owner also sees the reason.
+14. **`.anime`** uses Jikan (MyAnimeList, often busy: it gets a second try) and then Kitsu. Neither was called during testing.
 12. **`.listonline` is not a real online list.** WhatsApp does not tell a bot who is online, so it lists who wrote a message in the last few minutes (kept in memory, empty after a restart). **`.newmembers`** only knows joins the bot saw (`data/joined.json`). The lookup commands added in 0.9.3 depend on free public web services (restcountries, PokeAPI, Jikan, TheMealDB, TheCocktailDB, OpenLibrary, alquran.cloud, npm, wheretheiss.at, USGS, Nager.Date, open-meteo, sunrise-sunset.org, NASA with the shared DEMO_KEY, Google DNS, and the cat and dog picture services); any of them can change or stop, and none was called during testing (the tests use fakes).
 
 ## 18. Instructions for AI assistants

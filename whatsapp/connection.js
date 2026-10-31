@@ -304,7 +304,7 @@ async function startWhatsApp() {
     }
 
     if (connection === 'open') {
-      console.log(`✅ ${brand.botName} is online as ${sock.user?.id}`);
+      require('../core/chatlog').banner(`${brand.botName} is online as ${sock.user?.id}`);
       scheduler.start(sock);
       presence.apply(sock); // always online / auto bio
       replay.open(); // for a few seconds, skip old messages WhatsApp re-delivers

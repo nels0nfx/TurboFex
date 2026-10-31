@@ -330,6 +330,6 @@ test('setmenu changes the menu heading', async () => {
   sent.length = 0;
   await handler.handleMessage(sock, dm(OWNER, '.menu'));
   await settle();
-  assert.match(texts().join('\n'), /N E L S O N F X/);
+  assert.match(texts().join('\n'), /NELSONFX/);
   await handler.handleMessage(sock, dm(OWNER, '.setmenu reset'));
 });

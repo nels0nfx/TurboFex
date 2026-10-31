@@ -169,9 +169,13 @@ test('pokemon, anime, meal, cocktail, book, quran and npm read their services', 
     const p = await run(find(lookups, 'pokemon'), 'Pikachu');
     assert.ok(p.sent[0].image && /#25/.test(p.sent[0].caption), 'pokemon sends the picture with the facts');
     assert.match((await run(find(lookups, 'anime'), 'naruto')).sent[0].caption, /Episodes:\* 220/);
-    assert.match((await run(find(lookups, 'meal'), 'jollof')).sent[0].caption, /2 cups Rice/);
+    const meal = await run(find(lookups, 'meal'), 'jollof');
+    assert.match(meal.sent[0].caption, /Jollof Rice/, 'the picture carries the name');
+    assert.match(meal.text, /2 cups Rice/, 'the recipe is its own message');
     assert.match((await run(find(lookups, 'meal'), '')).sent[0].caption, /Jollof/, 'random meal');
-    assert.match((await run(find(lookups, 'cocktail'), 'mojito')).sent[0].caption, /4 leaves Mint/);
+    const drink = await run(find(lookups, 'cocktail'), 'mojito');
+    assert.match(drink.sent[0].caption, /Mojito/);
+    assert.match(drink.text, /4 leaves Mint/);
     assert.match((await run(find(lookups, 'book'), 'things fall apart')).text, /Chinua Achebe/);
     const q = await run(find(lookups, 'quran'), '2:255');
     assert.match(q.text, /Al-Baqarah.*2:255/);

@@ -31,7 +31,8 @@ test('private mode (the default): a stranger gets no reply at all, the owner doe
 });
 test('the menu lists categories alphabetically without emojis', async () => {
   const menu = texts()[0];
-  const heads = [...menu.matchAll(/┌─ \*([A-Z]+)\*/g)].map((m) => m[1]);
+  const heads = [...menu.matchAll(/┏━ \S+ \*([A-Z]+)\*/g)].map((m) => m[1]);
+  assert.ok(heads.length > 5, 'the category headings are found');
   assert.deepStrictEqual(heads, [...heads].sort());
   assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(menu));
 });

@@ -5,6 +5,7 @@ const path = require('path');
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbofex-test-'));
 process.env.TURBOFEX_DATA = dir;
+process.env.CONSOLE_CHAT = process.env.CONSOLE_CHAT || 'off'; // the tests do not print every message
 process.env.OWNER_NUMBER = process.env.OWNER_NUMBER || '27800000001';
 process.on('exit', () => fs.rmSync(dir, { recursive: true, force: true }));
 

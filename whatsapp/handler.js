@@ -29,6 +29,7 @@ const capacity = require('../core/capacity');
 const { runProtections } = require('./protect');
 const { runPassive } = require('./passive');
 const { peel } = require('./unwrap');
+const chatlog = require('../core/chatlog');
 const ownerInfo = require('./owner');
 const { getText, num, whoIds, whoJid, participantIds, senderIds, isCommandText } = require('./utils');
 
@@ -153,6 +154,10 @@ async function handleMessageInner(sock, msg) {
 
   const botIds = [sock.user?.id, sock.user?.lid].filter(Boolean).map(num);
 
+  // the console shows every message (gold, white and black lines; switch off with CONSOLE_CHAT=off)
+  if (!synthetic) chatlog.incoming({ msg, jid, isGroup, text, content: early, prefix, isCommand: isCommandText(text, prefix, isKnownCommand) });
+  if (isGroup && !meta.peek(jid)) meta.getMeta(sock, jid).catch(() => {}); // so the next line can show the group name
+
   let cached = null;
   const roles = () => (cached = cached || getRoles(sock, msg, jid, isGroup));
 
@@ -209,7 +214,7 @@ async function handleMessageInner(sock, msg) {
   // For commands they run alongside, so they never delay the answer.
   const passive = runPassive({ sock, msg, jid, text, isGroup, isCommand, prefix, botIds });
   if (!isCommand) {
-    if (!synthetic && text && !require('./play').get(jid)) chatbot.maybeReply({ sock, msg, jid, text, botIds }).catch(() => {}); // NelsonFx chats (only when switched on)
+    if (!synthetic && text && !require('./play').get(jid)) chatbot.maybeReply({ sock, msg, jid, text, botIds, isOwner: async () => (await roles()).isOwner }).catch(() => {}); // NelsonFx chats (only when switched on)
     return passive;
   }
 

@@ -30,7 +30,10 @@ function addressed(msg, text, botIds) {
   return new RegExp(`^(hey|hi|hello|ok|okay|yo)?[\\s,]*${ai.NAME}\\b`, 'i').test(text);
 }
 
-async function maybeReply({ sock, msg, jid, text, botIds }) {
+const failedAt = new Map(); // chat -> when we last said "I could not answer" (so a broken service does not make the bot nag)
+const NAG_GAP_MS = 2 * 60 * 1000;
+
+async function maybeReply({ sock, msg, jid, text, botIds, isOwner }) {
   const cfg = settings();
   if (!enabledFor(cfg, jid) || msg.key.fromMe || !text || text.length > 800) return;
   const isGroup = jid.endsWith('@g.us');
@@ -52,6 +55,20 @@ async function maybeReply({ sock, msg, jid, text, botIds }) {
   } catch (err) {
     history.pop();
     console.log(`Chatbot failed: ${err.message}`);
+    // do not stay silent: tell the person (at most once every 2 minutes in a chat). Only the owner sees the reason.
+    if (Date.now() - (failedAt.get(jid) || 0) < NAG_GAP_MS) return;
+    failedAt.set(jid, Date.now());
+    if (failedAt.size > 2000) failedAt.clear();
+    let owner = false;
+    try {
+      owner = !!(isOwner && (await isOwner()));
+    } catch (e) {
+      owner = false;
+    }
+    const detail = owner
+      ? `\n\n*Reason:* ${String(err.message).slice(0, 300)}\n*Fix:* send \`${store.effectivePrefix()}setapi gemini <key>\` (a free key from aistudio.google.com/apikey), then \`${store.effectivePrefix()}chatbot test\``
+      : '';
+    await sock.sendMessage(jid, { text: `😕 *I could not think of an answer just now.* Please try again in a moment.${detail}` }, { quoted: msg }).catch(() => {});
   }
 }
 

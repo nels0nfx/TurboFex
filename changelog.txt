@@ -1,3 +1,20 @@
+TurboFex v0.9.5 - menu header without the grey box
+CHANGED IN 0.9.5
+- FIXED the menu header left a big empty space above and below the details. WhatsApp pads grey code boxes, so the details are now plain lines inside the header box, two items per line (User, Mode, Prefix, Commands, Version, Uptime; the owner also sees Memory and System). The clock time and date were removed from the header: WhatsApp underlines them like links. The first category now follows the header after one empty line, and its commands sit directly under its name
+- The 0.9.4 changes (coloured console, chatbot, anime, recipes) are unchanged and still need the AI key step: .setapi gemini <key>, then .chatbot test
+
+TurboFex v0.9.4 - new menu header, coloured console, chatbot fix, anime fix, recipe layout
+CHANGED IN 0.9.4
+- CHANGED the menu has a new header (a boxed title with the bot name written normally, no spaced-out letters, then the details). Each category name is followed straight away by its commands, with no gap. menu <category> shows the name and the description on one line. No emoji in the menu (as before)
+- NEW the console shows every message the bot receives, one line each, in gold, white and black: gold badge with the time, white badge with GROUP or PRIVATE, the chat name in gold, then who wrote and what (commands in gold). Text is cut to 110 characters, colour codes typed by people are removed, and nothing is saved to a file. Switch it off with CONSOLE_CHAT=off; no colours with CONSOLE_COLOR=off. The "online" line uses the same colours
+- FIXED chatbot / .ai did not answer. Two reasons found in the public documentation (checked 31 Oct 2026): Google shut down gemini-2.0-flash on 1 June 2026 (the model the bot used), and the old key-free Pollinations address needs a key now. The bot now tries Gemini (a list of current models, remembering the one that works), then Groq, then Pollinations with a key, then the old address. NEW keys: setapi groq <key> (console.groq.com/keys, free) and setapi pollinations <key> (enter.pollinations.ai, free). Gemini keys are checked when saved and are sent in a header, not in the web address
+- FIXED the chatbot used to stay silent when the AI failed. It now says "I could not think of an answer just now" (at most once every 2 minutes in a chat). The owner also sees the reason and what to do. .ai does the same
+- NEW chatbot test (owner) asks every AI service a tiny question and shows which ones work. chatbot (status) now lists which keys are set
+- FIXED .anime said "not answering": Jikan (MyAnimeList) is often busy (503, 504). It now tries Jikan twice, then Kitsu, and the owner sees the reason if both fail
+- FIXED .meal and .cocktail: the method is now a numbered list with one step on each line (it was one block with "step 1 ... step 2" inside). The picture carries the name and the kind of dish, and the recipe follows as its own message so nothing is cut. A very long method is cut between steps with a link to the full recipe
+- NOTE none of the web services were called in testing (the tests use fakes). The AI keys are the one thing you must do: get a free key at aistudio.google.com/apikey and send .setapi gemini <key>, then .chatbot test
+- STILL NEEDS A REAL WHATSAPP TEST: the console colours on your host panel, the new menu on a phone, .anime, .meal, .cocktail, .chatbot test and a chatbot reply in a private chat and in a group (in a group tag the bot or start with NelsonFx; "chatbot where" decides where it answers)
+
 TurboFex v0.9.3 - 49 new commands: fun, lookup, tools and group
 CHANGED IN 0.9.3
 - NEW FUN (13): hug, slap, kiss (tag a person), love (love meter), pickup, dadjoke, fortune, advice, bored, catfact, dogfact, cat, dog (pictures). Jokes and facts have a saved list to fall back on when the web service is down

@@ -27,6 +27,57 @@ async function sendWithPicture(ctx, url, text) {
   }
   return reply(text);
 }
+// A recipe method usually comes as one long block ("step 1 ... step 2 ..."). This makes it a numbered list with ONE step
+// on each line, and never cuts a step in the middle.
+function steps(raw, maxChars, moreLink) {
+  const chunks = String(raw || '').replace(/\r/g, '\n').split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  let list = [];
+  for (const c of chunks) list.push(...c.split(/\bstep\s*\d+\s*[:.)-]?\s*/i).map((x) => x.trim()).filter(Boolean));
+  list = list.filter((x) => !/^(step\s*)?\d+[.:)]?$/i.test(x)).map((x) => x.replace(/^\d+[.)]\s+/, ''));
+  if (list.length <= 1 && (list[0] || '').length > 80) {
+    // one long paragraph: one sentence per step (a very short sentence joins the next one)
+    const sentences = (list[0].match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g) || [list[0]]).map((x) => x.trim()).filter(Boolean);
+    if (sentences.length >= 2) {
+      list = [];
+      let carry = '';
+      for (const sentence of sentences) {
+        const joined = `${carry} ${sentence}`.trim();
+        if (joined.length < 30) carry = joined;
+        else {
+          list.push(joined);
+          carry = '';
+        }
+      }
+      if (carry) list.push(carry);
+    }
+  }
+  const lines = [];
+  let used = 0;
+  for (let i = 0; i < list.length; i++) {
+    const line = `*${i + 1}.* ${list[i]}`;
+    if (used + line.length > maxChars && lines.length) {
+      lines.push(`_...and ${list.length - i} more step${list.length - i === 1 ? '' : 's'}${moreLink ? `: ${moreLink}` : ''}_`);
+      break;
+    }
+    lines.push(line);
+    used += line.length + 1;
+  }
+  return lines.join('\n');
+}
+// a picture with a short caption (name and kind), then the full recipe as a normal message so nothing is cut
+async function pictureThenText(ctx, url, caption, text) {
+  const { sock, jid, msg, reply } = ctx;
+  if (url && /^https:\/\//i.test(url)) {
+    try {
+      const img = await web.getBuffer(url, { timeout: 12000, max: 3 * 1024 * 1024 });
+      await sock.sendMessage(jid, { image: img, caption }, { quoted: msg });
+      return reply(text);
+    } catch (err) {
+      // no picture: the name and the recipe go together
+    }
+  }
+  return reply(`${caption}\n\n${text}`);
+}
 const hostOf = (raw) => {
   const h = String(raw || '').trim().toLowerCase().replace(/^[a-z]+:\/\//, '').split(/[/?#]/)[0].replace(/:\d+$/, '').replace(/\.$/, '');
   return /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/.test(h) ? h : null;
@@ -89,20 +140,56 @@ module.exports = [
     slow: true,
     description: 'Facts about an anime: anime naruto',
     async run(ctx) {
-      const { rest, reply, prefix } = ctx;
+      const { rest, reply, prefix, isOwner } = ctx;
       if (!rest) return reply(`Write an anime name.\nExample: ${prefix}anime naruto`);
-      try {
-        const j = await web.getJson(`https://api.jikan.moe/v4/anime?q=${enc(rest.slice(0, 80))}&limit=1&sfw=true`, { timeout: 12000 });
-        const a = j?.data?.[0];
-        if (!a) return reply(`🔎 I could not find an anime called *${cut(rest, 30)}*.`);
-        const text =
-          `🎌 *${a.title_english || a.title}*${a.title_english && a.title !== a.title_english ? `\n_${a.title}_` : ''}\n\n` +
-          `📺 *Type:* ${a.type || '?'}   🎞️ *Episodes:* ${a.episodes ?? '?'}\n📅 *Status:* ${a.status || '?'}${a.year ? `   🗓️ *Year:* ${a.year}` : ''}\n` +
-          `⭐ *Score:* ${a.score ?? 'not rated'}\n🎭 *Genres:* ${(a.genres || []).map((g) => g.name).join(', ') || '?'}\n\n${cut(a.synopsis, 450)}\n\n🔗 ${a.url}`;
-        return await sendWithPicture(ctx, a.images?.jpg?.image_url, text);
-      } catch (err) {
-        return reply(down('The anime service'));
+      const problems = [];
+      let a = null;
+      let answered = false; // a service answered (even with "nothing found")
+      // 1) Jikan (MyAnimeList). It is often busy, so it gets a second try.
+      for (let attempt = 0; attempt < 2 && !answered; attempt++) {
+        try {
+          const j = await web.getJson(`https://api.jikan.moe/v4/anime?q=${enc(rest.slice(0, 80))}&limit=1&sfw=true`, { timeout: 12000 });
+          answered = true;
+          const x = j?.data?.[0];
+          if (x) {
+            a = {
+              title: x.title_english || x.title, other: x.title_english && x.title !== x.title_english ? x.title : '', type: x.type, episodes: x.episodes,
+              status: x.status, year: x.year, score: x.score, genres: (x.genres || []).map((g) => g.name), synopsis: x.synopsis, url: x.url, image: x.images?.jpg?.image_url,
+            };
+          }
+        } catch (err) {
+          problems.push(`Jikan: ${cut(err.message, 60)}`);
+          if (attempt === 0) await new Promise((r) => setTimeout(r, 1200));
+        }
       }
+      // 2) Kitsu, when Jikan did not answer
+      if (!answered) {
+        for (const host of ['kitsu.io', 'kitsu.app']) {
+          try {
+            const j = await web.getJson(`https://${host}/api/edge/anime?filter[text]=${enc(rest.slice(0, 80))}&page[limit]=1&include=genres`, { timeout: 12000, headers: { Accept: 'application/vnd.api+json' } });
+            answered = true;
+            const x = j?.data?.[0]?.attributes;
+            if (x) {
+              const status = { finished: 'Finished Airing', current: 'Currently Airing', upcoming: 'Not yet aired', unreleased: 'Not yet aired', tba: 'To be announced' }[x.status] || x.status;
+              a = {
+                title: x.titles?.en || x.canonicalTitle, other: x.titles?.en_jp && x.titles.en_jp !== (x.titles?.en || x.canonicalTitle) ? x.titles.en_jp : '', type: x.subtype ? String(x.subtype).toUpperCase() : '',
+                episodes: x.episodeCount, status, year: x.startDate ? String(x.startDate).slice(0, 4) : null, score: x.averageRating ? Math.round(Number(x.averageRating)) / 10 : null,
+                genres: (j.included || []).filter((i) => i.type === 'genres').map((g) => g.attributes?.name).filter(Boolean), synopsis: x.synopsis, url: `https://kitsu.io/anime/${x.slug}`, image: x.posterImage?.medium || x.posterImage?.small,
+              };
+            }
+            break;
+          } catch (err) {
+            problems.push(`Kitsu: ${cut(err.message, 60)}`);
+          }
+        }
+      }
+      if (!answered) return reply(`${down('The anime service')}${isOwner ? `\nReason: ${problems.join(' | ')}` : ''}`);
+      if (!a) return reply(`🔎 I could not find an anime called *${cut(rest, 30)}*.`);
+      const text =
+        `🎌 *${a.title}*${a.other ? `\n_${a.other}_` : ''}\n\n` +
+        `📺 *Type:* ${a.type || '?'}   🎞️ *Episodes:* ${a.episodes ?? '?'}\n📅 *Status:* ${a.status || '?'}${a.year ? `   🗓️ *Year:* ${a.year}` : ''}\n` +
+        `⭐ *Score:* ${a.score ?? 'not rated'}\n🎭 *Genres:* ${a.genres.join(', ') || '?'}\n\n${cut(a.synopsis, 450)}\n\n🔗 ${a.url}`;
+      return await sendWithPicture(ctx, a.image, text);
     },
   },
   {
@@ -122,9 +209,10 @@ module.exports = [
           const ing = String(m[`strIngredient${i}`] || '').trim();
           if (ing) items.push(`▸ ${String(m[`strMeasure${i}`] || '').trim()} ${ing}`.replace(/\s+/g, ' '));
         }
-        const text =
-          `🍽️ *${m.strMeal}*\n${[m.strCategory, m.strArea].filter(Boolean).join(' • ')}\n\n🛒 *Ingredients*\n${items.join('\n')}\n\n👩‍🍳 *Method*\n${cut(m.strInstructions, 900)}${m.strYoutube ? `\n\n▶️ ${m.strYoutube}` : ''}`;
-        return await sendWithPicture(ctx, m.strMealThumb, text);
+        const link = `https://www.themealdb.com/meal/${m.idMeal}`;
+        const caption = `🍽️ *${m.strMeal}*\n${[m.strCategory, m.strArea].filter(Boolean).join(' • ')}`;
+        const text = `🛒 *Ingredients*\n${items.join('\n')}\n\n👩‍🍳 *Method*\n${steps(m.strInstructions, 1400, link)}${m.strYoutube ? `\n\n▶️ ${m.strYoutube}` : ''}`;
+        return await pictureThenText(ctx, m.strMealThumb, caption, text);
       } catch (err) {
         return reply(down('The recipe service'));
       }
@@ -147,8 +235,9 @@ module.exports = [
           const ing = String(d[`strIngredient${i}`] || '').trim();
           if (ing) items.push(`▸ ${String(d[`strMeasure${i}`] || '').trim()} ${ing}`.replace(/\s+/g, ' '));
         }
-        const text = `🍹 *${d.strDrink}*\n${[d.strCategory, d.strAlcoholic, d.strGlass].filter(Boolean).join(' • ')}\n\n🛒 *Ingredients*\n${items.join('\n')}\n\n🥄 *Method*\n${cut(d.strInstructions, 700)}`;
-        return await sendWithPicture(ctx, d.strDrinkThumb, text);
+        const caption = `🍹 *${d.strDrink}*\n${[d.strCategory, d.strAlcoholic, d.strGlass].filter(Boolean).join(' • ')}`;
+        const text = `🛒 *Ingredients*\n${items.join('\n')}\n\n🥄 *Method*\n${steps(d.strInstructions, 1000, '')}`;
+        return await pictureThenText(ctx, d.strDrinkThumb, caption, text);
       } catch (err) {
         return reply(down('The drinks service'));
       }

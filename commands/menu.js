@@ -15,9 +15,9 @@ const mono = (rows) => {
   return '```\n' + rows.map(([k, v]) => `${k.padEnd(w)}${v}`).join('\n') + '\n```';
 };
 
-// one category: a title and its commands, one per line
+// one category: its name, and the commands right underneath it (no empty line, no gap)
 function block(section, lines) {
-  return `┌─ *${section.meta.title}*\n${lines.map((l) => `│ ${section.meta.symbol} ${l}`).join('\n')}\n└──────`;
+  return `┏━ ${section.meta.symbol} *${section.meta.title}*\n${lines.map((l) => `┃ ${l}`).join('\n')}\n┗━━━━━━`;
 }
 
 module.exports = {
@@ -32,7 +32,7 @@ module.exports = {
     // menu <category>: every command of it with its description
     const section = sections.find((s) => s.key === query);
     if (query && section) {
-      const items = section.cmds.map((c) => `*${c.name}*\n│    _${c.description}_`);
+      const items = section.cmds.map((c) => `*${c.name}* – _${c.description}_`);
       return reply(block(section, items));
     }
 
@@ -53,20 +53,19 @@ module.exports = {
 
     // full menu
     const now = clock.parts();
-    const rows = [
-      ['User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member'],
-      ['Prefix', prefix],
-      ['Mode', store.getMode() === 'private' ? 'Private' : 'Public'],
-      ['Time', now.time],
-      ['Date', `${String(now.day).slice(0, 3)}, ${now.date}`],
-      ['Version', `v${pkg.version}`],
-      ['Commands', String(all.length)],
-      ['Uptime', clock.uptime()],
-    ];
-    if (isOwner) rows.push(['Memory', `${Math.round(process.memoryUsage().rss / 1048576)} MB`], ['System', `${os.type()}, Node ${process.versions.node.split('.')[0]}`]);
-
     const custom = store.getAuto('menu') || {};
-    const head = `*${(custom.title || brand.botName).toUpperCase().split('').join(' ')}*\n_${custom.subtitle || 'WhatsApp Assistant'}_\n${RULE}\n${mono(rows)}`;
+    const title = String(custom.title || brand.botName).toUpperCase();
+    const sub = custom.subtitle || 'WhatsApp Assistant';
+    // the details are plain lines inside the header box (no code block: WhatsApp pads those with empty space)
+    const pairs = [
+      ['User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member'], ['Mode', store.getMode() === 'private' ? 'Private' : 'Public'],
+      ['Prefix', prefix || 'none'], ['Commands', String(all.length)],
+      ['Version', `v${pkg.version}`], ['Uptime', clock.uptime()],
+    ];
+    if (isOwner) pairs.push(['Memory', `${Math.round(process.memoryUsage().rss / 1048576)} MB`], ['System', `${os.type()}, Node ${process.versions.node.split('.')[0]}`]);
+    const rows = [];
+    for (let i = 0; i < pairs.length; i += 2) rows.push(`┃ ${pairs[i].join(' ▸ ')}${pairs[i + 1] ? `  ·  ${pairs[i + 1].join(' ▸ ')}` : ''}`);
+    const head = `╭━━━━━━━━━━━━━━━━╮\n┃  ✦ *${title}* ✦\n┃  _${sub}_\n┣━━━━━━━━━━━━━━━━\n${rows.join('\n')}\n╰━━━━━━━━━━━━━━━━╯`;
     const body = sections.map((s) => block(s, s.cmds.map((c) => sc(c.name)))).join('\n\n');
     const tips =
       `> ${prefix}menu <category>  details of a category\n` +

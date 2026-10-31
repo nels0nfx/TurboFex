@@ -12,6 +12,14 @@ async function validate(name, key) {
       const res = await fetch('https://api.remove.bg/v1.0/account', { headers: { 'X-Api-Key': key }, signal: AbortSignal.timeout(10000) });
       if (res.status === 401 || res.status === 403) return { ok: false, why: 'remove.bg says this key is not valid.' };
     }
+    if (name === 'groq') {
+      const res = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10000) });
+      if (res.status === 401 || res.status === 403) return { ok: false, why: 'Groq says this key is not valid.' };
+    }
+    if (name === 'gemini') {
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', { headers: { 'x-goog-api-key': key }, signal: AbortSignal.timeout(10000) });
+      if (res.status === 400 || res.status === 401 || res.status === 403) return { ok: false, why: 'Google says this key is not valid. Make a new one at aistudio.google.com/apikey' };
+    }
     if (name === 'musixmatch') {
       const j = await web.getJson(`https://api.musixmatch.com/ws/1.1/track.search?q=test&page_size=1&apikey=${encodeURIComponent(key)}`, { timeout: 10000 });
       const code = j?.message?.header?.status_code;

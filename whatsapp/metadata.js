@@ -129,4 +129,10 @@ function indexOf(info) {
   return built;
 }
 
-module.exports = { getMeta, invalidate, applyParticipants, patch, prime, size, indexOf };
+// what is already known about a group, right now (no waiting, no WhatsApp call); null when nothing is saved yet
+function peek(jid) {
+  const hit = cache.get(jid);
+  return hit && hit.meta ? hit.meta : null;
+}
+
+module.exports = { peek, getMeta, invalidate, applyParticipants, patch, prime, size, indexOf };
