@@ -15,7 +15,7 @@ const vm = require('vm');
 const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
-const KEEP = new Set(['config.js', 'session_id.txt', 'session', 'data', 'node_modules', '.env', '.git', '.github']);
+const KEEP = new Set(['config.js', 'session_id.txt', 'config.env', 'session', 'data', 'node_modules', '.env', '.git', '.github']);
 const UA = 'TurboFex-Updater';
 const REPO_ZIP = 'turbofex-latest.zip';
 const VERSIONISH = /^v?\d+\.\d+/;

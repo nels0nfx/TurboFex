@@ -1,4 +1,4 @@
-# ⚡ TurboFex v0.9.0
+# ⚡ TurboFex v0.9.1
 
 WhatsApp group management and assistant bot by **Nelson Fx** (Trinity Flow). It runs on Node.js with the
 [Baileys](https://github.com/WhiskeySockets/Baileys) library and is built to run for months without attention:
@@ -22,7 +22,8 @@ it reconnects by itself, backs up its login, updates itself safely and protects 
 - Optional tools (only the commands that need them are affected if missing): `sharp` (pictures), `ffmpeg` (audio/video), `qrcode`
 
 ## Quick start
-1. Upload the files (or the release zip) to your host and unarchive them. On a Pterodactyl panel use the **Files** tab and **Unarchive**.
+1. Download the **hosting ZIP** from the repo's **Releases** page (the file named `TurboFex-hosting-vX.Y.Z.zip` under *Assets*), upload it to the host's main folder and unarchive it. On a Pterodactyl panel (Spaceify and similar) use the **Files** tab and **Unarchive**. `index.js` must end up directly in the main folder (`/home/container`).
+   - Do **not** use *Code > Download ZIP* or the *Source code (zip)* link: GitHub wraps those in an extra `TurboFex-main` folder, and the host then fails with `Cannot find module '/home/container/index.js'`. If you already did, open the `TurboFex-main` folder, select everything inside it, move it up one level, and delete the empty folder.
 2. Make sure the host runs `npm install`, then start it with `npm start`.
 3. Link the bot with a **session ID** from the pairing site (next section). The console never asks for a number or a pairing code.
 4. Add the bot to a group, make it admin, and send `.ping`.
@@ -30,18 +31,20 @@ it reconnects by itself, backs up its login, updates itself safely and protects 
 ### Linking the bot (session ID)
 1. Open the **pairing site**, https://turbofex-pair.onrender.com (a bot that is not linked also prints this in the console).
 2. Link your WhatsApp number there (pairing code or QR) and copy the session ID, like `TFX-K7M2-9QXA-4BNP`. The site also sends it to your own WhatsApp chat.
-3. Open the file **`session_id.txt`** in the bot's main folder (the bot creates it for you when it starts without a login) and paste the ID after `SESSION_ID=`. Save it. (The `SESSION_ID` variable of the host works too and wins when both are set.)
+3. Open the file **`session_id.txt`** in the bot's main folder (the bot creates it for you when it starts without a login) and paste the ID after `SESSION_ID=`. Save it. (The `SESSION_ID` variable of the host works too and wins when both are set. A `config.env` file with the line `SESSION_ID=TFX-...` works as well.)
 4. **Restart** the bot. It downloads the login, saves it in `session/`, and your number becomes the bot's number and its owner.
 
-- A session ID works **once** and expires after 24 hours. After the first start the bot keeps its login, so the ID can stay in the file; an old ID does nothing.
+- A session ID works **once** and expires after **5 minutes**, so paste it and restart right away. After the first start the bot keeps its login, so the ID can stay in the file; an old ID does nothing.
 - To move the bot to **another number**, or after WhatsApp logged it out, link again on the site and paste the **new** ID in `session_id.txt`. The old login is kept in `data/session-previous`.
 - A bot that is not linked prints these steps and waits. It never asks for a number in the console.
 - The old console linking (number question, pairing code or QR in the console) is still there for developers: set `CONSOLE_LINK=1` (and optionally `NUMBER`, `PAIR_METHOD=code|qr`).
 
 ### Updating the bot
-Push the new files to the GitHub repo and raise `version` in `package.json`. Bots check on every start (and with `.update`), download the repo from GitHub when the version differs, check it, and restart. No zip file is needed. `.gitignore` should contain `node_modules/`, `session/`, `data/`, `.env` and `session_id.txt`.
+Push the new files to the GitHub repo and raise `version` in `package.json`. Bots check on every start (and with `.update`), download the repo from GitHub when the version differs, check it, and restart. No zip file is needed. `.gitignore` should contain `node_modules/`, `session/`, `data/`, `.env`, `config.env` and `session_id.txt`.
 
 ## Configuration
+Settings can come from the host's variables or from an optional **`config.env`** file in the main folder (one `KEY=value` per line, `#` for notes, for example `SESSION_ID=TFX-K7M2-9QXA-4BNP`, `PREFIX=.`, `TIMEZONE=Africa/Lagos`). A variable set on the host always wins over the file.
+
 | Setting (`config.js`) | Environment variable | Meaning |
 |---|---|---|
 | `sessionIdFile` | `SESSION_ID` (variable) | The session ID from the pairing site: the file `session_id.txt` (or the variable, which wins) |

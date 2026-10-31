@@ -1,5 +1,5 @@
 // Linking with a session ID. A person links their number on the pairing site and gets an ID like TFX-K7M2-9QXA-4BNP.
-// They paste it in the file session_id.txt (in the bot's main folder; the SESSION_ID variable of the host works too) and
+// They paste it in the file session_id.txt (in the bot's main folder; the SESSION_ID variable of the host or a line in config.env works too) and
 // restart the bot, like with other WhatsApp bots. The bot downloads that
 // login from the site (pairSiteUrl) and saves it as session/creds.json. After that the bot starts normally.
 //
@@ -31,7 +31,7 @@ const TEMPLATE = (site) =>
     `# 1) Open ${site} and link your WhatsApp number.`,
     '# 2) Copy the session ID (it looks like TFX-K7M2-9QXA-4BNP).',
     '# 3) Paste it after the = sign on the line below, SAVE this file and RESTART the bot.',
-    '# A session ID works once and expires after 24 hours.',
+    '# A session ID works once and expires after 5 minutes: paste it and restart the bot right away.',
     'SESSION_ID=',
     '',
   ].join('\n');
@@ -160,7 +160,7 @@ async function restore(config, log = console.log, fetchFn = globalThis.fetch, op
       markUsed(id); // an old ID that was used before this bot remembered it: the current login stays
       return 'skipped';
     }
-    log('⚠️ The pairing site does not know this session ID. It expires after 24 hours and works only once. Link again on the site and use the NEW ID.');
+    log('⚠️ The pairing site does not know this session ID. It expires after 5 minutes and works only once. Link again on the site and use the NEW ID.');
     return 'failed';
   }
 

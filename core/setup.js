@@ -151,7 +151,7 @@ function helpText(config, reason = 'none') {
     '     Save the file.',
     '  4) RESTART the bot. Nothing is asked here in the console.',
     '',
-    '  A session ID works once and expires after 24 hours.',
+    '  A session ID works once and expires after 5 minutes: paste it and restart right away.',
     rule,
     '',
   ].join('\n');

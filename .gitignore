@@ -3,3 +3,4 @@ session/
 data/
 .env
 session_id.txt
+config.env

@@ -1,3 +1,9 @@
+TurboFex v0.9.1 - hosting and session ID fixes
+CHANGED IN 0.9.1
+- NEW optional config.env file in the main folder (SESSION_ID=..., PREFIX=..., TIMEZONE=...): the same idea as other WhatsApp bots. A variable set on the host always wins over the file, and updates never touch it
+- FIXED the session ID wording: an ID from the pairing site works once and expires after 5 minutes (the bot said 24 hours)
+- NEW the README tells people to download the hosting ZIP from the Releases page, not Code > Download ZIP (that one adds a TurboFex-main folder and the host cannot find index.js)
+
 TurboFex v0.9.0 - the Empire, phases 4 and 5: the government, the court, seasons, festivals, nobility, guilds and dungeons
 CHANGED IN 0.9.0
 - NEW the government: elections ("election", "stand", "vote"), the Sovereign and three officers (Treasurer, Marshal, Steward: "appoint", "dismiss"), decrees, salaries paid from the treasury, the income tax ("tax", taken from the daily gift, work and the weekly bonus), the treasury ("treasury", grants and relief with a daily spending cap), laws ("law": Festival, Trade Holiday, Harvest Decree, Amnesty; big laws such as the Age of Prosperity and the Royal Levy need a referendum), referendums, impeachment (petition then vote), jail ("jail", "pardon"). The bot closes votes and starts the next election by itself and tells the group, tagging the people

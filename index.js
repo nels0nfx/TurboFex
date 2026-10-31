@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+require('./core/envfile').load(); // optional config.env (SESSION_ID, PREFIX, ...); the child process inherits it
 const { RESTART_CODE } = require('./core/restart');
 const bootnote = require('./core/bootnote');
 
