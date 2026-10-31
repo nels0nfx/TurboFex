@@ -1,3 +1,18 @@
+TurboFex v0.9.3 - 49 new commands: fun, lookup, tools and group
+CHANGED IN 0.9.3
+- NEW FUN (13): hug, slap, kiss (tag a person), love (love meter), pickup, dadjoke, fortune, advice, bored, catfact, dogfact, cat, dog (pictures). Jokes and facts have a saved list to fall back on when the web service is down
+- NEW LOOKUP (16): country, pokemon, anime, meal, cocktail, book, quran, npm, iss (space station), earthquake, holiday, sunrise (and sunset), moon (worked out by the bot), apod (NASA picture of the day), isup (is a website up), dns. All use free services that need no key
+- NEW TOOLS (14): timer (uses the same saved reminders as remind, so a restart does not lose it), uuid, wordcount, upper, lower, leet, zalgo, ascii (big block letters), roman (both ways), color (with a picture when the picture tool is installed), tip, percent, discount, timestamp
+- NEW GROUP (6): listonline (who wrote in the last few minutes), newmembers (who joined lately), staff (owner, sudo helpers, admins), nickname (own nickname per group; admins can set others; shown in rank and top), kickall (removes every member who is not an admin, only after a "kickall confirm" within 60 seconds), kicklist (remove several tagged people at once)
+- CHANGED rank and top show the nickname when a member has one
+- CHANGED the bot now remembers when it saw members join (data/joined.json) and, in memory only, who wrote lately (for listonline)
+- NOTE listonline cannot show who is really "online": WhatsApp does not tell bots that. It shows who wrote a message in the last few minutes, and says so in the reply
+- NOTE newmembers only knows about people who joined while the bot was in the group
+- SAFETY kickall and kicklist never remove group admins, the bot, the bot owner or sudo helpers. They remove people in small batches with a pause, and report how many were really removed
+- COUNTS members can use 311 commands in 14 categories (was 262); the bot has 384 commands in total
+- TESTS new tests/v093.test.js (30 tests, all web services replaced by fakes, no network). Version tests updated
+- STILL NEEDS A REAL WHATSAPP TEST: every new command on a phone, the cat/dog/pokemon/meal pictures, kickall and kicklist in a throw-away group, nickname in rank and top, and each web service (they can change or go away)
+
 TurboFex v0.9.2 - public product cleanup: silent permissions, clean ping and help, honest README, project guide
 CHANGED IN 0.9.2
 - CHANGED restricted commands are SILENT: a person who may not use an owner-only, admin-only or main-owner command gets no reply at all (no warning, no explanation, no "slow down"). The check now happens before the rate limit, the "turned off" notice, the maintenance notice and the "groups only" notice. The same for the restricted parts inside commands (rank, herald, realm on/off, delete, schedule, filter, stop, unschedule, birthday on/off, antipromote/antidemote, endgame, locked promote/demote)

@@ -4,6 +4,7 @@ const config = require('../config');
 const store = require('./store');
 const meta = require('./metadata');
 const activity = require('./activity');
+const recent = require('./recent');
 const categories = require('./categories');
 const seen = require('./seen');
 const sent = require('./sent');
@@ -179,6 +180,7 @@ async function handleMessageInner(sock, msg) {
   // Passive protections (anti-link, anti-word, anti-spam) and message counting
   if (isGroup && !msg.key.fromMe) {
     activity.count(jid, msg.key.participant);
+    recent.touch(jid, msg.key.participant); // for listonline
     if (await runProtections({ sock, msg, jid, text, getRoles: roles })) return;
     if (text && captcha.check(sock, msg, jid, text, botIds)) return; // an answer to the verification question
     autosticker.maybe(sock, msg, jid, botIds).catch(() => {}); // pictures and videos become stickers (only when switched on)

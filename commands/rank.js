@@ -1,5 +1,6 @@
 const store = require('../whatsapp/store');
 const levels = require('../whatsapp/levels');
+const nicks = require('../whatsapp/nicknames');
 const { getTargets, num } = require('../whatsapp/utils');
 
 module.exports = [
@@ -26,7 +27,7 @@ module.exports = [
       const s = levels.statsOf(jid, target);
       if (!s.position) return reply(`@${num(target)} has no XP yet. Chat with the group to earn some!`, { mentions: [target] });
       return reply(
-        `*Rank of @${num(target)}*\n▸ *Level:* ${s.level}\n▸ *XP:* ${s.xp}\n▸ *Position:* ${s.position} of ${s.total}\n\n${levels.bar(s.into, s.need)}  ${s.into}/${s.need} XP to level ${s.level + 1}`,
+        `*Rank of ${nicks.label(jid, target)}*\n▸ *Level:* ${s.level}\n▸ *XP:* ${s.xp}\n▸ *Position:* ${s.position} of ${s.total}\n\n${levels.bar(s.into, s.need)}  ${s.into}/${s.need} XP to level ${s.level + 1}`,
         { mentions: [target] }
       );
     },
@@ -46,7 +47,7 @@ module.exports = [
       if (!top.length) return reply('Nobody has earned XP yet. Start chatting!');
       const medal = ['1.', '2.', '3.'];
       return reply(
-        `*Top members*\n${top.map(([, v], i) => `${medal[i] || `${i + 1}.`} @${num(v.j)}: level ${levels.level(v.x)} (${v.x} XP)`).join('\n')}`,
+        `*Top members*\n${top.map(([, v], i) => `${medal[i] || `${i + 1}.`} ${nicks.label(jid, v.j)}: level ${levels.level(v.x)} (${v.x} XP)`).join('\n')}`,
         { mentions: top.map(([, v]) => v.j) }
       );
     },

@@ -1,6 +1,7 @@
 const store = require('./store');
 const meta = require('./metadata');
 const replay = require('./replay');
+const joined = require('./joined');
 const { num } = require('./utils');
 const adminguard = require('./adminguard');
 const captcha = require('./captcha');
@@ -56,6 +57,11 @@ async function handleParticipants(sock, update) {
   }
 
   if (action !== 'add' && action !== 'remove') return;
+  if (!stale) {
+    // for newmembers: remember who joined and when (and forget who left)
+    if (action === 'add') joined.record(id, ids);
+    else joined.forget(id, ids);
+  }
   if (action === 'add' && !stale) {
     captcha.onRaid(sock, id, ids, g).catch((e) => console.error('Raid protection error:', e.message)); // many joins at once
     captcha.onJoin(sock, id, ids, g).catch((e) => console.error('Verification error:', e.message)); // a question for every new member

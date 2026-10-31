@@ -1,11 +1,11 @@
-# ⚡ TurboFex v0.9.2
+# ⚡ TurboFex v0.9.3
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and even
 runs a small "Empire" game where every group becomes its own realm with its own money.
 
-<!-- counts: 262 commands, 14 categories -->
-Members can use **262 commands in 14 categories** (the bot owner has even more, such as settings and diagnostics).
+<!-- counts: 311 commands, 14 categories -->
+Members can use **311 commands in 14 categories** (the bot owner has even more, such as settings and diagnostics).
 Send `.menu` to see them all.
 
 > ⚠️ **Please read:** WhatsApp does not officially allow bots, and a number used for a bot can be banned.
@@ -15,11 +15,11 @@ Send `.menu` to see them all.
 
 | | |
 |---|---|
-| 👥 **Group management** | Welcome and goodbye messages, rules, warnings, kick / promote / demote, open and close the group, tag everyone, polls, giveaways, scheduled messages, birthdays, and chat levels (`.rank`, `.top`). |
+| 👥 **Group management** | Welcome and goodbye messages, rules, warnings, kick / promote / demote, open and close the group, tag everyone, polls, giveaways, scheduled messages, birthdays, chat levels (`.rank`, `.top`), nicknames, and lists of who is active or new (`.listonline`, `.newmembers`, `.staff`). |
 | 🛡️ **Protection** | Anti-link, banned words, anti-spam, anti-bot, anti-raid, slow mode, verification questions for new members. All of them are **off until an admin switches them on**. |
 | ⚜️ **Empire of Fex** | A game inside every group: earn Aurum (the money), choose a career, own estates, craft goods, trade, bid at auctions, hold elections, join guilds and enter dungeons. Start with `.daily`. |
-| 🎮 **Games and fun** | Wordle, hangman, trivia, tic-tac-toe, connect four, slots, riddles, quizzes, jokes, truth or dare, and more. |
-| 🧰 **Tools and lookups** | Weather, dictionary, Wikipedia, currency, translation, QR codes, calculator, reminders, notes and to-dos. |
+| 🎮 **Games and fun** | Wordle, hangman, trivia, tic-tac-toe, connect four, slots, riddles, quizzes, jokes, truth or dare, hugs, a love meter, fortune cookies, cat and dog pictures, and more. |
+| 🧰 **Tools and lookups** | Weather, dictionary, Wikipedia, currency, translation, QR codes, calculator, reminders, timers, notes and to-dos, country facts, Pokémon, recipes, the space station, earthquakes, tip and discount calculators. |
 | 🎨 **Media** | Stickers, picture editing, audio and video effects, and downloads (`.play`, `.dl`). Some of these need extra tools on the computer or host that runs the bot; if one is missing, the bot says the feature is not available. |
 
 The exact list is always in `.menu` and `.list`; they are built from the commands your version really has.

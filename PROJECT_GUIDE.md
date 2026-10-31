@@ -44,7 +44,7 @@ index.js (supervisor)
 | `core/` | Engine: boot, updater, session ID, setup, storage helpers, web helpers (`safefetch`, `http`, `linkpreview`), capacity guard, backups, brand and integrity |
 | `core/realm/` | The Empire of Fex game logic: money (`aurum`), `market`, `trade`, `auction`, `gov`, `court`, `guild`, `dungeon`, `god` (owner tools), `settings`, `ledger`, `ui` |
 | `whatsapp/` | Connection, handler, store, protections, watchers, welcome, levels, formatting, menu categories; `whatsapp/play/` has the chat games |
-| `commands/` | Command files (about 190 files, 335 commands, 224 aliases) |
+| `commands/` | Command files (about 196 files, 384 commands, 312 aliases) |
 | `tests/` | Node built-in tests, one file per area; `tests/_setup.js` points data to a temporary folder |
 | `update.json` | Which GitHub repo and branch the updater reads |
 | `removed.txt` | Files to delete on bots that update themselves |
@@ -128,7 +128,7 @@ Slow commands (`slow: true`) run in the background so the chat is not blocked.
 
 Everything saved lives in `data/` (override with `TURBOFEX_DATA`; tests use a temporary folder). JSON files are written by `core/jsonstore.js` (kept in memory, written a moment later and always on stop/restart).
 Known files: `groups.json` (group settings and bot settings, `whatsapp/store.js`), `setup.json` (number), `session-id.json`, `session-previous/`, `session-backup/` (last 3 login copies, daily), `rollback/`, `maintenance.json`, `last-repair.txt`,
-plus per-feature stores (levels, notes, birthdays, stats, the Empire in `core/realm/state.js` with a ledger of owner changes). Realm data is **per group**; nothing is shared between groups.
+plus per-feature stores (levels, nicknames, joined (when members joined, for `.newmembers`), notes, birthdays, stats, the Empire in `core/realm/state.js` with a ledger of owner changes). Realm data is **per group**; nothing is shared between groups.
 **Never delete or reset `data/`** and never write a migration that changes balances without a backup and the owner's approval.
 
 ## 10. Configuration and environment variables
@@ -195,6 +195,7 @@ The host needs to run `npm install`, keep the process alive, and keep `session/`
 9. **No uptime guarantee:** the bot reconnects and can roll back a bad update, but nothing proves it runs for months unattended.
 10. **Usage hints** were checked for 325 commands with no arguments (most already show an example). Wrong-argument cases and every text string were not exhaustively reviewed.
 11. Only the owner sees console diagnostics; there is no log file or log rotation.
+12. **`.listonline` is not a real online list.** WhatsApp does not tell a bot who is online, so it lists who wrote a message in the last few minutes (kept in memory, empty after a restart). **`.newmembers`** only knows joins the bot saw (`data/joined.json`). The lookup commands added in 0.9.3 depend on free public web services (restcountries, PokeAPI, Jikan, TheMealDB, TheCocktailDB, OpenLibrary, alquran.cloud, npm, wheretheiss.at, USGS, Nager.Date, open-meteo, sunrise-sunset.org, NASA with the shared DEMO_KEY, Google DNS, and the cat and dog picture services); any of them can change or stop, and none was called during testing (the tests use fakes).
 
 ## 18. Instructions for AI assistants
 
