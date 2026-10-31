@@ -465,7 +465,7 @@ test('the ticker runs every job and one broken job does not stop the others', as
   await ticker.run(async (grp, c) => posted.push([grp, c.text]));
   console.error = log;
   assert.deepStrictEqual(seen, ['t1', 't3']);
-  assert.deepStrictEqual(posted, [['g', 'x']]);
+  assert.deepStrictEqual(posted.filter((p) => p[0] === 'g'), [['g', 'x']]); // (other features may post news for realms the earlier tests made)
 });
 
 test('every Empire command is in the Empire category, has a description, and none of the old coin commands is left', () => {
@@ -481,6 +481,6 @@ test('every Empire command is in the Empire category, has a description, and non
   for (const nu of ['purse', 'daily', 'profile', 'bank', 'deposit', 'withdraw', 'give', 'wealth', 'shop', 'buy', 'realm', 'god']) assert.ok(all.has(nu), `${nu} should exist`);
 });
 
-test('the version is 0.8.2', () => {
-  assert.strictEqual(require('../package.json').version, '0.8.2');
+test('the version is 0.9.0', () => {
+  assert.strictEqual(require('../package.json').version, '0.9.0');
 });

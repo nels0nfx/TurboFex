@@ -13,6 +13,7 @@ const careers = require('../core/realm/careers');
 const market = require('../core/realm/market');
 const auction = require('../core/realm/auction');
 const { resolveTarget } = require('../whatsapp/utils');
+const godtext = require('../core/realm/godtext');
 
 const godCoreStock = (g) => god.realmStock(g);
 const isNumberToken = (t) => /^@?\+?\d{7,15}$/.test(t);
@@ -67,6 +68,8 @@ const HELP = (p) =>
       `\`${p}god price grain 12\` • \`${p}god event [name]\` • \`${p}god herald\` • \`${p}god market reset confirm\``,
       `\`${p}god auction end 3\` • \`${p}god auction cancel 3\``,
       `\`${p}god wipe @user confirm\` • \`${p}god wipe realm confirm\``,
+      '',
+      ...godtext.HELP(p),
       '',
       '*The realms*',
       `\`${p}god realm 2\` – choose the realm in a private chat`,
@@ -338,6 +341,10 @@ module.exports = [
         if (!r.ok) return reply(ui.warn('Percent: up to 500 for a blessing, up to 90 for a curse. Hours: 1 to 720.'));
         await announce(ctx, group, sub === 'bless' ? `${ui.tag(target)} is blessed.` : `${ui.tag(target)} is cursed.`, [target]);
         return reply(ui.card(sub === 'bless' ? '✨' : '🌑', sub === 'bless' ? 'Blessed' : 'Cursed', [ui.tag(target), `*Pay:* ${pct > 0 ? '+' : ''}${pct}% for ${hours} hours`]), who);
+      }
+
+      if (godtext.SUBS.includes(sub)) {
+        if (await godtext.handle(ctx, { sub, group, announce, needRealm, nameOf })) return undefined;
       }
 
       return reply(`${ui.warn('I do not know that.')}\n\n${HELP(prefix)}`);

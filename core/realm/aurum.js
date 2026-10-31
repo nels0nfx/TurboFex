@@ -2,6 +2,7 @@
 // Every function takes the realm (the group) first: every realm has its own citizens, its own money and its own treasury.
 const settings = require('./settings');
 const S = require('./state');
+const civic = require('./civic'); // laws and festivals change pay; the Treasurer's income tax
 
 const DAY = 86400000;
 
@@ -72,6 +73,7 @@ function earnMult(group, jid, now = Date.now()) {
   if (charmLeft(group, jid, now) > 0) m += charmPct(group) / 100;
   const c = S.citizen(group, jid);
   if (c.fate && c.fate.until > now) m *= c.fate.mult;
+  m *= civic.mult(group, 'pay', now) * (1 + civic.payBonus(group, jid, now)); // a law or festival that is on, and the perk of a noble title
   return m;
 }
 
@@ -151,7 +153,7 @@ function give(group, from, to, n) {
   if (!(n >= min)) return { ok: false, why: 'min', min };
   const a = S.citizen(group, from);
   if (a.coins < n) return { ok: false, why: 'poor', have: a.coins };
-  const fee = Math.floor((n * get('giveFee', group)) / 100);
+  const fee = Math.floor((n * get('giveFee', group) * civic.mult(group, 'fee')) / 100);
   a.coins -= n;
   S.citizen(group, to).coins += n - fee;
   treasuryAdd(group, fee);
@@ -177,11 +179,18 @@ function daily(group, jid, now = Date.now()) {
   const days = Math.min(c.streak, get('dailyStreakMax', group)) - 1;
   const base = get('dailyBase', group) + days * get('dailyStreakStep', group);
   const mult = earnMult(group, jid, now);
-  const amount = Math.round(base * mult);
+  const gross = Math.round(base * mult);
+  const tax = civic.tax(group, gross); // the Treasurer's income tax (0 unless a rate is set)
+  const amount = gross - tax;
   c.lastDaily = now;
   c.coins += amount;
   S.touch();
-  return { ok: true, amount, base, bonus: mult - 1, streak: c.streak, coins: c.coins };
+  try {
+    require('./season').points(group, jid, 10, now); // the season counts the daily gift
+  } catch (err) {
+    // the season is not loaded
+  }
+  return { ok: true, amount, gross, tax, base, bonus: mult - 1, streak: c.streak, coins: c.coins };
 }
 
 // a waiting time that is used up when asked (name = what it is for)

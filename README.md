@@ -1,4 +1,4 @@
-# ⚡ TurboFex v0.8.2
+# ⚡ TurboFex v0.9.0
 
 WhatsApp group management and assistant bot by **Nelson Fx** (Trinity Flow). It runs on Node.js with the
 [Baileys](https://github.com/WhiskeySockets/Baileys) library and is built to run for months without attention:
@@ -60,7 +60,7 @@ Push the new files to the GitHub repo and raise `version` in `package.json`. Bot
 
 ## The Empire of Fex
 Every group is a **realm** with its own citizens, money (**Aurum**) and treasury. It is open in every group by default (admins close it with `.realm off`).
-The Empire is built in phases: the foundation and God (phase 1), careers, estates, goods and crafting (phase 2), the market, the Herald news, trading and auctions (phase 3). The government, guilds and more come next.
+The Empire is built in phases: the foundation and God (phase 1), careers, estates, goods and crafting (phase 2), the market, the Herald news, trading and auctions (phase 3), the government and the court (phase 4), and society: seasons, festivals, nobility, guilds and dungeons (phase 5).
 
 | Command | What it does |
 |---|---|
@@ -100,6 +100,32 @@ Goods (Grain, Ore, Iron, Wine, Cloth) have a price in every realm. It moves when
 | `.auction` / `.auction sell sword 1 200` / `.auction bid 3 250` | Auctions: the best bid wins when the time is over (the realm keeps a cut). `.auction info 3`, `.auction cancel 3` |
 
 God controls: `.god price grain 12`, `.god event [name|list]`, `.god herald`, `.god market reset confirm`, `.god auction end|cancel <number>`. Every number (update time, swing, how fast prices come back, how far trades move them, the lowest and highest price, the buying markup, event chance and strength, the Herald's tags, the trade fee and time, the auction time, cut, minimum raise and limits) is a setting: `.god settings market`, `herald`, `trade`, `auction`.
+
+### The government and the court (phase 4)
+A realm with no Sovereign can hold an **election**; the winner rules for a term and appoints a **Treasurer**, a **Marshal** and a **Steward**. The Treasurer sets the income tax and spends the treasury, the Marshal jails, the Steward and the Sovereign pass laws, and the citizens can call for a **referendum** or an **impeachment**. Citizens can also **sue** each other: a jury of citizens votes. A prisoner cannot work, collect, trade, auction or claim the daily gift.
+
+| Command | What it does |
+|---|---|
+| `.government` | The Sovereign, the officers, the tax, the treasury, the laws and what is going on |
+| `.election` / `.election start` / `.stand` / `.vote @user` | Choose a Sovereign (standing costs a fee that goes to the treasury) |
+| `.appoint treasurer @user` / `.dismiss marshal` / `.decree text` / `.salary` | The Sovereign's work; the rulers claim a daily salary from the treasury |
+| `.tax` / `.tax 5` | Income tax on the daily gift, work and the weekly bonus (the Treasurer sets it, God limits it) |
+| `.treasury` / `.treasury grant @user 100` / `.treasury relief 500` / `.treasury log` | The treasury and what the Treasurer may spend each day |
+| `.law` / `.law festival` / `.referendum prosperity` / `.referendum yes` | Laws (festival, trade holiday, harvest decree, amnesty; big laws like the Age of Prosperity and the Royal Levy need the citizens' vote) |
+| `.impeach` / `.impeach yes` | Citizens sign a petition, then vote to remove the Sovereign |
+| `.jail` / `.jail @user 30` / `.pardon @user` | The Marshal jails, the Sovereign pardons |
+| `.court` / `.sue @user reason` / `.court guilty 3` / `.court innocent 3` | The court: a fine for the treasury and some jail time when the jury says guilty |
+
+### Society (phase 5)
+| Command | What it does |
+|---|---|
+| `.season` / `.season hall` | The season leaderboard (points from the daily gift, work, guilds, dungeons). The best three win Aurum, the first becomes Champion. Summer pays a little more, Autumn gives estates a bigger harvest |
+| `.festival` | The realm celebrates every few days: everybody earns more for some hours |
+| `.nobility` / `.ennoble @user baron` / `.disgrace @user` | Knights, Barons, Counts and Dukes: the Sovereign gives titles (the treasury pays), seats are limited, a noble earns a little more |
+| `.guild` / `.guild create Name` / `.guild invite @user` / `.guild join Name` / `.guild deposit 100` / `.guild upgrade` / `.guild top` | Guilds with a bank and levels; every member earns a bonus |
+| `.dungeon` / `.dungeon open crypt` / `.dungeon join` | A party goes into a dungeon: a bigger party has better odds; a win shares Aurum and goods |
+
+God controls for all of it: `.god crown|dethrone|officer|election|law|jail|pardon|treasury|tax|court|title|festival|season|guild|dungeon|clearstate` (send `.god` for the list). Every number and every switch is a setting: `.god settings government`, `court`, `season`, `festival`, `nobility`, `guild`, `dungeon`. In a private chat choose the realm first with `.god realm N`.
 
 ### God (the bot owner)
 God does not rule the realms. God sets the limits and can change anything that exists, in a group or in a private chat.

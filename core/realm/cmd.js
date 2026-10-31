@@ -6,6 +6,10 @@ const S = require('./state');
 const settings = require('./settings');
 const god = require('./god');
 const ui = require('./ui');
+const civic = require('./civic');
+
+// what a prisoner may not do
+const JAILED = new Set(['work', 'weekly', 'daily', 'collect', 'trade', 'auction']);
 
 function realmCommand(def) {
   const { feature = 'core', run, ...rest } = def;
@@ -29,6 +33,11 @@ function realmCommand(def) {
       }
       if (feature !== 'core' && !settings.featureOn(feature, group)) {
         return reply(ui.card('🔒', 'Closed by God', [`${settings.one(feature)?.title || feature} is switched off in this realm.`]));
+      }
+      // a prisoner cannot earn or trade (God is never jailed)
+      if (JAILED.has(rest.name) && !isRealOwner && ctx.myJid) {
+        const left = civic.jailLeft(group, ctx.myJid);
+        if (left > 0) return reply(ui.card('⛓️', 'You are in jail', [`${rest.name} is not possible for another *${ui.dur(left)}*.`], [`The Sovereign can pardon: \`${prefix}pardon\``]));
       }
       return run(ctx, { group, god: !!isRealOwner, isDM });
     },

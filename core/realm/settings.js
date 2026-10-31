@@ -63,7 +63,7 @@ function parse(d, text) {
 function set(full, text, group = null) {
   const d = defOf(full);
   if (!d) return { ok: false, error: 'There is no such setting.' };
-  const p = typeof text === 'boolean' || typeof text === 'number' ? { ok: true, value: text } : parse(d, text);
+  const p = typeof text === 'boolean' ? { ok: true, value: text } : parse(d, String(text));
   if (!p.ok) return p;
   const before = get(full, group);
   if (group) (js.data.realms[group] || (js.data.realms[group] = {}))[full] = p.value;

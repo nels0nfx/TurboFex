@@ -1,3 +1,18 @@
+TurboFex v0.9.0 - the Empire, phases 4 and 5: the government, the court, seasons, festivals, nobility, guilds and dungeons
+CHANGED IN 0.9.0
+- NEW the government: elections ("election", "stand", "vote"), the Sovereign and three officers (Treasurer, Marshal, Steward: "appoint", "dismiss"), decrees, salaries paid from the treasury, the income tax ("tax", taken from the daily gift, work and the weekly bonus), the treasury ("treasury", grants and relief with a daily spending cap), laws ("law": Festival, Trade Holiday, Harvest Decree, Amnesty; big laws such as the Age of Prosperity and the Royal Levy need a referendum), referendums, impeachment (petition then vote), jail ("jail", "pardon"). The bot closes votes and starts the next election by itself and tells the group, tagging the people
+- NEW the court of law ("court", "sue"): a filing fee, a jury of citizens, a fine for the treasury and jail time on a guilty verdict
+- NEW seasons ("season", "season hall"): points from the daily gift, work, guild deposits and dungeons; prizes for the top three and the Champion title; Summer and Autumn weather
+- NEW festivals ("festival"): the realm celebrates every few days with extra pay for some hours
+- NEW titles and nobility ("nobility", "ennoble", "disgrace"): Knight, Baron, Count, Duke with limited seats, a cost for the treasury, a length and a pay perk
+- NEW guilds ("guild ..."): found, invite, join, bank, levels, a pay bonus for members
+- NEW dungeons ("dungeon open|join|leave"): parties, odds that grow with the party, shared loot of Aurum and goods
+- NEW prisoners cannot use daily, work, weekly, collect, trade or auction
+- NEW the profile shows the office, the noble title, the guild, the season place and the jail
+- NEW God controls for everything: every feature has an on/off switch and settings with safe ranges ("god settings government|court|season|festival|nobility|guild|dungeon"), and new God commands: crown, dethrone, officer, election, law, jail, pardon, treasury, tax, court, title, festival, season, guild, dungeon, clearstate. All of them are written in the Divine Ledger and work in a private chat after "god realm N"
+- CHANGED: God's settings now check the range for numbers given by code too, not only for text
+- CHANGED: the version is 0.9.0
+
 TurboFex v0.8.2 - the market and herald commands are back
 CHANGED IN 0.8.2
 - FIXED: "market" and "herald" were silent on every bot that updated by itself. removed.txt still listed commands/market.js (the file of the OLD market), so each update installed the new file and then deleted it. The line is gone, and the bot no longer deletes any file that the same update contains. Bots that already updated get the file back with this version

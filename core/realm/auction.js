@@ -104,7 +104,7 @@ function resolve(group, now = Date.now(), force = []) {
   for (const a of done) {
     const item = stuff.get(a.item);
     if (a.bid) {
-      const cut = Math.floor((a.bid * get('cut', group)) / 100);
+      const cut = Math.floor((a.bid * get('cut', group) * require('./civic').mult(group, 'fee')) / 100);
       giveBack(group, a.bidderJid, a.item, a.qty);
       A.add(group, a.sellerJid, a.bid - cut);
       A.treasuryAdd(group, cut);

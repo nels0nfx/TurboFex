@@ -3,6 +3,7 @@
 const settings = require('./settings');
 const S = require('./state');
 const A = require('./aurum');
+const civic = require('./civic');
 const shop = require('./shop');
 const stuff = require('./stuff');
 
@@ -163,13 +164,20 @@ function work(group, jid, now = Date.now(), rand = Math.random) {
     const n = get('goodsBase', group) + Math.floor(level / 3) + (rand() < 0.5 ? 1 : 0);
     goods = { id: cr.good, ...stuff.add(group, jid, cr.good, n) };
   }
-  const pay = Math.round(mult);
+  const gross = Math.round(mult);
+  const tax = civic.tax(group, gross);
+  const pay = gross - tax;
   A.add(group, jid, pay);
   c.cx = c.cx || {};
   c.cx[cr.id] = xp0 + 10 + (usedTool ? 5 : 0);
   const level2 = levelOf(group, c.cx[cr.id]);
   S.touch();
-  return { ok: true, career: cr, pay, goods, level: level2, levelUp: level2 > level, xp: c.cx[cr.id], tool: usedTool, meal, first, notes };
+  try {
+    require('./season').points(group, jid, 5, now);
+  } catch (err) {
+    // the season is not loaded
+  }
+  return { ok: true, career: cr, pay, tax, goods, level: level2, levelUp: level2 > level, xp: c.cx[cr.id], tool: usedTool, meal, first, notes };
 }
 
 // ---- the weekly bonus (also for citizens without a career)
@@ -179,12 +187,14 @@ function weekly(group, jid, now = Date.now()) {
   if (!cd.ok) return { ok: false, waitMs: cd.waitMs };
   const st = status(group, jid);
   const bonus = 1 + (st.level > 1 ? ((st.level - 1) * get('levelPay', group)) / 100 : 0);
-  const pay = Math.round(get('weeklyBase', group) * bonus * A.earnMult(group, jid, now));
+  const gross = Math.round(get('weeklyBase', group) * bonus * A.earnMult(group, jid, now));
+  const tax = civic.tax(group, gross);
+  const pay = gross - tax;
   A.add(group, jid, pay);
   let goods = null;
   if (st.career && st.career.good) goods = { id: st.career.good, ...stuff.add(group, jid, st.career.good, 5) };
   S.touch();
-  return { ok: true, pay, goods, career: st.career, level: st.level };
+  return { ok: true, pay, tax, goods, career: st.career, level: st.level };
 }
 
 module.exports = { CAREERS, TOOLS, byId, findCareer, minRankOf, toolOf, status, levelOf, xpFor, choose, quit, work, weekly };

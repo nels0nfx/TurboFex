@@ -54,7 +54,7 @@ const maxEstates = (group, jid) => get('estatesBase', group) + A.rank(group, jid
 // what an estate has made since the last collection (before the tax)
 function waiting(group, e, st, now = Date.now()) {
   const hours = Math.min(get('storageHours', group), Math.max(0, (now - st.at) / HOUR));
-  return Math.floor(hours * outputOf(group, e, st.lv));
+  return Math.floor(hours * outputOf(group, e, st.lv) * require('./civic').mult(group, 'output', now)); // a harvest law raises it while it is on
 }
 
 function buy(group, jid, id, now = Date.now()) {

@@ -64,7 +64,7 @@ function accept(group, jid, id = null, now = Date.now()) {
   }
   if (A.balance(group, jid) < o.price) return { ok: false, why: 'poor', offer: o, item, need: o.price - A.balance(group, jid) };
   if (stuff.bagSize(group, jid) - stuff.used(group, jid) < o.qty) return { ok: false, why: 'bag', offer: o, item };
-  const fee = Math.floor((o.price * get('fee', group)) / 100);
+  const fee = Math.floor((o.price * get('fee', group) * require('./civic').mult(group, 'fee')) / 100);
   stuff.take(group, o.fromJid, o.good, o.qty);
   stuff.add(group, jid, o.good, o.qty);
   A.take(group, jid, o.price);
