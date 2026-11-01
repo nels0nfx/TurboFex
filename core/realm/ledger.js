@@ -1,7 +1,7 @@
 // The Divine Ledger: everything God changes is written here (who, when, where, what). God can read it with "god ledger".
 const jsonstore = require('../jsonstore');
 
-const js = jsonstore.open('realm-ledger', { rows: [] });
+const js = jsonstore.open('realm-ledger', { rows: [] }, { delay: 500 });
 const KEEP = 500;
 
 function log({ action, realm = null, target = null, detail = '' }) {

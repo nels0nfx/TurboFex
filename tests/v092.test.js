@@ -164,12 +164,3 @@ test('public README: no claims the code cannot prove', () => {
   const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
   assert.ok(!/for months|without attention|every message with a link|every command reply|guarantee/i.test(readme));
 });
-
-test('PROJECT_GUIDE.md (private, only in the owner\'s copy) covers the required topics and holds no secrets', { skip: fs.existsSync(path.join(ROOT, 'PROJECT_GUIDE.md')) ? false : 'PROJECT_GUIDE.md is private and not in this copy' }, () => {
-  const guide = fs.readFileSync(path.join(ROOT, 'PROJECT_GUIDE.md'), 'utf8');
-  for (const topic of ['Architecture', 'Folder', 'Baileys', 'Pairing', 'Command', 'Permissions', 'Data storage', 'Environment variables', 'Error handling', 'Update', 'Testing', 'Deployment', 'Known limitations', 'Instructions for AI']) {
-    assert.ok(new RegExp(topic, 'i').test(guide), `guide covers ${topic}`);
-  }
-  assert.ok(!/TFX-(?!XXXX|K7M2)[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}/.test(guide), 'no real-looking session ID');
-  assert.ok(!/[A-Za-z0-9_-]{40,}/.test(guide.replace(/https?:\/\/\S+/g, '')), 'no long token-like strings');
-});

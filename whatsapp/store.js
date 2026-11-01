@@ -1,9 +1,8 @@
 // Saves each group's settings and the bot's own settings in data/groups.json
-const fs = require('fs');
-const path = require('path');
+const { DEFAULT_STATUS_EMOJIS } = require('./statusemojis');
 const config = require('../config');
 const { num } = require('./utils');
-const { DATA } = require('../core/paths');
+const jsonstore = require('../core/jsonstore');
 
 const MAX_WARNINGS = Number(config.maxWarnings) || 3;
 const DEFAULT_WELCOME = '👋 Welcome @user to *{group}*!\n👥 You are member #{count}.';
@@ -11,41 +10,24 @@ const DEFAULT_GOODBYE = '🚪 @user has left *{group}*. Goodbye! 👋';
 const ANTILINK_MODES = ['off', 'delete', 'warn', 'kick'];
 const BOT_KEY = '__bot';
 
-const dir = DATA;
-const file = path.join(dir, 'groups.json');
-
-let db = {};
-try {
-  db = JSON.parse(fs.readFileSync(file, 'utf8'));
-} catch (err) {
-  db = {};
-}
+// All group settings and all bot settings live in data/groups.json. It is opened by the safe store (core/jsonstore.js):
+// written atomically, with a backup copy, never replaced by empty defaults when it is damaged, and written again on stop.
+const js = jsonstore.open('groups', {}, { delay: 400 });
+const db = js.data;
 
 // Saves are batched: many changes within a moment become ONE disk write (keeps the bot fast)
-let saveTimer = null;
-let dirty = false;
-
 function flush() {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = null;
-  if (!dirty) return; // nothing changed: never touch the disk
-  dirty = false;
-  try {
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(db));
-  } catch (err) {
-    console.error('Could not save settings:', err.message);
-  }
+  js.flush();
 }
 
 function save() {
-  dirty = true;
-  if (saveTimer) return;
-  saveTimer = setTimeout(flush, 400);
-  if (saveTimer.unref) saveTimer.unref();
+  js.touch();
 }
 
-process.on('exit', flush);
+// Settings the owner or an admin changes by hand are written at once (they are rare, and must survive a sudden stop).
+function settle() {
+  js.save();
+}
 
 function getGroup(jid) {
   const g = db[jid] || (db[jid] = {});
@@ -95,7 +77,7 @@ function getGroup(jid) {
 function update(jid, fn) {
   const g = getGroup(jid);
   fn(g);
-  save();
+  settle();
   return g;
 }
 
@@ -128,7 +110,7 @@ function addWarning(jid, id) {
 function resetWarnings(jid, id) {
   const g = getGroup(jid);
   delete g.warnings[num(id)];
-  save();
+  settle();
 }
 
 function getWarnings(jid, id) {
@@ -151,7 +133,7 @@ function getMode() {
 
 function setMode(mode) {
   bot().mode = mode;
-  save();
+  settle();
 }
 
 function getAutoUpdate() {
@@ -160,7 +142,7 @@ function getAutoUpdate() {
 
 function setAutoUpdate(on) {
   bot().autoUpdate = !!on;
-  save();
+  settle();
 }
 
 const DEFAULT_PREFIX = '.';
@@ -168,20 +150,20 @@ const DEFAULT_PREFIX = '.';
 function setPrefix(p) {
   bot().prefix = p || null;
   bot().noPrefix = false; // choosing a prefix switches "no prefix" mode off
-  save();
+  settle();
 }
 
 // "No prefix" mode: commands are used without any symbol (menu, ping, play song...)
 function setNoPrefix(on) {
   bot().noPrefix = !!on;
-  save();
+  settle();
 }
 
 // The region (time zone) chosen with the "region" command. null = the one from config.js / TIMEZONE
 const getRegion = () => bot().region || null;
 function setRegion(zone) {
   bot().region = zone || null;
-  save();
+  settle();
 }
 
 // The prefix that is really used: the one saved with "setprefix", else config.js / PREFIX, else "."
@@ -201,7 +183,7 @@ function effectivePrefix() {
   if (b.prefixMigrated) return;
   b.prefixMigrated = true;
   if (b.prefix === '!') b.prefix = null;
-  dirty = true;
+  js.touch();
 })();
 
 // Owner automation (autotyping, autoread, alwaysonline, autobio, autoreact, pmblocker...): small named settings
@@ -210,7 +192,7 @@ function setAuto(key, value) {
   const b = bot();
   if (!b.auto || typeof b.auto !== 'object') b.auto = {};
   b.auto[key] = value;
-  save();
+  settle();
 }
 
 // API keys the owner gave the bot with the setapi command (an environment variable still works too)
@@ -241,21 +223,21 @@ function rateCfg() {
 
 function updateRate(fn) {
   fn(rateCfg());
-  save();
+  settle();
 }
 
 // ----- what to do with incoming calls: 'off' | 'reject' | 'block'
 const getAnticall = () => (['reject', 'block'].includes(bot().anticall) ? bot().anticall : 'off');
 function setAnticall(v) {
   bot().anticall = v;
-  save();
+  settle();
 }
 
 // ----- link previews under messages that contain a link
 const getLinkPreview = () => bot().linkPreview !== false;
 function setLinkPreview(on) {
   bot().linkPreview = !!on;
-  save();
+  settle();
 }
 
 // ----- credit inside the stickers the bot makes ("Sticker by ...")
@@ -268,7 +250,7 @@ function stickerCfg() {
 
 function updateSticker(fn) {
   fn(stickerCfg());
-  save();
+  settle();
 }
 
 // ----- reactions on commands (hourglass while working, tick when done) -----
@@ -280,7 +262,7 @@ function getCmdReact() {
 
 function setCmdReact(v) {
   bot().cmdReact = v;
-  save();
+  settle();
 }
 
 // ----- watermark added under the result of some commands -----
@@ -294,7 +276,7 @@ function watermarkCfg() {
 
 function updateWatermark(fn) {
   fn(watermarkCfg());
-  save();
+  settle();
 }
 
 // ----- message sent after a restart or an update -----
@@ -304,7 +286,7 @@ function getRestartMsg() {
 
 function setRestartMsg(on) {
   bot().restartMsg = !!on;
-  save();
+  settle();
 }
 
 // ----- protection that blocks heavy commands when the server cannot cope -----
@@ -314,7 +296,7 @@ function getGuard() {
 
 function setGuard(on) {
   bot().guard = !!on;
-  save();
+  settle();
 }
 
 // lists of phone numbers (digits only): extra owners and banned users
@@ -328,7 +310,7 @@ function addTo(key, id) {
   const list = listOf(key);
   if (n && !list.includes(n)) {
     list.push(n);
-    save();
+    settle();
   }
 }
 
@@ -338,7 +320,7 @@ function removeFrom(key, id) {
   const i = list.indexOf(n);
   if (i !== -1) {
     list.splice(i, 1);
-    save();
+    settle();
     return true;
   }
   return false;
@@ -365,7 +347,7 @@ function peekFilters(jid) {
 }
 
 function saveNow() {
-  flush();
+  js.save();
 }
 
 // ----- AFK (away) -----
@@ -385,7 +367,7 @@ function afkSet(ids, reason) {
   const map = afkMap();
   const record = { reason: reason || '', since: Date.now(), ids: [...ids], told: {} };
   for (const id of ids) map[id] = record;
-  save();
+  settle();
 }
 
 // each person is told about an AFK only ONCE per AFK session (turning AFK on again starts a new session)
@@ -406,7 +388,7 @@ function afkDel(ids) {
   const record = afkGet(ids);
   if (!record) return;
   for (const id of record.ids) delete map[id];
-  save();
+  settle();
 }
 
 // ----- scheduled messages -----
@@ -424,19 +406,19 @@ function addSchedule({ jid, time, text, once, repeat, cmd }) {
   const item = { id: b.scheduleSeq, jid, time, text, once: rep.kind === 'once', repeat: rep };
   if (cmd) item.cmd = cmd;
   schedules().push(item);
-  save();
+  settle();
   return item;
 }
 
 // a schedule item was changed in place (an "every N hours" item moves its next time): save it
-const touchSchedules = () => save();
+const touchSchedules = () => settle();
 
 function removeSchedule(id) {
   const list = schedules();
   const i = list.findIndex((s) => s.id === id);
   if (i === -1) return false;
   list.splice(i, 1);
-  save();
+  settle();
   return true;
 }
 
@@ -451,7 +433,7 @@ function addReminder({ jid, who, ids, at, text }) {
   b.reminderSeq = (b.reminderSeq || 0) + 1;
   const item = { id: b.reminderSeq, jid, who, ids, at, text };
   reminders().push(item);
-  save();
+  settle();
   return item;
 }
 
@@ -460,7 +442,7 @@ function removeReminder(id) {
   const i = list.findIndex((r) => r.id === id);
   if (i === -1) return false;
   list.splice(i, 1);
-  save();
+  settle();
   return true;
 }
 
@@ -469,7 +451,7 @@ const getGreet = () => bot().greet || null;
 
 function setGreet(text) {
   bot().greet = text || null;
-  save();
+  settle();
 }
 
 function wasGreeted(jid, withinMs) {
@@ -493,21 +475,23 @@ const getWelcomedFor = () => bot().welcomedFor || null;
 
 function setWelcomedFor(account) {
   bot().welcomedFor = account;
-  save();
+  settle();
 }
 
 // ----- WhatsApp status features (auto view / like / save) -----
 function statusCfg() {
   const b = bot();
-  const defaults = { view: false, like: false, save: false, emojis: ['❤️'], delayMin: 0, delayMax: 0, saveTo: null, dailyLikeLimit: 200 };
+  const defaults = { view: false, like: false, save: false, emojis: [...DEFAULT_STATUS_EMOJIS], delayMin: 0, delayMax: 0, saveTo: null, dailyLikeLimit: 200 };
   b.status = { ...defaults, ...(b.status || {}) };
-  if (!Array.isArray(b.status.emojis) || !b.status.emojis.length) b.status.emojis = ['❤️'];
+  // nothing chosen yet, or only the old single-heart default that was never chosen by the owner: use the default list
+  const old = b.status.emojis;
+  if (!Array.isArray(old) || !old.length || (!b.status.emojisSet && old.length === 1 && old[0] === '❤️')) b.status.emojis = [...DEFAULT_STATUS_EMOJIS];
   return b.status;
 }
 
 function updateStatusCfg(fn) {
   fn(statusCfg());
-  save();
+  settle();
 }
 
 // ----- watchers: view-once, deleted and edited messages, each with its own destination -----
@@ -522,7 +506,7 @@ function watchCfg(name) {
 
 function updateWatch(name, fn) {
   fn(watchCfg(name));
-  save();
+  settle();
 }
 
 module.exports = {

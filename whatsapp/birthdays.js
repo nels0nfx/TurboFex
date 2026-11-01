@@ -72,28 +72,45 @@ function inGroup(groupMetadata) {
   return out;
 }
 
-// 08:00: groups that switched birthdays on are told
+// 08:00 (or later the same morning if the bot was restarting): groups that switched birthdays on are told.
+// Each group is told ONCE per day: the day is saved with the group, so a restart does not send it again.
+const tries = new Map(); // group|day -> failed tries in this run
 async function announceToday(sock) {
   const t = today();
+  const dayId = clock.parts().date;
   const sent = [];
   const groups = [];
   store.forEachGroup((jid, g) => {
-    if (g.birthdays) groups.push(jid);
+    if (g.birthdays && g.birthdayDay !== dayId) groups.push(jid);
   });
   for (const jid of groups) {
+    const tk = `${jid}|${dayId}`;
+    if ((tries.get(tk) || 0) >= 3) continue;
     try {
       const info = await meta.getMeta(sock, jid);
       const list = inGroup(info).filter((x) => x.bd.d === t.d && x.bd.m === t.m);
-      if (!list.length) continue;
-      const tags = list.map((x) => `@${num(x.jid)}`).join(', ');
-      // "@all" is WhatsApp's own tag-all: it notifies every member (nonJidMentions: 1). The birthday people are tagged by name as well.
-      await sock.sendMessage(jid, {
-        text: `@all\n🎂 *Happy Birthday!*\n${tags}\n_Wishing you a wonderful day from everyone here!_`,
-        mentions: list.map((x) => x.jid),
-        contextInfo: { nonJidMentions: 1 },
-      });
-      sent.push(jid);
+      if (list.length) {
+        const tags = list.map((x) => `@${num(x.jid)}`).join(', ');
+        // "@all" is WhatsApp's own tag-all: it notifies every member (nonJidMentions: 1). The birthday people are tagged by name as well.
+        store.update(jid, (g) => {
+          g.birthdayDay = dayId; // saved BEFORE sending: a restart cannot send it twice
+        });
+        await sock.sendMessage(jid, {
+          text: `@all\n🎂 *Happy Birthday!*\n${tags}\n_Wishing you a wonderful day from everyone here!_`,
+          mentions: list.map((x) => x.jid),
+          contextInfo: { nonJidMentions: 1 },
+        });
+        sent.push(jid);
+      } else {
+        store.update(jid, (g) => {
+          g.birthdayDay = dayId; // nobody today: not looked at again today
+        });
+      }
     } catch (err) {
+      tries.set(tk, (tries.get(tk) || 0) + 1);
+      store.update(jid, (g) => {
+        if (g.birthdayDay === dayId && !sent.includes(jid)) g.birthdayDay = null; // the message did not go out: try again
+      });
       console.log(`Birthday message failed for ${jid}: ${err.message}`);
     }
   }

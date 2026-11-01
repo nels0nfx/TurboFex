@@ -38,7 +38,7 @@ module.exports = {
     const text = buffer.toString('utf8');
     if (!/youtube\.com|google\.com/i.test(text) || !text.includes('\t')) return reply('⚠️ That does not look like a cookies.txt file (Netscape format) for YouTube.');
     fs.mkdirSync(path.dirname(FILE), { recursive: true });
-    fs.writeFileSync(FILE, text);
+    require('../core/safefile').writeText(FILE, text);
     return reply('✅ Cookies saved. Try *play* again. If YouTube blocks it again later, export a fresh file.');
   },
 };

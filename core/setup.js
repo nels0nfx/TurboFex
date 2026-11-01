@@ -11,8 +11,7 @@ const line = '==============================================';
 
 function saveNumber(number) {
   try {
-    fs.mkdirSync(path.dirname(FILE), { recursive: true });
-    fs.writeFileSync(FILE, JSON.stringify({ number }));
+    require('./safefile').save(FILE, { number });
   } catch (err) {
     console.log('Could not save the number:', err.message);
   }

@@ -5,7 +5,28 @@ const ai = require('../core/ai');
 const { num, getContextInfo } = require('./utils');
 
 const SCOPES = ['all', 'groups', 'dms', 'selected'];
-const memory = new Map(); // chat -> [{ role, content }] (kept in memory only)
+// chat -> [{ role, content }]: the short conversation memory is saved (data/chatbot-memory.json), so after a restart the
+// chatbot still knows what was just talked about. It looks like a Map to the code below.
+const jsonstore = require('../core/jsonstore');
+const memStore = jsonstore.open('chatbot-memory', { chats: {} }, { delay: 5000 });
+const memory = {
+  get: (k) => memStore.data.chats[k],
+  set(k, v) {
+    memStore.data.chats[k] = v;
+    memStore.touch();
+    return this;
+  },
+  delete(k) {
+    const had = k in memStore.data.chats;
+    delete memStore.data.chats[k];
+    memStore.touch();
+    return had;
+  },
+  get size() {
+    return Object.keys(memStore.data.chats).length;
+  },
+  keys: () => Object.keys(memStore.data.chats)[Symbol.iterator](),
+};
 const lastAt = new Map();
 const MAX_TURNS = 10;
 const GAP_MS = 3000;

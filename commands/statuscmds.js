@@ -3,6 +3,7 @@ const store = require('../whatsapp/store');
 const { parseDestination } = require('../whatsapp/dest');
 const statusEngine = require('../whatsapp/status');
 const clock = require('../core/clock');
+const { DEFAULT_STATUS_EMOJIS, split: emojiList } = require('../whatsapp/statusemojis');
 
 const base = { category: 'status', ownerOnly: true };
 
@@ -22,10 +23,6 @@ function toggle(name, aliases, key, label, description, note) {
   };
 }
 
-const emojiList = (text) =>
-  [...new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(text)]
-    .map((s) => s.segment)
-    .filter((g) => /\p{Extended_Pictographic}/u.test(g));
 
 module.exports = [
   toggle('autoviewstatus', ['viewstatus'], 'view', 'Auto view status', 'Automatically view everybody\'s WhatsApp statuses: autoviewstatus on / off', 'Use ' + 'statusdelay to wait a little before viewing.'),
@@ -34,19 +31,21 @@ module.exports = [
   {
     ...base,
     name: 'statusemoji',
-    description: 'Emojis used for auto like: statusemoji ❤️ 🔥 😂 (several = random one each time, reset = back to ❤️)',
+    description: 'Emojis used for auto like: statusemoji ❤️ 🔥 😂 (any number, one is picked at random each time, reset = back to the default list)',
     async run({ rest, reply, prefix }) {
       if (!rest) return reply(`💖 Auto-like emojis: ${store.statusCfg().emojis.join(' ')}\nChange them: ${prefix}statusemoji ❤️ 🔥 😂`);
       if (rest.toLowerCase() === 'reset') {
         store.updateStatusCfg((s) => {
-          s.emojis = ['❤️'];
+          s.emojis = [...DEFAULT_STATUS_EMOJIS];
+          s.emojisSet = false;
         });
-        return reply('✅ Back to ❤️');
+        return reply(`✅ Back to the default list (${DEFAULT_STATUS_EMOJIS.length} emojis).`);
       }
-      const list = emojiList(rest).slice(0, 8);
+      const list = emojiList(rest); // no limit on how many
       if (!list.length) return reply('⚠️ I could not find any emoji in that. Example: statusemoji ❤️ 🔥 😂');
       store.updateStatusCfg((s) => {
         s.emojis = list;
+        s.emojisSet = true;
       });
       return reply(`✅ Auto-like emojis: ${list.join(' ')}`);
     },

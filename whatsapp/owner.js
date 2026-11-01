@@ -1,9 +1,9 @@
-const fs = require('fs');
 const path = require('path');
 const config = require('../config');
 const idmap = require('./idmap');
 const { num, selfJid } = require('./utils');
 const { DATA } = require('../core/paths');
+const safefile = require('../core/safefile');
 
 // WhatsApp can address the same person two ways: by phone number or by a hidden "LID". Many phones (iPhones
 // especially) can only open messages sent to their LID; a message sent to the phone number shows
@@ -11,7 +11,7 @@ const { DATA } = require('../core/paths');
 const file = path.join(DATA, 'owner-chat.json');
 let remembered = null;
 try {
-  remembered = JSON.parse(fs.readFileSync(file, 'utf8')).jid || null;
+  remembered = (safefile.load(file, 'owner-chat.json').data || {}).jid || null;
 } catch (err) {
   remembered = null;
 }
@@ -21,10 +21,9 @@ function remember(jid) {
   if (!jid || jid === remembered) return;
   remembered = jid;
   try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify({ jid }));
+    safefile.save(file, { jid });
   } catch (err) {
-    // not important
+    console.error('Could not save the owner chat:', err.message);
   }
 }
 

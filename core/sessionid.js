@@ -83,7 +83,7 @@ function usedBefore(id) {
 function markUsed(id) {
   try {
     fs.mkdirSync(DATA, { recursive: true });
-    fs.writeFileSync(MARK(), JSON.stringify({ hash: hashOf(id), at: Date.now() }));
+    require('./safefile').save(MARK(), { hash: hashOf(id), at: Date.now() });
   } catch (err) {
     // not important: the worst case is one extra download attempt on the next start
   }

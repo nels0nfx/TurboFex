@@ -163,7 +163,7 @@ function schedule(sessionDir) {
       if (Date.now() - (st.lastCleanup || 0) > 30 * DAY) {
         const r = cleanup(sessionDir);
         fs.mkdirSync(DATA, { recursive: true });
-        fs.writeFileSync(stateFile, JSON.stringify({ ...st, lastCleanup: Date.now() }));
+        require('./safefile').save(stateFile, { ...st, lastCleanup: Date.now() });
         if (r.removed) console.log(`🧹 Cleaned ${r.removed} old encryption files (${Math.round(r.bytes / 1024)} KB).`);
       }
     } catch (err) {

@@ -3,7 +3,7 @@ const jsonstore = require('../jsonstore');
 const levels = require('../../whatsapp/levels');
 const settings = require('./settings');
 
-const js = jsonstore.open('realm', { realms: {}, citizens: {}, god: {} });
+const js = jsonstore.open('realm', { realms: {}, citizens: {}, god: {} }, { delay: 300 }); // money and progress: written a fraction of a second after every change
 
 const keyOf = (jid) => levels.keyOf(jid);
 const slot = (group, key) => `${group}|${key}`;

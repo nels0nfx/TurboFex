@@ -36,9 +36,16 @@ function installAutoRepair() {
 async function start() {
   console.log(`\n⚡ Starting ${brand.botName} by ${brand.creator}...\n`);
 
+  require('./flush').installSignals(); // every saved file is written when the host stops or restarts the bot
   process.on('unhandledRejection', (err) => console.error('Unhandled error:', err));
   process.on('uncaughtException', (err) => console.error('Crash prevented:', err));
   installAutoRepair();
+
+  // One bot per data folder: a second copy would overwrite the first one's saved settings and records
+  if (!(await require('./lock').acquire())) {
+    console.error('❌ Another copy of the bot is running with the same data folder. This copy stops so the saved data is not overwritten.');
+    process.exit(1);
+  }
 
   // Look for a new version BEFORE the bot loads
   const { autoUpdateOnStart } = require('./updater');

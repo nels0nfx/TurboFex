@@ -8,9 +8,57 @@ const idmap = require('./idmap');
 const ack = require('./ack');
 const names = require('./names');
 const { num, selfJid } = require('./utils');
+const jsonstore = require('../core/jsonstore');
+const clockCore = require('../core/clock');
+
+// Everything the status features count or remember is kept on disk (data/status-activity.json), so a restart does not make
+// the bot forget how many statuses it already liked today, what it did with each status, or its totals.
+//   likes     the daily like counter { day, count, lastAt }
+//   totals    seen / viewed / liked / saved / errors / rejected / limited since the bot was first used
+//   progress  what was already done for each status id { t: time, v: viewed, l: liked, s: saved, n: failed tries }
+//   history   the last interactions (newest last)
+const js = jsonstore.open('status-activity', () => ({ likes: { day: '', count: 0, lastAt: 0 }, totals: {}, progress: {}, history: [], last: null, lastError: null }), { delay: 500 });
+const COUNTERS = ['seen', 'viewed', 'liked', 'saved', 'errors', 'rejected', 'limited'];
+const MAX_PROGRESS = 1500;
+const MAX_HISTORY = 200;
 
 const settings = { minimumDelayMs: 0 }; // tests can shorten delays
-const stats = { seen: 0, viewed: 0, liked: 0, saved: 0, errors: 0, rejected: 0, viewMs: null, route: '-', lagSec: null, last: null, lastError: null }; // shown by !statusinfo
+const stats = { seen: 0, viewed: 0, liked: 0, saved: 0, errors: 0, rejected: 0, limited: 0, viewMs: null, route: '-', lagSec: null, last: js.data.last || null, lastError: js.data.lastError || null }; // shown by !statusinfo
+for (const k of COUNTERS) stats[k] = Number(js.data.totals[k]) || 0; // the totals come back after a restart
+
+// adds one to a counter and saves it
+function bump(k) {
+  stats[k] = (Number(stats[k]) || 0) + 1;
+  js.data.totals[k] = stats[k];
+  js.touch();
+}
+function note(k, v) {
+  stats[k] = v;
+  if (k === 'last' || k === 'lastError') {
+    js.data[k] = v;
+    js.touch();
+  }
+}
+const history = (n = 20) => js.data.history.slice(-n).reverse();
+function record(action, who, ok, extra) {
+  js.data.history.push({ at: Date.now(), action, who: num(who), ok: !!ok, ...(extra || {}) });
+  if (js.data.history.length > MAX_HISTORY) js.data.history.splice(0, js.data.history.length - MAX_HISTORY);
+  js.touch();
+}
+
+// what was already done for a status (made when the status is first seen)
+function progressOf(id) {
+  const all = js.data.progress;
+  let p = all[id];
+  if (!p) {
+    p = all[id] = { t: Date.now() };
+    const keys = Object.keys(all);
+    if (keys.length > MAX_PROGRESS) for (const k of keys.slice(0, keys.length - MAX_PROGRESS)) delete all[k];
+    js.touch();
+  }
+  return p;
+}
+const inflight = new Set(); // statuses being handled right now (in this process)
 
 const rand = (a, b) => (b > a ? a + Math.random() * (b - a) : a);
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -66,11 +114,37 @@ let routeBrokenUntil = 0;
 // A real person does not like hundreds of statuses a day. The bot stops liking (it keeps viewing) after this many per day,
 // and keeps a short pause between two likes. Both protect the account from being limited by WhatsApp.
 const LIKE_GAP_MS = 1500;
-const likeDay = { day: '', count: 0, lastAt: 0 };
-function likeAllowed(limit) {
-  const today = new Date().toISOString().slice(0, 10);
-  if (likeDay.day !== today) Object.assign(likeDay, { day: today, count: 0 });
-  return !limit || likeDay.count < limit;
+// "Today" is the day in the bot's own time zone (the one set with the region command), the same clock the rest of the bot uses.
+const dayKey = () => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: clockCore.zone(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  } catch (err) {
+    return new Date().toISOString().slice(0, 10);
+  }
+};
+const likeDay = js.data.likes; // saved with the rest: the counter survives a restart
+function rollDay() {
+  const today = dayKey();
+  if (likeDay.day !== today) {
+    Object.assign(likeDay, { day: today, count: 0 });
+    js.touch();
+  }
+  return today;
+}
+// Takes one place in today's likes BEFORE the like is sent. Several likes can be waiting at the same time, so checking
+// only the finished ones let the daily limit be passed. Returns the day it counted for, or null when the limit is reached.
+function reserveLike(limit) {
+  const today = rollDay();
+  if (limit && likeDay.count >= limit) return null;
+  likeDay.count += 1;
+  js.touch();
+  return today;
+}
+function releaseLike(day) {
+  if (day && likeDay.day === day && likeDay.count > 0) {
+    likeDay.count -= 1; // the like failed: the place is given back
+    js.touch();
+  }
 }
 
 async function react(sock, to, key, emoji, opts) {
@@ -105,7 +179,7 @@ async function likeStatus(sock, msg, who, emoji) {
           stats.route = `status (${list.every((j) => j.endsWith('@lid')) ? 'lid' : list.some((j) => j.endsWith('@lid')) ? 'mixed' : 'number'} list)`;
           return;
         }
-        stats.rejected += 1;
+        bump('rejected');
         console.log(`⚠️ WhatsApp refused a like with the list [${list.map((j) => j.split('@')[1]).join(', ')}] (error ${r.error}), trying the next way...`);
       } catch (err) {
         // try the next list
@@ -117,7 +191,7 @@ async function likeStatus(sock, msg, who, emoji) {
   // last resort: straight to the poster
   const r = await react(sock, posterLid || who, key, emoji, {});
   if (r.ok === false) {
-    stats.rejected += 1;
+    bump('rejected');
     throw new Error(`WhatsApp refused the like (error ${r.error}). This is a known problem of the WhatsApp library with some accounts.`);
   }
   stats.route = 'direct';
@@ -145,38 +219,60 @@ function makeLane(max) {
     pump();
   };
 }
-const viewLane = makeLane(4);
+const viewLane = makeLane(8);
 const slowLane = makeLane(3);
 
 async function handleStatus(sock, msg) {
   const cfg = store.statusCfg();
   if (!cfg.view && !cfg.like && !cfg.save) return;
   if (msg.key.fromMe || !msg.message || msg.message.protocolMessage) return; // our own status, or a status being deleted
-  if (seen.statuses.check('status', msg.key.id)) return; // never twice, also after a restart
+  const id = msg.key.id;
+  if (id && seen.statuses.has('status', id)) return; // handled by an older version: never twice
+  if (id && inflight.has(id)) return; // already being worked on right now
 
   const who = msg.key.participant || msg.participant;
   if (!who) return;
   const posted = Number(msg.messageTimestamp?.low ?? msg.messageTimestamp) || 0;
   if (posted && Date.now() / 1000 - posted > 24 * 3600) return; // older than a day: it has expired anyway
+
+  // What is still to do for THIS status. What was done before a restart is remembered, so after a reconnect nothing is
+  // done twice and nothing that was only half done is forgotten.
+  const first = !(id && js.data.progress[id]);
+  const prog = id ? progressOf(id) : { t: Date.now() };
+  if ((prog.n || 0) >= 3) return; // it failed three times: stop trying
+  const todo = {
+    view: (cfg.view || cfg.like) && !prog.v,
+    like: cfg.like && !prog.l,
+    save: cfg.save && !prog.s,
+  };
+  if (!todo.view && !todo.like && !todo.save) return;
+  if (id) inflight.add(id);
+  const finish = () => {
+    if (id) inflight.delete(id);
+    js.touch();
+  };
+
   stats.lagSec = posted ? Math.max(0, Math.round(Date.now() / 1000 - posted)) : null; // how long WhatsApp took to bring it to the bot
   names.learnMessage({ key: { remoteJid: 'status@broadcast', participant: who }, pushName: msg.pushName });
-  stats.seen += 1;
-  stats.last = Date.now();
-  console.log(`📢 Status from ${num(who)} (${[cfg.view && 'view', cfg.like && 'like', cfg.save && 'save'].filter(Boolean).join(', ')})`);
+  if (first) bump('seen');
+  note('last', Date.now());
+  console.log(`📢 Status from ${num(who)} (${[cfg.view && 'view', cfg.like && 'like', cfg.save && 'save'].filter(Boolean).join(', ')})${first ? '' : ' (finishing what a restart interrupted)'}`);
   const fail = (what, err) => {
-    stats.errors += 1;
-    stats.lastError = `${what}: ${String(err?.message || err).slice(0, 80)}`;
+    bump('errors');
+    prog.n = (prog.n || 0) + 1;
+    note('lastError', `${what}: ${String(err?.message || err).slice(0, 80)}`);
     console.error(`Status ${what} failed:`, err?.message || err);
   };
   // The view is ALWAYS immediate. The "status delay" setting (if you set one) only delays the like and the save.
   const wait = Math.max(settings.minimumDelayMs, rand(cfg.delayMin, cfg.delayMax) * 1000);
   // 1) the VIEW: always immediate
   const viewJob = async () => {
-    if (!cfg.view && !cfg.like) return;
+    if (!todo.view) return;
     const t0 = Date.now();
     try {
       await markViewed(sock, msg, who);
-      stats.viewed += 1;
+      bump('viewed');
+      prog.v = 1;
       stats.viewMs = Date.now() - t0;
     } catch (err) {
       fail('view', err);
@@ -185,33 +281,58 @@ async function handleStatus(sock, msg) {
 
   // 2) the LIKE and the SAVE: only here is there any waiting. Past the daily like limit there is nothing to wait for.
   const slowJob = async () => {
-    const limited = cfg.like && !likeAllowed(cfg.dailyLikeLimit);
-    if (limited) {
-      stats.limited = (stats.limited || 0) + 1;
-      if (stats.limited === 1) console.log(`ℹ️ Daily like limit (${cfg.dailyLikeLimit}) reached: statuses are still viewed, but not liked until tomorrow.`);
+    let reserved = null;
+    let wantLike = todo.like;
+    if (wantLike) {
+      const live = store.statusCfg(); // read NOW, not when the status arrived: a limit set a moment ago must count
+      reserved = live.like ? reserveLike(Number(live.dailyLikeLimit) || 0) : null;
+      if (!reserved) {
+        wantLike = false;
+        if (live.like) {
+          prog.l = 2; // skipped because of the daily limit: it is not liked tomorrow instead
+          bump('limited');
+          if (likeDay.told !== likeDay.day && (likeDay.told = likeDay.day)) console.log(`ℹ️ Daily like limit (${live.dailyLikeLimit}) reached: statuses are still viewed, but not liked until tomorrow.`);
+        }
+      }
     }
-    const wantLike = cfg.like && !limited;
-    if (!wantLike && !cfg.save) return; // nothing left to do: no delay, no waiting place taken
+    const wantSave = todo.save;
+    if (!wantLike && !wantSave) return; // nothing left to do: no delay, no waiting place taken
     if (wait > 0) await sleep(wait);
+    if (wantLike) {
+      // the owner may have lowered the limit or switched liking off while this like was waiting its turn
+      const live = store.statusCfg();
+      if (!live.like || (Number(live.dailyLikeLimit) && likeDay.count > Number(live.dailyLikeLimit))) {
+        releaseLike(reserved);
+        wantLike = false;
+        if (live.like) prog.l = 2;
+      }
+    }
+    if (!wantLike && !wantSave) return;
     if (wantLike) {
       const pause = LIKE_GAP_MS - (Date.now() - likeDay.lastAt);
       if (pause > 0) await sleep(pause + Math.random() * 500);
       likeDay.lastAt = Date.now();
       if (settings.likeGapMs) await sleep(settings.likeGapMs);
       try {
-        await likeStatus(sock, msg, who, pick(cfg.emojis));
-        stats.liked += 1;
-        likeDay.count += 1;
+        await likeStatus(sock, msg, who, pick(store.statusCfg().emojis));
+        bump('liked');
+        prog.l = 1;
+        record('like', who, true, { id });
         console.log(`❤️ Liked the status of ${num(who)} (${stats.route})`);
       } catch (err) {
+        releaseLike(reserved);
+        record('like', who, false, { id });
         fail('like', err);
       }
     }
-    if (cfg.save) {
+    if (wantSave) {
       try {
         await saveStatus(sock, msg, normalize(sock, cfg.saveTo) || ownerChat(sock), who);
-        stats.saved += 1;
+        bump('saved');
+        prog.s = 1;
+        record('save', who, true, { id });
       } catch (err) {
+        record('save', who, false, { id });
         fail('save', err);
       }
     }
@@ -223,10 +344,11 @@ async function handleStatus(sock, msg) {
     } catch (e) {
       fail('status', e);
     }
-    if (cfg.like || cfg.save) slowLane(() => slowJob().catch((e) => fail('status', e)));
+    if (todo.like || todo.save) slowLane(() => slowJob().catch((e) => fail('status', e)).finally(finish));
+    else finish();
   });
 }
 
-const likeToday = () => (likeDay.day === new Date().toISOString().slice(0, 10) ? likeDay.count : 0);
+const likeToday = () => (likeDay.day === dayKey() ? likeDay.count : 0);
 
-module.exports = { handleStatus, settings, stats, markViewed, likeStatus, likeToday };
+module.exports = { handleStatus, settings, stats, markViewed, likeStatus, likeToday, history, store: js };

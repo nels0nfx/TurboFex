@@ -1,28 +1,15 @@
 // Personal money tracker, one record per person (data/budget.json)
-const fs = require('fs');
-const path = require('path');
 const clock = require('../core/clock');
 const { whoIds, num } = require('./utils');
-const { DATA } = require('../core/paths');
+const jsonstore = require('../core/jsonstore');
 
-const dir = DATA;
-const file = path.join(dir, 'budget.json');
 const MAX_ENTRIES = 500;
 
-let db = {};
-try {
-  db = JSON.parse(fs.readFileSync(file, 'utf8'));
-} catch (err) {
-  db = {};
-}
+const js = jsonstore.open('budget', {}, { delay: 500 });
+const db = js.data;
 
 function save() {
-  try {
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(db));
-  } catch (err) {
-    console.error('Could not save budget data:', err.message);
-  }
+  js.save(); // money records are written at once
 }
 
 function user(key) {

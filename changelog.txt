@@ -1,20 +1,44 @@
-TurboFex v0.9.13 - private AI files stay off GitHub
+TurboFex v1.0.1 - status limit fix, more like emojis, cleaner public files
+CHANGED IN 1.0.1
+- FIXED: statuslimit now takes effect at once. Likes that were already waiting in the queue read the limit and the on/off switch again just before they are sent, so a lower limit or "autolikestatus off" is respected.
+- FIXED: viewing statuses stays fast after the daily like limit is reached (more views run at the same time, and nothing waits for a like that will not be sent).
+- CHANGED: statusemoji has no limit on how many emojis you give it (it was 8). "statusemoji reset" goes back to the default list.
+- NEW: the default like emojis are a list of 57 emojis (a random one is used for each status). A bot that still has the old single heart is moved to the new list; emojis you chose yourself are kept.
+- CHANGED: the public project holds only the bot: development-only files and notes are no longer part of the repository or the release ZIP.
+
+TurboFex v1.0.0 - nothing is forgotten on a restart, plus four new media commands
+CHANGED IN 1.0.0
+- FIXED (root cause): the status daily-like counter and the status totals lived only in memory, so after a restart the bot thought it had never liked anything. They are now saved (data/status-activity.json) together with what was done for each status and a history of the last interactions. A status that was only half done before a restart is finished, never repeated.
+- FIXED: a damaged groups.json (all group and owner settings) was silently replaced by empty defaults. Every saved file now goes through core/safefile.js: atomic write (temp file, fsync, rename), a .bak mirror, repair from .tmp/.bak, and a damaged file is MOVED aside (.corrupt-<time>), never overwritten or deleted. One copy per day is kept in data/backups (7 days).
+- FIXED: settings were written late and not at all on SIGTERM/SIGKILL. All saved files now flush on exit, restart, SIGTERM, SIGINT and SIGHUP; owner settings and money are written within a fraction of a second; a failed write is kept and retried; a 10-second safety net saves changes that a feature forgot to announce.
+- FIXED: the daily like limit could be passed when several likes waited at once, and "today" used UTC instead of the bot's time zone.
+- FIXED: scheduled messages, auto open/close times and birthday messages could be sent twice or skipped when the bot restarted in that minute. They remember on disk that they ran and catch up for up to 10 minutes (birthdays until noon).
+- FIXED: a reminder was deleted before it was sent, so a failed send or a restart lost it. It is removed only after it was sent (up to 5 tries).
+- FIXED: open captcha questions and the chatbot's short memory were forgotten on restart; they are saved now.
+- CHANGED: the old economy files are moved to data/legacy-economy instead of being deleted. Saved values always win over defaults. Two bots on one data folder are refused (core/lock.js).
+- NEW: ytsearch (aliases yts, ytfind): search YouTube, then "ytsearch video 2" or "ytsearch audio 2". The results are kept 30 minutes, also across a restart.
+- NEW: tiktok (alias tt): TikTok video without the watermark.
+- NEW: ig (aliases instagram, insta): Instagram post, reel or story (stories and private accounts need cookies, see ytcookies).
+- NEW: pdf (aliases topdf, makepdf): text to PDF, picture to PDF, and "pdf add" + "pdf make" to join pictures and PDFs. No new package is needed (core/pdfmaker.js). The list is kept on disk for 2 hours.
+- NEW: tests/persistence.test.js (restart, SIGTERM, SIGKILL and damaged-file tests with real processes) and tests/v100.test.js.
+
+TurboFex v0.9.13 - local-only files stay out of the public project
 CHANGED IN 0.9.13
-- NEW: AGENTS.md, CLAUDE.md, GEMINI.md, PROJECT_GUIDE.md and removed.txt are git-ignored (every folder) and are no longer uploaded to GitHub or put in the public release ZIP. They stay on the owner's phone and in the development ZIP.
-- NEW: tools/protect-private.sh (takes them out of Git without deleting the local copies, installs commit and push guards, and can list old commits that held them) and tools/make-release.sh (builds the public ZIP and stops if a private file or secret is inside). .gitattributes also leaves them out of "git archive".
-- NEW: removed-files.txt is the public list of old files that self-updating bots delete. Updates still read an old removed.txt when a ZIP has one.
-- CHANGED: the README no longer links to files that are not on GitHub. Tests of the private files are skipped on a clean clone. No bot feature changed.
+- NEW: local-only development files are kept out of the public project and out of the public release ZIP. They are never uploaded to GitHub.
+- NEW: helper scripts that keep local-only files out of Git and check the release ZIP before it is published.
+- NEW: removed-files.txt is the public list of old files that self-updating bots delete. Updates still understand the older list format.
+- CHANGED: the README no longer links to files that are not on GitHub. No bot feature changed.
 
 TurboFex v0.9.12 - menu headings in one style
 CHANGED IN 0.9.12
 - CHANGED menu: every category heading is now exactly "┏ ❏ NAME ❏" (for example "┏ ❏ AUDIO ❏", "┏ ❏ AUTOREPLY ❏", "┏ ❏ GAMES ❏"): plain capitals, no bold marks, no small caps. The old styles are gone. Commands, their symbols, descriptions, order, the "┗" closers and everything else are unchanged
 - TESTS menu tests check the new heading on every category
 
-TurboFex v0.9.11 - private owner preferences for AI agents
+TurboFex v0.9.11 - local preferences file
 CHANGED IN 0.9.11
-- NEW OWNER_PREFERENCES.private.md: the owner's lasting preferences, design standards, coding rules, bot behaviour rules and "never change without permission" list, with a dated log of decisions. It is in .gitignore, so it stays on the owner's phone and never reaches GitHub or the hosting ZIP made by git archive; every ZIP the owner receives carries a copy
-- NEW AGENTS.md has a mandatory STEP 0 (read the private file, save new lasting preferences at once, never delete old lines, ask when unclear). CLAUDE.md, GEMINI.md and .cursorrules are short pointers; PROJECT_GUIDE.md points to it too
-- TESTS agents tests check the .gitignore entry, the pointers and the sections of the private file
+- NEW: a local-only preferences file for the owner, kept out of GitHub and out of the hosting ZIP made by git archive
+- CHANGED: local development notes were reorganised
+- TESTS: local checks for the notes (they run only on the owner's own copy)
 - NOTE no bot code changed in this version
 
 TurboFex v0.9.10 - clean menu headings, view-once diagnostics
@@ -60,11 +84,11 @@ CHANGED IN 0.9.7
 - STILL NEEDS A REAL WHATSAPP TEST: send yourself a view-once picture from another phone with autoviewonce all, check that the copy arrives; .chatbot test and a chat reply (it should now take 1 to 4 seconds); the console look on your panel (try CONSOLE_THEME=aurora or sunset)
 - NOTE WhatsApp decides what a linked device may receive. If WhatsApp does not send the file to this bot at all (not even when asked again), no bot can open that view-once, and the owner is told so with the "reply with vv" hint
 
-TurboFex v0.9.6 - console cards, old category look back, push command saved for AI helpers
+TurboFex v0.9.6 - console cards, old category look back, push command saved
 CHANGED IN 0.9.6
 - NEW the console prints a small card for every message, in gold, white and black: a gold badge with the time (with seconds), a white badge with GROUP or PRIVATE, then Chat (group name and size), From (name and role: Creator, Admin or Member), Number, Kind (text, image, reaction... and the command name), Text (long messages wrap onto 3 lines, then are cut), and Speed with a bar and a word (instant to very slow). The card is printed when the bot has finished with the message, so the speed is real. It is 44 characters wide so it fits a phone. CONSOLE_CHAT=off hides it, CONSOLE_CHAT=compact gives one short line per message, CONSOLE_COLOR=off drops the colours
 - CHANGED the menu categories and the menu <category> view look as they did before 0.9.4 (the "┌─ NAME" box with "│" lines). The new header stays (a boxed title, details on plain lines, no grey code box, no clock time)
-- CHANGED AGENTS.md now holds the owner's real push command (unzip, commit, push, tag, GitHub Release in one line) and tells every AI helper to send it, filled in, with every ZIP. The ZIP is named TurboFex-hosting-vX_Y_Z.zip. The old wipe-first command was removed from it. New tests/agents.test.js checks this
+- CHANGED: the owner's push command (unzip, commit, push, tag, GitHub Release in one line) is kept in the local notes. The ZIP is named TurboFex-hosting-vX_Y_Z.zip
 - NOTE 0.9.4 and 0.9.5 were never pushed: this version holds their changes too (chatbot and AI keys, anime, recipe steps)
 
 TurboFex v0.9.5 - menu header without the grey box
@@ -106,9 +130,9 @@ CHANGED IN 0.9.2
 - NEW .help is a short friendly guide for beginners (how to use commands, how to find them, what to try first, tips for admins and the owner). .menu keeps the full list; .menu <command> shows help for one command
 - FIXED antigstatus / antigm no longer tell group admins to run npm install; only the owner sees the technical hint
 - FIXED the "needs a group admin" notice no longer tells a plain member to do something only an admin can do
-- NEW PROJECT_GUIDE.md: architecture, files, pairing, commands, permissions, data, configuration, testing, deployment, known limitations and rules for future AI assistants
-- NEW README.md rewritten for ordinary users. It no longer claims "300+ commands in 16 categories" (members can use 262 commands in 14 categories, checked by a test), "every message with a link shows a preview", "every command reply is formatted", or "runs for months without attention". Developer setup moved to PROJECT_GUIDE.md
-- CHECKED the session ID expiry: everything says "works once, expires after 5 minutes" (README, AGENTS.md, the generated session_id.txt, the console help, and the pairing site page). A test now guards the wording
+- NEW: developer notes (architecture, files, pairing, commands, permissions, data, configuration, testing, deployment, known limitations), kept locally
+- NEW README.md rewritten for ordinary users. It no longer claims "300+ commands in 16 categories" (members can use 262 commands in 14 categories, checked by a test), "every message with a link shows a preview", "every command reply is formatted", or "runs for months without attention". Developer setup moved to local notes
+- CHECKED the session ID expiry: everything says "works once, expires after 5 minutes" (README, the local notes, the generated session_id.txt, the console help, and the pairing site page). A test now guards the wording
 - TESTS new tests/v092.test.js; six older tests that expected "Only admins can..." replies now expect silence
 - STILL NEEDS A REAL WHATSAPP TEST: silence for members in a real group, .ping and .help on a phone, pairing with the QR code and with the pairing code, a link preview, one media command, one restart
 
@@ -117,7 +141,7 @@ CHANGED IN 0.9.1
 - NEW optional config.env file in the main folder (SESSION_ID=..., PREFIX=..., TIMEZONE=...): the same idea as other WhatsApp bots. A variable set on the host always wins over the file, and updates never touch it
 - FIXED the session ID wording: an ID from the pairing site works once and expires after 5 minutes (the bot said 24 hours)
 - NEW the README tells people to download the hosting ZIP from the Releases page, not Code > Download ZIP (that one adds a TurboFex-main folder and the host cannot find index.js)
-- NEW AGENTS.md: a project guide (how the owner pushes from Termux, how a release is made, why the green Download ZIP button fails on hosts, how the session ID and the pairing site work)
+- NEW: local developer notes (how the owner pushes from Termux, how a release is made, why the green Download ZIP button fails on hosts, how the session ID and the pairing site work)
 
 TurboFex v0.9.0 - the Empire, phases 4 and 5: the government, the court, seasons, festivals, nobility, guilds and dungeons
 CHANGED IN 0.9.0
@@ -136,8 +160,8 @@ CHANGED IN 0.9.0
 
 TurboFex v0.8.2 - the market and herald commands are back
 CHANGED IN 0.8.2
-- FIXED: "market" and "herald" were silent on every bot that updated by itself. removed.txt still listed commands/market.js (the file of the OLD market), so each update installed the new file and then deleted it. The line is gone, and the bot no longer deletes any file that the same update contains. Bots that already updated get the file back with this version
-- NEW test: removed.txt may never list a file the project has, and market, herald, trade and auction must be loaded commands
+- FIXED: "market" and "herald" were silent on every bot that updated by itself. the old-files list still listed commands/market.js (the file of the OLD market), so each update installed the new file and then deleted it. The line is gone, and the bot no longer deletes any file that the same update contains. Bots that already updated get the file back with this version
+- NEW test: the old-files list may never list a file the project has, and market, herald, trade and auction must be loaded commands
 - CHANGED: the version is 0.8.2 (the CI badge was removed from the README: the workflow is not used)
 
 TurboFex v0.7.11 - the Empire, phase 3: the Realm Market, the Herald news, trading and auctions

@@ -10,8 +10,7 @@ const MAX_AGE_MS = 30 * 60 * 1000;
 // note = { type: 'update' | 'restart' | 'repair' | 'rollback', chat?: jid, from?, to?, notes? }
 function write(note) {
   try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify({ ...note, at: Date.now() }));
+    require('./safefile').save(file, { ...note, at: Date.now() }, { backup: false });
     return true;
   } catch (err) {
     return false;

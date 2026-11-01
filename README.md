@@ -1,10 +1,10 @@
-# ⚡ TurboFex v0.9.13
+# ⚡ TurboFex v1.0.1
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and even
 runs a small "Empire" game where every group becomes its own realm with its own money.
 
-<!-- counts: 311 commands, 14 categories -->
+<!-- counts: 315 commands, 14 categories -->
 Members can use **311 commands in 14 categories** (the bot owner has even more, such as settings and diagnostics).
 Send `.menu` to see them all.
 
@@ -20,7 +20,7 @@ Send `.menu` to see them all.
 | ⚜️ **Empire of Fex** | A game inside every group: earn Aurum (the money), choose a career, own estates, craft goods, trade, bid at auctions, hold elections, join guilds and enter dungeons. Start with `.daily`. |
 | 🎮 **Games and fun** | Wordle, hangman, trivia, tic-tac-toe, connect four, slots, riddles, quizzes, jokes, truth or dare, hugs, a love meter, fortune cookies, cat and dog pictures, and more. |
 | 🧰 **Tools and lookups** | Weather, dictionary, Wikipedia, currency, translation, QR codes, calculator, reminders, timers, notes and to-dos, country facts, Pokémon, recipes, the space station, earthquakes, tip and discount calculators. |
-| 🎨 **Media** | Stickers, picture editing, audio and video effects, and downloads (`.play`, `.dl`). Some of these need extra tools on the computer or host that runs the bot; if one is missing, the bot says the feature is not available. |
+| 🎨 **Media** | Stickers, picture editing, audio and video effects, downloads (`.play`, `.dl`, `.ytsearch`, `.tiktok`, `.ig`) and PDFs (`.pdf`). Some of these need extra tools on the computer or host that runs the bot; if one is missing, the bot says the feature is not available. |
 
 The exact list is always in `.menu` and `.list`; they are built from the commands your version really has.
 

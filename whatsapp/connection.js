@@ -306,6 +306,11 @@ async function startWhatsApp() {
     if (connection === 'open') {
       require('../core/chatlog').banner(`${brand.botName} is online as ${sock.user?.id}`);
       scheduler.start(sock);
+      try {
+        require('./captcha').resume(sock); // open verification questions continue after a restart or reconnect
+      } catch (err) {
+        console.error('Could not resume the verification questions:', err.message);
+      }
       presence.apply(sock); // always online / auto bio
       replay.open(); // for a few seconds, skip old messages WhatsApp re-delivers
       startWatchdog(sock, alive);

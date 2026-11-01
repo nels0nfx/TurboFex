@@ -1,40 +1,21 @@
 // WhatsApp hides phone numbers behind "LID" ids in many chats. Pairs are learned from messages,
 // contacts and the member lists of your groups, and kept on disk.
-const fs = require('fs');
-const path = require('path');
 const { withTimeout } = require('./timeout');
 const { num } = require('./utils');
-const { DATA } = require('../core/paths');
+const jsonstore = require('../core/jsonstore');
 
 const isLid = (j) => String(j).endsWith('@lid');
 const isPn = (j) => String(j).endsWith('@s.whatsapp.net');
 const TTL = 10 * 60 * 1000;
 const MAX = 5000;
 
-const dir = DATA;
-const file = path.join(dir, 'idmap.json');
-let known = {}; // lid number -> phone jid
-try {
-  known = JSON.parse(fs.readFileSync(file, 'utf8')) || {};
-} catch (err) {
-  known = {};
-}
-let dirty = false;
-let timer = null;
+// data/idmap.json: the safe store (atomic writes, backup copy, written again on stop or restart)
+const js = jsonstore.open('idmap', {}, { delay: 2000 });
+const known = js.data; // lid number -> phone jid
 
 function flush() {
-  if (timer) clearTimeout(timer);
-  timer = null;
-  if (!dirty) return;
-  dirty = false;
-  try {
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(known));
-  } catch (err) {
-    // not important
-  }
+  js.flush();
 }
-process.on('exit', flush);
 
 function learn(lid, pn) {
   if (!lid || !pn || !isLid(lid) || !isPn(pn)) return;
@@ -44,11 +25,7 @@ function learn(lid, pn) {
   known[k] = clean;
   const keys = Object.keys(known);
   if (keys.length > MAX) delete known[keys[0]];
-  dirty = true;
-  if (!timer) {
-    timer = setTimeout(flush, 2000);
-    if (timer.unref) timer.unref();
-  }
+  js.touch();
 }
 
 // every message carries both forms of the sender in the key (when WhatsApp knows them)

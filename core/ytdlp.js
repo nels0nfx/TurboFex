@@ -168,7 +168,7 @@ async function downloadAudio(target, { onSetup, source = 'youtube' } = {}) {
 }
 
 // target = a link or a name. Returns { buffer, ext, mimetype, title, artist, duration, url } with a video of at most 720p.
-async function downloadVideo(target, { onSetup } = {}) {
+async function downloadVideo(target, { onSetup, noWatermark = false } = {}) {
   let bin = await findBinary();
   if (!bin) {
     if (onSetup) await onSetup();
@@ -187,7 +187,10 @@ async function downloadVideo(target, { onSetup } = {}) {
     '-o', path.join(dir, '%(id)s.%(ext)s'),
     '--print', 'after_move:%(title)s\t%(uploader)s\t%(duration_string)s\t%(webpage_url)s\t%(filepath)s',
     // with ffmpeg: the best picture and sound up to 720p joined into an mp4; without it: a ready-made mp4
-    ...(ff ? ['-f', 'bv*[height<=720]+ba/b[height<=720]/b', '--merge-output-format', 'mp4', '--ffmpeg-location', ff] : ['-f', 'b[height<=720][ext=mp4]/b[ext=mp4]/b']),
+    // noWatermark (TikTok): the format called "download" is the one with the logo, it is never chosen
+    ...(noWatermark
+      ? (ff ? ['-f', 'bv*[format_id!*=download][height<=1080]+ba/b[format_id!*=download][height<=1080]/bv*[format_id!*=download]+ba/b[format_id!*=download]', '--merge-output-format', 'mp4', '--ffmpeg-location', ff] : ['-f', 'b[format_id!*=download][ext=mp4]/b[format_id!*=download]'])
+      : ff ? ['-f', 'bv*[height<=720]+ba/b[height<=720]/b', '--merge-output-format', 'mp4', '--ffmpeg-location', ff] : ['-f', 'b[height<=720][ext=mp4]/b[ext=mp4]/b']),
     ...(fs.existsSync(COOKIES) ? ['--cookies', COOKIES] : process.env.YTDLP_COOKIES ? ['--cookies', process.env.YTDLP_COOKIES] : []),
     ...extra,
     isLink ? target : `ytsearch1:${target}`,

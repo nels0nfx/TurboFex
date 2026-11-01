@@ -12,7 +12,7 @@ const digits = (v) => String(v || '').replace(/\D/g, '');
 // the number the owner typed when the bot was first started (see core/setup.js)
 let saved = {};
 try {
-  saved = JSON.parse(fs.readFileSync(path.join(DATA, 'setup.json'), 'utf8'));
+  saved = require('./core/safefile').load(path.join(DATA, 'setup.json'), 'setup.json').data || {};
 } catch (err) {
   saved = {};
 }

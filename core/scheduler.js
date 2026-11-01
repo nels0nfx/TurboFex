@@ -8,6 +8,30 @@ const ticker = require('./realm/ticker'); // the Empire's timed jobs (checkRealm
 let timer = null;
 let lastKey = '';
 
+// A timed job that is due is also done when the bot was restarting at that exact minute (it runs up to GRACE_MIN minutes
+// late), and every job remembers on disk that it ran for a given day, so a restart never repeats it and never skips it.
+const GRACE_MIN = 10;
+const toMin = (hhmm) => Number(String(hhmm).slice(0, 2)) * 60 + Number(String(hhmm).slice(3, 5));
+const slotKey = (p, hhmm) => `${p.date} ${hhmm}`;
+
+// is a time-of-day item due now (or a few minutes ago, not yet done)?
+function dueNow(item, p) {
+  if (!item.time || item.repeat?.kind === 'interval') return false;
+  const late = toMin(p.hhmm) - toMin(item.time);
+  if (!(late >= 0 && late <= GRACE_MIN)) return false;
+  if (!repeat.isDue(item, { ...p, hhmm: item.time })) return false;
+  return item.lastRun !== slotKey(p, item.time);
+}
+
+// the same for the group open / close times
+function dueAuto(g, kind, p) {
+  const at = g.autoMute && g.autoMute[kind];
+  if (!at) return false;
+  const late = toMin(p.hhmm) - toMin(at);
+  if (!(late >= 0 && late <= GRACE_MIN)) return false;
+  return g.autoMute[kind === 'mute' ? 'ranMute' : 'ranUnmute'] !== slotKey(p, at);
+}
+
 // sends the text of a scheduled item, or runs its command as the owner
 async function runItem(sock, item) {
   try {
@@ -31,7 +55,11 @@ async function checkIntervals(sock) {
     const had = item.nextAt;
     const due = repeat.dueInterval(item, now);
     if (had !== item.nextAt) changed = true;
-    if (due) await runItem(sock, item);
+    if (due) {
+      store.touchSchedules(); // the next time is saved BEFORE it runs, so a restart cannot run it twice
+      changed = false;
+      await runItem(sock, item);
+    }
   }
   if (changed) store.touchSchedules();
 }
@@ -42,26 +70,33 @@ async function tick(sock) {
   if (key === lastKey) return; // already handled this minute
   lastKey = key;
 
-  if (p.hhmm === '08:00') birthdays.announceToday(sock).catch((e) => console.log('Birthday job failed:', e.message));
+  // birthdays: from 08:00 (until noon, in case the bot was restarting at 08:00); each group is told once per day
+  if (p.hhmm >= '08:00' && p.hhmm <= '12:00') birthdays.announceToday(sock).catch((e) => console.log('Birthday job failed:', e.message));
 
   const jobs = [];
   store.forEachGroup((jid, g) => {
-    if (g.autoMute.mute === p.hhmm) jobs.push({ jid, mode: 'announcement', text: '🔒 Group closed automatically. Only admins can send messages.' });
-    if (g.autoMute.unmute === p.hhmm) jobs.push({ jid, mode: 'not_announcement', text: '🔓 Group opened automatically. Everyone can send messages.' });
+    if (dueAuto(g, 'mute', p)) jobs.push({ jid, g, mark: 'ranMute', at: g.autoMute.mute, mode: 'announcement', text: '🔒 Group closed automatically. Only admins can send messages.' });
+    if (dueAuto(g, 'unmute', p)) jobs.push({ jid, g, mark: 'ranUnmute', at: g.autoMute.unmute, mode: 'not_announcement', text: '🔓 Group opened automatically. Everyone can send messages.' });
   });
 
   // Scheduled messages and commands (!schedule): every day / weekdays / chosen days / monthly / once
   for (const item of [...store.schedules()]) {
-    if (!repeat.isDue(item, p)) continue;
+    if (!dueNow(item, p)) continue;
+    item.lastRun = slotKey(p, item.time); // remembered on disk BEFORE it runs: a restart cannot send it twice
+    store.touchSchedules();
     await runItem(sock, item);
     if (item.once || item.repeat?.kind === 'once') store.removeSchedule(item.id);
   }
 
   for (const job of jobs) {
     try {
+      job.g.autoMute[job.mark] = slotKey(p, job.at); // remembered before it runs
+      store.update(job.jid, () => {});
       await sock.groupSettingUpdate(job.jid, job.mode);
       await sock.sendMessage(job.jid, { text: job.text });
     } catch (err) {
+      job.g.autoMute[job.mark] = null; // it did not work: tried again in the next minute (within the grace time)
+      store.update(job.jid, () => {});
       console.log(`Scheduled job failed for ${job.jid}: ${err.message}`);
     }
   }
@@ -72,7 +107,7 @@ async function checkReminders(sock) {
   const now = Date.now();
   for (const r of [...store.reminders()]) {
     if (r.at > now) continue;
-    store.removeReminder(r.id);
+    if (r.retryAt && r.retryAt > now) continue; // a failed one waits a little before the next try
     const late = now - r.at > 2 * 60 * 1000 ? ' (a bit late, I was offline)' : '';
     const isGroup = String(r.jid).endsWith('@g.us');
     try {
@@ -80,8 +115,15 @@ async function checkReminders(sock) {
         text: `⏰ ${isGroup ? `@${String(r.who).split('@')[0].split(':')[0]} ` : ''}*Reminder${late}:*\n${r.text}`,
         mentions: isGroup ? [r.who] : [],
       });
+      store.removeReminder(r.id); // removed (and saved at once) only AFTER it was really sent: a restart or a failed send never loses it
     } catch (err) {
-      console.log(`Reminder ${r.id} could not be sent: ${err.message}`);
+      r.tries = (r.tries || 0) + 1;
+      console.log(`Reminder ${r.id} could not be sent (try ${r.tries}): ${err.message}`);
+      if (r.tries >= 5) store.removeReminder(r.id); // given up after five tries
+      else {
+        r.retryAt = now + r.tries * 60 * 1000;
+        store.touchSchedules();
+      }
     }
   }
 }

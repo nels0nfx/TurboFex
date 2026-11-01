@@ -5,7 +5,7 @@
 // Every feature also gets a switch ("<feature>.on") that turns the whole feature on or off.
 const jsonstore = require('../jsonstore');
 
-const js = jsonstore.open('realm-settings', { all: {}, realms: {} });
+const js = jsonstore.open('realm-settings', { all: {}, realms: {} }, { delay: 300 });
 const features = new Map(); // id -> { id, title, icon, settings: Map(key -> def) }
 
 function register(id, def) {
