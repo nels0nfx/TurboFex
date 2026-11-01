@@ -1,5 +1,7 @@
 # TurboFex: project guide for developers and AI assistants
 
+> AI agents: before changing anything read `OWNER_PREFERENCES.private.md` (private, git-ignored) and `AGENTS.md`.
+
 This is the handover document. It explains how TurboFex is built so a new developer, or a new Claude session, does not have to
 rediscover it. It was written during the v0.9.2 audit from the actual source. Anything this guide could not verify is listed under
 **Known limitations and open items**. [`AGENTS.md`](AGENTS.md) covers how the owner packages, pushes and releases (Termux, flat ZIP, GitHub Release);

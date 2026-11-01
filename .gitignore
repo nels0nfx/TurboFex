@@ -4,3 +4,5 @@ data/
 .env
 session_id.txt
 config.env
+# private owner preferences for AI agents: stays on the owner's phone, never on GitHub
+OWNER_PREFERENCES.private.md

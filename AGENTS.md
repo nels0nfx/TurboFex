@@ -3,6 +3,13 @@
 Read this first. It explains how this project is pushed, packaged, released and hosted, so you do not break the owner's workflow.
 For how the code itself works (architecture, commands, permissions, data, testing, known limitations) read [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) next.
 
+## STEP 0 - read the owner's private preferences (mandatory for every AI agent)
+Before you change anything, read **`OWNER_PREFERENCES.private.md`** in the main folder and follow it. It holds the owner's lasting preferences, design standards, coding rules, bot behaviour rules and the things that must never change without permission. It is **private**: it is git-ignored, it is not on GitHub, and you must never commit it, quote it in public files or paste it online.
+- If it is missing, stop and ask the owner to send it (it lives in `~/TurboFex` on his phone and inside every ZIP he receives). Do not invent preferences.
+- When the owner states a new lasting preference, correction, design requirement, coding preference or workflow rule, **save it in that file at once** (right section, dated, one line), then apply it. Never delete earlier lines: mark replaced ones `SUPERSEDED` and keep them. If an instruction is unclear or conflicts with a saved rule, ask him first.
+- Every ZIP you hand over must contain the current copy of that file (the ZIP rules below make this the one allowed private file).
+- If this file and the private file disagree, ask the owner which one is right.
+
 ## What this is
 - TurboFex: a WhatsApp group-management bot (Node.js >= 20, Baileys). Entry point: `index.js` (a small supervisor that starts `core/boot.js` as a child process, restarts it, and rolls back a bad update).
 - Repo: `nels0nfx/TurboFex`, branch `main` (see `update.json`).
@@ -32,7 +39,7 @@ cd ~/TurboFex && unzip -o ~/storage/downloads/TurboFex-hosting-v0_9_6.zip -d ~/T
 Consequences you must respect:
 - `unzip -o` overwrites files but **does not delete** anything. If a version removes a file, add `rm -f path/to/file &&` right after the `unzip` part of the command, and also list the file in `removed.txt` (for bots that update themselves).
 - The ZIP must contain every project file and must be **flat**: `index.js`, `package.json`, `core/`, ... at the top level, no wrapper folder.
-- A ZIP must never contain `.github/`, `node_modules/`, `session/`, `data/`, `session_id.txt` or `config.env`.
+- A ZIP must never contain `.github/`, `node_modules/`, `session/`, `data/`, `session_id.txt` or `config.env`. The one private file that MUST be inside it is `OWNER_PREFERENCES.private.md` (it is git-ignored, so `git add -A` skips it and GitHub never sees it).
 - The tag and the release fail if that version already exists, so **every ZIP needs a new version number** (bump it as described below).
 - The command ends by building `TurboFex-hosting.zip` from the committed files with `git archive` (flat, no `.git`, nothing from `.gitignore`). Keep the asset name exactly `TurboFex-hosting.zip` so `https://github.com/nels0nfx/TurboFex/releases/latest/download/TurboFex-hosting.zip` always gives the newest flat ZIP. (`gh` is installed with `pkg install gh`; log in once with `gh auth login`.)
 

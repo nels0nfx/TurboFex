@@ -1,3 +1,10 @@
+TurboFex v0.9.11 - private owner preferences for AI agents
+CHANGED IN 0.9.11
+- NEW OWNER_PREFERENCES.private.md: the owner's lasting preferences, design standards, coding rules, bot behaviour rules and "never change without permission" list, with a dated log of decisions. It is in .gitignore, so it stays on the owner's phone and never reaches GitHub or the hosting ZIP made by git archive; every ZIP the owner receives carries a copy
+- NEW AGENTS.md has a mandatory STEP 0 (read the private file, save new lasting preferences at once, never delete old lines, ask when unclear). CLAUDE.md, GEMINI.md and .cursorrules are short pointers; PROJECT_GUIDE.md points to it too
+- TESTS agents tests check the .gitignore entry, the pointers and the sections of the private file
+- NOTE no bot code changed in this version
+
 TurboFex v0.9.10 - clean menu headings, view-once diagnostics
 CHANGED IN 0.9.10
 - FIXED menu category headings had a doubled symbol ("┏✧ ✧ AUTOREPLY ✧"). Now "┏✧ AUTOREPLY ✧": one symbol before the name, the same one after it, command lines unchanged
