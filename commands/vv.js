@@ -25,10 +25,14 @@ module.exports = {
     if (!node) return reply('⚠️ That message has no picture, video or voice note in it.');
     const kind = inner.videoMessage ? 'video' : inner.audioMessage ? 'audio' : 'image';
 
-    const source = {
+    // A reply only carries a short copy of the quoted message, and for a view-once the file details can be missing from it.
+    // If the bot saw the complete message lately, that one is used.
+    const full = vo?.empty ? watchers.recentViewOnce(q.id) : null;
+    const source = full || {
       key: { remoteJid: jid, id: q.id, participant: q.participant, fromMe: botIds.includes(num(q.participant)) },
       message: q.message,
     };
+    const fullNode = full ? findViewOnce(full.message)?.node : null;
     let buffer;
     try {
       buffer = await watchers.fetchMedia(sock, source);
@@ -37,6 +41,7 @@ module.exports = {
       return reply(`⚠️ I could not open that file.\nReason: ${String(err.message).slice(0, 100)}\n${watchers.OPEN_ON_PHONE}`);
     }
 
+    if (fullNode) Object.assign(node, { caption: node.caption || fullNode.caption, mimetype: node.mimetype || fullNode.mimetype, ptt: node.ptt ?? fullNode.ptt });
     const to = (args[0] || '').toLowerCase() === 'me' ? ownerChat(sock) : jid;
     const caption = `👁️ *View-once opened*\n🕒 ${clock.stamp(Date.now())}${node.caption ? `\n\n${node.caption}` : ''}`;
     const opts = to === jid ? { quoted: msg } : undefined;

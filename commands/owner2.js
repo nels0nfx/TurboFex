@@ -57,7 +57,7 @@ module.exports = [
         store.setAuto('menu', { ...cur, [w]: text });
         return reply(`✅ *Menu ${w} saved:* ${text}\n_Open the menu to see it._`);
       }
-      await reply(`🎨 *Menu heading*\n*Title:* ${cur.title || 'default'}\n*Subtitle:* ${cur.subtitle || 'default'}\n\n▸ \`${prefix}setmenu title NELSONFX BOT\`\n▸ \`${prefix}setmenu subtitle Your friendly assistant\`\n▸ \`${prefix}setmenu reset\``);
+      await reply(`🎨 *Menu heading*\n*Title:* ${cur.title || 'default'}\n*Subtitle:* ${cur.subtitle || 'none'}\n\n▸ \`${prefix}setmenu title NELSONFX BOT\`\n▸ \`${prefix}setmenu subtitle Your friendly assistant\`\n▸ \`${prefix}setmenu reset\``);
     },
   },
   {

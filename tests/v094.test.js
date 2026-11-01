@@ -41,7 +41,8 @@ test('the menu has the new header (no grey box, no spaced-out letters) and the c
   const out = [];
   await menu.run({ reply: async (t) => out.push(t), commandList: all(), prefix: '.', args: [], isOwner: false, isAdmin: false });
   const text = out[0];
-  assert.match(text, /^╭━+╮\n┃  ✦ \*TURBOFEX\* ✦\n┃  _WhatsApp Assistant_\n┣━+\n┃ User ▸ Member  ·  Mode ▸ \w+\n/);
+  assert.match(text, /^╭━+╮\n┃  ✦ \*TURBOFEX\* ✦\n┣━+\n┃ User ▸ Member\n┃ Mode ▸ \w+\n┃ Prefix ▸ \.\n┃ Commands ▸ \d+\n┃ Version ▸ v\d+\.\d+\.\d+\n┃ Uptime ▸ [^\n]+\n╰━+╯\n/);
+  assert.ok(!/WhatsApp Assistant/.test(text), 'the "WhatsApp Assistant" line is gone');
   assert.ok(!/T U R B O/.test(text), 'the name is not spaced out');
   assert.ok(!text.includes('```'), 'no code block (WhatsApp pads it with empty space)');
   assert.ok(/\n╰━+╯\n\n┌─ \*/.test(text), 'the first category follows the header after one empty line only');
@@ -65,37 +66,67 @@ test('menu <category> is the old look: the name, then the description under it',
 const cardOf = (extra = {}) => chatlog.card({ time: '21:35:07', group: true, chat: 'Fex Squad', members: 128, who: 'Ada', role: 'Admin', number: '+27833333333', kind: 'text', isCommand: false, command: '', text: 'hello', ms: 48, ...extra });
 const plain = (t) => t.replace(/\x1b\[[0-9;]*m/g, '');
 
-test('console card: gold, white and black, every field there, wraps long text, and fits a phone screen', () => {
-  const was = { c: process.env.CONSOLE_COLOR, n: process.env.NO_COLOR };
-  delete process.env.CONSOLE_COLOR; delete process.env.NO_COLOR;
+test('console card: gradient colours, readable badges, every field there, wraps long text, and fits a phone screen', () => {
+  const was = { c: process.env.CONSOLE_COLOR, n: process.env.NO_COLOR, w: process.env.CONSOLE_WIDTH };
+  delete process.env.CONSOLE_COLOR; delete process.env.NO_COLOR; delete process.env.CONSOLE_WIDTH;
   try {
     const coloured = cardOf({ isCommand: true, command: 'menu', text: '.menu' });
-    assert.ok(coloured.includes('\x1b[48;5;220m') && coloured.includes('\x1b[30m'), 'black text on a gold badge (the time)');
-    assert.ok(coloured.includes('\x1b[107m'), 'black text on a white badge (GROUP)');
-    assert.ok(coloured.includes('\x1b[38;5;220m'), 'gold frame and chat name');
-    assert.ok(coloured.includes('\x1b[97m'), 'white text');
+    assert.ok(/\x1b\[38;2;\d+;\d+;\d+m/.test(coloured), 'full (24-bit) colours');
+    assert.ok(/\x1b\[48;2;\d+;\d+;\d+m\x1b\[38;2;12;12;28m/.test(coloured), 'a badge has an explicit dark text colour (the basic "black" is redrawn by some panels and was unreadable)');
+    assert.ok(!coloured.includes('\x1b[30m') && !coloured.includes('\x1b[107m'), 'no basic black or white');
     const lines = plain(coloured).split('\n');
-    assert.match(lines[0], /^┏━ 21:35:07 ━ GROUP ━+$/);
-    for (const label of ['Chat   Fex Squad (128)', 'From   Ada · Admin', 'Number +27833333333', 'Kind   text · command menu', 'Text   .menu']) assert.ok(lines.some((l) => l === `┃ ${label}`), label);
-    assert.match(lines[lines.length - 2], /^┃ Speed  ▰{8}  48 ms · instant$/);
-    assert.match(lines[lines.length - 1], /^┗━+$/);
+    assert.match(lines[0], /^╭─ 21:35:07 ─  GROUP  ─  CMD  ─+$/);
+    for (const label of ['Chat    Fex Squad (128)', 'From    Ada · Admin', 'Number  +27833333333', 'Kind    text · command menu', 'Text    .menu']) assert.ok(lines.some((l) => l === `│ ${label}`), label);
+    assert.match(lines[lines.length - 2], /^│ Speed   ▰{8} 48 ms$/);
+    assert.match(lines[lines.length - 1], /^╰─ instant ─+$/);
     const long = plain(cardOf({ text: 'word '.repeat(80) })).split('\n');
-    assert.ok(long.filter((l) => /^┃ (Text   |       )\S/.test(l)).length === 3, 'a long message is cut after three lines');
+    assert.ok(long.filter((l) => /^│ (Text    |        )\S/.test(l)).length === 3, 'a long message is cut after three lines');
     assert.ok(long.some((l) => l.endsWith('…')));
-    for (const l of [...lines, ...long]) assert.ok([...l].length <= 46, `fits a phone: ${l}`);
+    for (const l of [...lines, ...long]) assert.ok([...l].length <= 36, `fits a phone: ${l}`);
     // a colour code typed by a person is removed
     assert.ok(!cardOf({ text: 'hello \x1b[31mRED\x1b[0m' }).includes('\x1b[31m'));
     // other kinds
     const dm = plain(cardOf({ group: false, chat: '', members: 0, role: '', kind: 'reaction', text: '❤️', ms: 1700 }));
-    assert.ok(/PRIVATE/.test(dm) && /Chat   Private chat/.test(dm) && /Kind   reaction/.test(dm) && /Text   ❤️/.test(dm) && /1\.70 s · slowish/.test(dm));
+    assert.ok(/PRIVATE/.test(dm) && /Chat    Private chat/.test(dm) && /Kind    reaction/.test(dm) && /Text    ❤️/.test(dm) && /Speed   ▰{3}▱{5} 1\.70 s/.test(dm) && /╰─ slowish/.test(dm));
     const mine = plain(cardOf({ group: false, who: 'You', fromMe: true, number: '', kind: 'image', text: '', ms: 3200 }));
-    assert.ok(/From   You · bot account/.test(mine) && !/Number/.test(mine) && !/Text/.test(mine) && /slow/.test(mine));
+    assert.ok(/From    You · bot account/.test(mine) && !/Number/.test(mine) && !/Text/.test(mine) && /╰─ slow /.test(mine));
+    // themes and the 256-colour mode
+    process.env.CONSOLE_THEME = 'aurora';
+    assert.notStrictEqual(cardOf(), coloured.replace(/menu/g, 'hello'));
+    process.env.CONSOLE_COLOR = '256';
+    assert.ok(/\x1b\[38;5;\d+m/.test(cardOf()) && !/\x1b\[38;2/.test(cardOf()), 'old terminals get 256 colours');
+    delete process.env.CONSOLE_THEME;
+    // the width follows CONSOLE_WIDTH
     process.env.CONSOLE_COLOR = 'off';
+    process.env.CONSOLE_WIDTH = '50';
+    assert.ok(plain(cardOf()).split('\n')[0].length >= 48, 'a wider card');
+    process.env.CONSOLE_WIDTH = '36';
     assert.ok(!cardOf().includes('\x1b'), 'no colour codes when colours are off');
   } finally {
+    delete process.env.CONSOLE_THEME;
+    delete process.env.CONSOLE_WIDTH;
     if (was.c === undefined) delete process.env.CONSOLE_COLOR; else process.env.CONSOLE_COLOR = was.c;
     if (was.n !== undefined) process.env.NO_COLOR = was.n;
   }
+});
+
+test('console card: the number shows one + (it used to show ++)', () => {
+  const names = require('../whatsapp/names');
+  const idmap = require('../whatsapp/idmap');
+  const jid = '2349138567333@s.whatsapp.net';
+  assert.ok(idmap.isPn(jid));
+  assert.strictEqual(names.phoneOf(jid), '+2349138567333');
+  process.env.CONSOLE_COLOR = 'off';
+  try {
+    const base = { time: '09:35:58', group: false, chat: '', members: 0, who: 'X', role: '', kind: 'text', isCommand: false, command: '', text: 'Hi', ms: 68 };
+    const msg = { key: { remoteJid: jid, id: 'PL1', fromMe: false }, pushName: 'X' };
+    const keep = console.log; const printed = [];
+    console.log = (...a) => printed.push(a.join(' '));
+    process.env.CONSOLE_CHAT = 'on';
+    try { chatlog.incoming({ msg, jid, isGroup: false, text: 'Hi', content: { conversation: 'Hi' }, prefix: '.', isCommand: false }); chatlog.finish(msg); } finally { console.log = keep; process.env.CONSOLE_CHAT = 'off'; }
+    assert.ok(/Number  \+2349138567333\b/.test(printed.join('\n')) && !/\+\+/.test(printed.join('\n')));
+    assert.ok(base);
+  } finally { delete process.env.CONSOLE_COLOR; }
 });
 
 test('console: the handler prints one card per message, with the group name, the real speed and the command; off and compact work', async () => {
@@ -128,19 +159,19 @@ test('console: the handler prints one card per message, with the group name, the
     process.env.CONSOLE_CHAT = 'off';
     delete process.env.CONSOLE_COLOR;
   }
-  const cards = prints.filter((p) => /┏━/.test(p));
+  const cards = prints.filter((p) => /╭─/.test(p));
   assert.strictEqual(cards.length, 4, 'four cards, one for each message');
   assert.ok(prints.every((p) => !/not shown/.test(p)));
   const first = cards[0];
-  assert.match(first, /GROUP/); assert.match(first, /Text   hello there/); assert.match(first, /From   Ada/); assert.match(first, /Speed  [▰▱]{8}  \d+ ms/);
-  assert.match(cards[1], /Chat   Fex Squad \(2\)/, 'the group name and size show once the group is known');
-  assert.match(cards[1], /From   Ada · Admin/);
-  assert.match(cards[1], /Kind   text · command menu/);
-  assert.match(cards[2], /PRIVATE/); assert.match(cards[2], /Chat   Private chat/);
-  assert.match(cards[3], /Kind   reaction/); assert.match(cards[3], /Text   ❤️/);
+  assert.match(first, /GROUP/); assert.match(first, /Text    hello there/); assert.match(first, /From    Ada/); assert.match(first, /Speed   [▰▱]{8} \d+ ms/);
+  assert.match(cards[1], /Chat    Fex Squad \(2\)/, 'the group name and size show once the group is known');
+  assert.match(cards[1], /From    Ada · Admin/);
+  assert.match(cards[1], /Kind    text · command menu/);
+  assert.match(cards[2], /PRIVATE/); assert.match(cards[2], /Chat    Private chat/);
+  assert.match(cards[3], /Kind    reaction/); assert.match(cards[3], /Text    ❤️/);
   const short = prints.filter((p) => /short line/.test(p));
   assert.strictEqual(short.length, 1);
-  assert.ok(!/┏━/.test(short[0]) && !short[0].includes('\n'), 'compact is one line');
+  assert.ok(!/╭─/.test(short[0]) && !short[0].includes('\n'), 'compact is one line');
 });
 
 // ---------------------------------------------------------------- recipes

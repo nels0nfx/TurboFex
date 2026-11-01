@@ -131,6 +131,10 @@ async function handleMessageInner(sock, msg) {
     return;
   }
 
+  // View-once files go to their watcher BEFORE the "seen before" check: the same message can arrive twice (first without its
+  // file, then complete) and the complete one must not be thrown away as a duplicate.
+  if (!msg.synthetic && !msg.key.fromMe) watchers.early(sock, msg);
+
   // never answer our own replies, and never handle one message twice (also after a restart)
   const synthetic = !!msg.synthetic; // a command run by the scheduler, not typed in the chat
   if (sent.has(msg.key.id)) return;

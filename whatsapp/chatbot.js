@@ -46,13 +46,21 @@ async function maybeReply({ sock, msg, jid, text, botIds, isOwner }) {
   const ask = text.replace(/@\d{6,}/g, '').replace(new RegExp(`^(hey|hi|hello|ok|okay|yo)?[\\s,]*${ai.NAME}[\\s,:!-]*`, 'i'), '').trim() || text;
   const history = memory.get(jid) || [];
   history.push({ role: 'user', content: isGroup ? `${msg.pushName || 'Someone'}: ${ask}` : ask });
+  // "typing..." while the AI thinks (the person sees that something is happening; it is repeated because WhatsApp lets it fade)
+  const typing = () => sock.sendPresenceUpdate?.('composing', jid)?.catch?.(() => {});
+  typing();
+  const typingTimer = setInterval(typing, 7000);
   try {
     const answer = await ai.chat(history.slice(-MAX_TURNS));
     history.push({ role: 'assistant', content: answer });
     memory.set(jid, history.slice(-MAX_TURNS));
     if (memory.size > 500) memory.delete(memory.keys().next().value);
+    clearInterval(typingTimer);
     await sock.sendMessage(jid, { text: answer }, { quoted: msg });
+    sock.sendPresenceUpdate?.('paused', jid)?.catch?.(() => {});
   } catch (err) {
+    clearInterval(typingTimer);
+    sock.sendPresenceUpdate?.('paused', jid)?.catch?.(() => {});
     history.pop();
     console.log(`Chatbot failed: ${err.message}`);
     // do not stay silent: tell the person (at most once every 2 minutes in a chat). Only the owner sees the reason.

@@ -136,7 +136,7 @@ plus per-feature stores (levels, nicknames, joined (when members joined, for `.n
 `config.js` reads the environment; an optional `config.env` (`KEY=value`, `#` notes) is loaded first by `core/envfile.js` and never overrides a host variable. Names only, no values:
 
 `SESSION_ID`, `PAIR_SITE_URL`, `NUMBER` / `PAIRING_NUMBER`, `OWNER_NUMBER` (legacy), `PREFIX`, `TIMEZONE`, `BOT_BROWSER`, `CONSOLE_LINK`, `PAIR_METHOD`, `FAST_KEYS`, `RESTORE_LOGIN`, `YTDLP_PATH`, `YTDLP_COOKIES`,
-`PLAY_MAX_MB`, `PLAY_MAX_SECONDS`, `DL_MAX_MB`, `DL_MAX_SECONDS`, `TURBOFEX_DATA`, `CONSOLE_CHAT`, `CONSOLE_COLOR`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `POLLINATIONS_API_KEY`, `GEMINI_MODEL`, `GROQ_MODEL`, `POLLINATIONS_MODEL` (the keys can also be sent to the bot with `.setapi`). Settings changed at run time (`.mode`, `.setprefix`, `.linkpreview`, ...) are saved in `data/groups.json`.
+`PLAY_MAX_MB`, `PLAY_MAX_SECONDS`, `DL_MAX_MB`, `DL_MAX_SECONDS`, `TURBOFEX_DATA`, `CONSOLE_CHAT`, `CONSOLE_COLOR`, `CONSOLE_THEME`, `CONSOLE_WIDTH`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `POLLINATIONS_API_KEY`, `GEMINI_MODEL`, `GROQ_MODEL`, `POLLINATIONS_MODEL` (the keys can also be sent to the bot with `.setapi`). Settings changed at run time (`.mode`, `.setprefix`, `.linkpreview`, ...) are saved in `data/groups.json`.
 Default mode is **private**; default prefix is `.`; default timezone `Africa/Johannesburg`.
 
 ## 11. Dependencies and runtime
@@ -150,7 +150,7 @@ The unit tests do **not** need `npm install` (they use fakes), so passing tests 
 - Command errors: caught in `handler.js`; members see "Something went wrong running that command. Please try again in a moment."; the owner also sees `Reason:` (150 characters). The full error goes to the console and `whatsapp/stats.js` (`.stats`).
 - The capacity guard (`core/capacity.js`) refuses heavy commands when a tool is missing, memory is low or the server is busy; members get a plain sentence, the owner also gets the numbers.
 - `.status` (owner) shows version, load errors, timing and watcher counters. `.ping` shows one response time; the split (bot time vs WhatsApp time) is written to the console only.
-- Do not log credentials, session IDs or API keys. **Exception, by the owner's request (v0.9.4):** the console prints one line for every message the bot receives (time, GROUP or PRIVATE, chat name, sender, the text cut to 110 characters) in gold, white and black (`core/chatlog.js`). It goes to the console only, never to a file. Switch it off with `CONSOLE_CHAT=off`, or drop the colours with `CONSOLE_COLOR=off` (or `NO_COLOR=1`). `core/sessionid.js` stores only a hash of a used ID.
+- Do not log credentials, session IDs or API keys. **Exception, by the owner's request (v0.9.4):** the console prints one line for every message the bot receives (time, GROUP or PRIVATE, chat name, sender, the text cut to 110 characters) as a small card with a holographic gradient (`core/chatlog.js`; v0.9.7 changed the gold, white and black look). It goes to the console only, never to a file. Switch it off with `CONSOLE_CHAT=off`, drop the colours with `CONSOLE_COLOR=off` (or `NO_COLOR=1`), use 256 colours with `CONSOLE_COLOR=256`, pick a palette with `CONSOLE_THEME=holo|aurora|sunset|gold`. `core/sessionid.js` stores only a hash of a used ID.
 
 ## 13. Updating and rollback
 

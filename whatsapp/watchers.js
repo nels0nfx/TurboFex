@@ -7,6 +7,7 @@ const media = require('./media');
 const { ownerChat, normalize } = require('./owner');
 const { num } = require('./utils');
 const { peel, textOf, findViewOnce, editInfo } = require('./unwrap');
+const { withTimeout } = require('./timeout');
 const secretedit = require('./secretedit');
 
 const MAX_MEDIA = 2 * 1024 * 1024;
@@ -112,33 +113,124 @@ const OPEN_ON_PHONE =
   '💡 Reply to the view-once message with *vv* to open it.';
 
 // ---------------------------------------------------------------- view once
-// also used by the "vv" command: returns the file + details of a view-once message, or throws a clear problem
+// The same view-once message can reach the bot twice: first WITHOUT its file (a placeholder), then again, complete, with the
+// same id (after the bot asked the phone for it, or after a reconnect). The second one used to be thrown away as a "duplicate"
+// before the watcher saw it, so nothing was ever opened. Now the view-once watcher is called BEFORE that check (see early()),
+// and keeps its own record: a message is only marked as done when its copy was really sent.
+const voState = new Map(); // message id -> 'busy' | the time the copy was sent
+const voWait = new Map(); // message id -> timer of the "no content" notice (cancelled when the complete message arrives)
+const voKeep = new Map(); // message id -> { msg, at }: view-once messages seen lately, so "vv" can open them even if the reply lost the file details
+const KEEP_MS = 30 * 60 * 1000;
+const timing = { resendWait: 12000 }; // milliseconds: how long we wait for the phone to send the file after we asked (tests make it tiny)
+
+function keepViewOnce(msg) {
+  const id = msg.key?.id;
+  if (!id) return;
+  voKeep.set(id, { msg: { key: msg.key, message: msg.message }, at: Date.now() });
+  if (voKeep.size > 60) voKeep.delete(voKeep.keys().next().value);
+}
+
+// the full view-once message (with the file details) that arrived lately, for the "vv" command
+function recentViewOnce(id) {
+  const it = voKeep.get(id);
+  if (!it) return null;
+  if (Date.now() - it.at > KEEP_MS) {
+    voKeep.delete(id);
+    return null;
+  }
+  return it.msg;
+}
+
+// the message came without its file: ask the phone to send it again (the answer arrives as a normal message later)
+async function askPhoneAgain(sock, msg) {
+  if (typeof sock.requestPlaceholderResend !== 'function') return false;
+  try {
+    await withTimeout(Promise.resolve(sock.requestPlaceholderResend(msg.key)), 10000, 'the phone did not answer');
+    stats.viewOnceAsked = (stats.viewOnceAsked || 0) + 1;
+    return true;
+  } catch (err) {
+    console.log(`👁️ Could not ask the phone for the view-once file: ${err.message}`);
+    return false;
+  }
+}
+
+// copies one view-once file to the owner (see early() below); throws a clear problem when something unexpected breaks
 async function viewOnce(sock, msg, isGroup) {
   const cfg = store.watchCfg('viewonce');
   if (!inScope(cfg.mode, isGroup)) return;
   const vo = findViewOnce(msg.message);
   if (!vo) return;
-  stats.viewOnce += 1;
-  console.log(`👁️ View-once found (${vo.kind}, content ${vo.empty ? 'MISSING' : 'present'}), sending to ${cfg.to || 'owner chat'}`);
+  const id = msg.key.id;
+  if (id && voState.has(id)) return; // already copied, or being copied right now
   const jid = msg.key.remoteJid;
   const sender = isGroup ? msg.key.participant : jid;
   const kind = vo.kind === 'image' ? 'picture' : vo.kind === 'video' ? 'video' : vo.node.ptt ? 'voice note' : 'audio';
-  const where = await chatName(sock, jid);
-  console.log(`👁️ View-once ${kind} from ${num(sender)} in ${jid}`);
+  console.log(`👁️ View-once ${kind} from ${num(sender)} in ${jid} (content ${vo.empty ? 'MISSING' : 'present'}), sending to ${cfg.to || 'owner chat'}`);
 
   if (vo.empty) {
-    return warnOwner(sock, `👁️ A view-once ${kind} from ${tagOf(sender)} arrived in ${where}, but WhatsApp did not send its content to this device.\n${OPEN_ON_PHONE}`, 'viewonce', [sender]);
+    if (id && voWait.has(id)) return; // we are already waiting for the complete message
+    stats.viewOnce += 1;
+    const tell = async () => {
+      if (id) voWait.delete(id);
+      await warnOwner(sock, `👁️ A view-once ${kind} from ${tagOf(sender)} arrived in ${await chatName(sock, jid)}, but WhatsApp did not send its content to this device.\n${OPEN_ON_PHONE}`, 'viewonce', [sender]);
+    };
+    const asked = await askPhoneAgain(sock, msg);
+    if (!asked || !id) return tell();
+    const timer = setTimeout(() => tell().catch(() => {}), timing.resendWait); // told only if the complete message does not come
+    if (timer.unref) timer.unref();
+    voWait.set(id, timer);
+    return;
   }
-  let buffer;
+
+  // the complete message is here: the "no content" notice is no longer needed
+  if (id && voWait.has(id)) {
+    clearTimeout(voWait.get(id));
+    voWait.delete(id);
+    console.log('👁️ The phone sent the missing view-once file.');
+  }
+  if (id) voState.set(id, 'busy');
+  if (voState.size > 2000) {
+    for (const [k, v] of voState) if (v !== 'busy') voState.delete(k);
+  }
+  stats.viewOnce += 1;
   try {
-    buffer = await fetchMedia(sock, msg);
+    const [where, buffer] = await Promise.all([
+      chatName(sock, jid), // looked up while the file downloads (it used to be one after the other)
+      fetchMedia(sock, msg).catch((err) => {
+        problem('View-once download', err);
+        return err;
+      }),
+    ]);
+    if (buffer instanceof Error) {
+      if (id) voState.delete(id); // a later delivery may try again
+      return warnOwner(sock, `👁️ A view-once ${kind} from ${tagOf(sender)} arrived in ${where}, but I could not save it.\nReason: ${String(buffer.message).slice(0, 100)}\n${OPEN_ON_PHONE}`, 'viewonce', [sender]);
+    }
+    const header = `👁️ *View-once ${kind}*\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`;
+    await sendCopy(sock, normalize(sock, cfg.to) || ownerChat(sock), { kind, buffer, mime: vo.node.mimetype, text: vo.node.caption || '', sender }, header);
+    if (id) voState.set(id, Date.now());
+    stats.viewOnceSaved += 1;
   } catch (err) {
-    problem('View-once download', err);
-    return warnOwner(sock, `👁️ A view-once ${kind} from ${tagOf(sender)} arrived in ${where}, but I could not save it.\nReason: ${String(err.message).slice(0, 100)}\n${OPEN_ON_PHONE}`, 'viewonce', [sender]);
+    if (id) voState.delete(id);
+    throw err;
   }
-  const header = `👁️ *View-once ${kind}*\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`;
-  await sendCopy(sock, normalize(sock, cfg.to) || ownerChat(sock), { kind, buffer, mime: vo.node.mimetype, text: vo.node.caption || '', sender }, header);
-  stats.viewOnceSaved += 1;
+}
+
+// Called by the handler for EVERY incoming message, before the "seen before" check (see above). Never throws, never waits.
+function early(sock, msg) {
+  try {
+    if (!msg?.message || msg.key?.fromMe) return;
+    const jid = msg.key?.remoteJid;
+    if (!jid || jid.endsWith('@broadcast') || jid.endsWith('@newsletter')) return;
+    const vo = findViewOnce(msg.message);
+    if (!vo) return;
+    if (!vo.empty) keepViewOnce(msg);
+    viewOnce(sock, msg, jid.endsWith('@g.us')).catch((e) => {
+      problem('View-once', e);
+      return warnOwner(sock, `👁️ I could not handle a view-once message.\nReason: ${String(e.message).slice(0, 100)}`, 'viewonce');
+    });
+  } catch (err) {
+    // a watcher must never break message handling
+  }
 }
 
 // ---------------------------------------------------------------- remember messages for anti-delete / anti-edit
@@ -296,13 +388,7 @@ async function run(sock, msg) {
   }
   if (msg.key.fromMe) return;
 
-  await Promise.all([
-    viewOnce(sock, msg, isGroup).catch((e) => {
-      problem('View-once', e);
-      return warnOwner(sock, `👁️ I could not handle a view-once message.\nReason: ${String(e.message).slice(0, 100)}`, 'viewonce');
-    }),
-    remember(sock, msg, isGroup).catch(() => {}),
-  ]);
+  await remember(sock, msg, isGroup).catch(() => {}); // (view-once files are handled by early(), before the "seen before" check)
 }
 
 // called for "message updates": the other way WhatsApp reports edits and deletions
@@ -328,4 +414,6 @@ async function onUpdate(sock, updates) {
   }
 }
 
-module.exports = { run, noContent, onUpdate, findViewOnce, inScope, stats, fetchMedia, OPEN_ON_PHONE };
+const resetWarnings = () => lastWarn.clear(); // for tests
+
+module.exports = { timing, resetWarnings, run, early, noContent, onUpdate, findViewOnce, recentViewOnce, inScope, stats, fetchMedia, OPEN_ON_PHONE };

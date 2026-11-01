@@ -4,8 +4,8 @@
 const safefetch = require('./safefetch');
 
 const URL_RE = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+\.[a-z]{2,}[^\s<>"']*)/i;
-const BUDGET_MS = 3500; // a message is never held back longer than this for its page and picture
-const UPLOAD_MS = 4000; // ...plus this long for sending the big picture to WhatsApp
+const BUDGET_MS = 1500; // a message is never held back longer than this for its page and picture (it used to be 3.5 s: every reply with a link felt slow)
+const UPLOAD_MS = 1200; // ...plus this long for sending the big picture to WhatsApp
 const cache = new Map(); // url -> { at, value }
 
 function firstUrl(text) {
@@ -87,7 +87,7 @@ async function largeImage(buf) {
 }
 
 async function build(found, fetchOpts) {
-  const page = await safefetch.get(found.url, { ...fetchOpts, timeout: 3000, maxBytes: 400 * 1024, headers: { Accept: 'text/html,application/xhtml+xml,image/*;q=0.8' } });
+  const page = await safefetch.get(found.url, { ...fetchOpts, timeout: 1300, maxBytes: 400 * 1024, headers: { Accept: 'text/html,application/xhtml+xml,image/*;q=0.8' } });
   if (page.status >= 400) return null;
   const type = String(page.headers['content-type'] || '').toLowerCase();
   if (type.startsWith('image/')) {
@@ -101,7 +101,7 @@ async function build(found, fetchOpts) {
   let full = null;
   if (meta.image) {
     try {
-      const img = await safefetch.get(new URL(meta.image, page.url).href, { ...fetchOpts, timeout: 3000, maxBytes: 2.5 * 1024 * 1024, headers: { Accept: 'image/*' } });
+      const img = await safefetch.get(new URL(meta.image, page.url).href, { ...fetchOpts, timeout: 1300, maxBytes: 2.5 * 1024 * 1024, headers: { Accept: 'image/*' } });
       if (img.status < 400 && /^image\//i.test(String(img.headers['content-type'] || 'image/'))) {
         jpeg = await thumbnail(img.body);
         full = await largeImage(img.body);

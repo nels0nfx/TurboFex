@@ -1,5 +1,6 @@
 // The AI behind the "ai" and "chatbot" commands. Its name is NelsonFx.
-// It tries these services in this order and uses the first one that answers:
+// It tries these services in this order and uses the first one that answers. If a service has not answered after a few
+// seconds, the next one is started at the same time (the fastest answer wins), so one slow service never keeps a person waiting:
 //   1. Gemini     (free key from aistudio.google.com/apikey:  setapi gemini <key>)
 //   2. Groq       (free key from console.groq.com/keys:       setapi groq <key>)
 //   3. Pollinations (free key from enter.pollinations.ai:     setapi pollinations <key>)
@@ -34,7 +35,7 @@ const orderModels = (service) => {
 };
 
 // one POST with a time limit. Errors say the status and the reason the service gave (never the key).
-async function post(url, headers, body, timeout = 25000) {
+async function post(url, headers, body, timeout = 14000) {
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(timeout) });
   const raw = await res.text();
   let json = null;
@@ -68,26 +69,65 @@ async function viaModels(service, call) {
   throw new Error(problems.slice(0, 3).join('; ') || 'no answer');
 }
 
+// Gemini "thinks" before it answers, which can take 5 to 20 seconds and eats the answer's space. A chat reply does not need
+// it, so thinking is switched off. Every model family names the switch differently: the settings are tried one by one, and the one
+// a model accepts is remembered (a model that refuses a setting answers with a 400 that mentions "thinking").
+const thinkTries = (model) => {
+  if (/gemini-3|flash-latest/.test(model)) return [{ thinkingLevel: 'minimal' }, { thinkingBudget: 0 }, null];
+  if (/2\.5-(flash|flash-lite)$/.test(model)) return [{ thinkingBudget: 0 }, null];
+  return [null];
+};
+const thinkPick = {}; // model -> position in its list that worked
+
 const gemini = (messages, key) =>
   viaModels('gemini', async (model) => {
-    const j = await post(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      { 'x-goog-api-key': key },
-      {
-        systemInstruction: { parts: [{ text: PERSONA }] },
-        contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-        generationConfig: { maxOutputTokens: 700, temperature: 0.8 },
+    const tries = thinkTries(model);
+    let lastErr;
+    for (let n = thinkPick[model] || 0; n < tries.length; n++) {
+      const thinking = tries[n];
+      try {
+        const j = await post(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+          { 'x-goog-api-key': key },
+          {
+            systemInstruction: { parts: [{ text: PERSONA }] },
+            contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+            generationConfig: { maxOutputTokens: thinking ? 600 : 1500, temperature: 0.8, ...(thinking ? { thinkingConfig: thinking } : {}) },
+          }
+        );
+        thinkPick[model] = n;
+        const parts = j?.candidates?.[0]?.content?.parts || [];
+        return parts.filter((p) => !p.thought).map((p) => p.text || '').join('');
+      } catch (err) {
+        lastErr = err;
+        if (!(err.status === 400 && /think/i.test(err.message)) || n === tries.length - 1) throw err; // only a refused thinking setting moves on to the next setting
       }
-    );
-    const parts = j?.candidates?.[0]?.content?.parts || [];
-    return parts.filter((p) => !p.thought).map((p) => p.text || '').join('');
+    }
+    throw lastErr;
   });
 
 // Groq and Pollinations both speak the "OpenAI" way
+// (reasoning models are asked to think very little: a chat reply does not need more, and it is much faster)
+const reasoningTries = (service, model) => {
+  if (service !== 'groq') return [{}];
+  if (/gpt-oss/.test(model)) return [{ reasoning_effort: 'low' }, {}];
+  if (/qwen3/.test(model)) return [{ reasoning_effort: 'none' }, {}];
+  return [{}];
+};
 const openaiStyle = (service, url, key, messages) =>
   viaModels(service, async (model) => {
-    const j = await post(url, key ? { Authorization: `Bearer ${key}` } : {}, { model, messages: [{ role: 'system', content: PERSONA }, ...messages], max_tokens: 700, temperature: 0.8 });
-    return j?.choices?.[0]?.message?.content || '';
+    const tries = reasoningTries(service, model);
+    let lastErr;
+    for (let n = 0; n < tries.length; n++) {
+      try {
+        const j = await post(url, key ? { Authorization: `Bearer ${key}` } : {}, { model, messages: [{ role: 'system', content: PERSONA }, ...messages], max_tokens: 700, temperature: 0.8, ...tries[n] });
+        return j?.choices?.[0]?.message?.content || '';
+      } catch (err) {
+        lastErr = err;
+        if (!(err.status === 400 && /reason/i.test(err.message)) || n === tries.length - 1) throw err;
+      }
+    }
+    throw lastErr;
   });
 
 // the old address that needed no key (kept as the very last try)
@@ -127,27 +167,60 @@ function services() {
 
 let lastUsed = null; // { service, model } of the last good answer
 
+const timing = { hedge: 6000, giveUp: 32000 }; // milliseconds. hedge: a service that has not answered after this long gets company (the next one starts too). giveUp: nobody waits longer than this (tests make them tiny)
+
 // messages: [{ role: 'user' | 'assistant', content }]  ->  the answer text
+// The services start one after the other; the next one starts when the one before it FAILS or has been quiet for HEDGE_MS.
+// The first good answer wins.
 async function chat(messages) {
   const clean = messages.map((m) => ({ role: m.role, content: shorten(m.content, 1500) })).filter((m) => m.content);
   if (!clean.length) throw new Error('empty question');
+  const list = services();
   const problems = [];
-  const started = Date.now();
-  for (const s of services()) {
-    if (Date.now() - started > 50000) break; // do not keep a person waiting for minutes
-    try {
-      const r = await s.run(clean);
-      const text = shorten(r.text, 3500);
-      if (!text) throw new Error('empty answer');
-      lastUsed = { service: s.id, model: r.model };
-      return text;
-    } catch (err) {
-      problems.push(`${s.id}: ${err.message}`);
-      console.log(`AI: ${s.id} failed (${shorten(err.message, 140)})`);
-    }
-  }
-  const hasKey = services().some((s) => !s.keyless);
-  throw Object.assign(new Error(`${problems.join(' | ')}${hasKey ? '' : ' | No AI key is set'}`), { noKey: !hasKey });
+
+  const answer = await new Promise((resolve, reject) => {
+    let next = 0;
+    let finished = 0;
+    let settled = false;
+    const timers = [];
+    const end = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      timers.forEach(clearTimeout);
+      fn(value);
+    };
+    const launch = () => {
+      if (settled || next >= list.length) return;
+      const s = list[next++];
+      const hedge = setTimeout(launch, timing.hedge);
+      timers.push(hedge);
+      Promise.resolve()
+        .then(() => s.run(clean))
+        .then((r) => {
+          const text = shorten(r.text, 3500);
+          if (!text) throw new Error('empty answer');
+          lastUsed = { service: s.id, model: r.model };
+          end(resolve, text);
+        })
+        .catch((err) => {
+          clearTimeout(hedge);
+          problems.push(`${s.id}: ${err.message}`);
+          console.log(`AI: ${s.id} failed (${shorten(err.message, 140)})`);
+          finished += 1;
+          if (finished >= list.length) end(reject, null);
+          else launch(); // do not wait for the timer: start the next service now
+        });
+    };
+    timers.push(setTimeout(() => end(reject, null), timing.giveUp));
+    launch();
+  }).catch((e) => {
+    if (e) throw e;
+    return null;
+  });
+
+  if (answer) return answer;
+  const hasKey = list.some((s) => !s.keyless);
+  throw Object.assign(new Error(`${problems.join(' | ') || 'no answer in time'}${hasKey ? '' : ' | No AI key is set'}`), { noKey: !hasKey });
 }
 
 // one single instruction (summarize, grammar...)
@@ -171,4 +244,4 @@ async function diagnose() {
 
 const status = () => ({ lastUsed, keys: { gemini: !!store.getApiKey('gemini'), groq: !!store.getApiKey('groq'), pollinations: !!store.getApiKey('pollinations') } });
 
-module.exports = { NAME, chat, task, diagnose, status, MODELS };
+module.exports = { NAME, chat, task, diagnose, status, MODELS, timing };
