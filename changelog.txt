@@ -1,3 +1,9 @@
+TurboFex v1.0.2 - update notices and faster status views at the limit
+CHANGED IN 1.0.2
+- NEW: the bot now messages the owner when a new version is available (checked a minute after connecting, then every 6 hours, once per version), with the list of what changed and how to install it. It works with auto-update on or off. "update" shows the same list.
+- FIXED: once the daily like limit is reached, a status that only needed a like skips the slow queue completely, so viewing stays fast.
+- NOTE: no other bot feature changed.
+
 TurboFex v1.0.1 - status limit fix, more like emojis, cleaner public files
 CHANGED IN 1.0.1
 - FIXED: statuslimit now takes effect at once. Likes that were already waiting in the queue read the limit and the on/off switch again just before they are sent, so a lower limit or "autolikestatus off" is respected.

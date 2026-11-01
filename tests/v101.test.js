@@ -67,3 +67,35 @@ test('a limit set while likes are waiting counts: the waiting likes are dropped,
     console.log = realLog;
   }
 });
+
+// ---- update notice
+const uw = require('../whatsapp/updatewatch');
+const LOG = 'TurboFex v1.0.3 - c\nCHANGED IN 1.0.3\n- FIXED: three\n\nTurboFex v1.0.2 - b\nCHANGED IN 1.0.2\n- NEW: two\n\nTurboFex v1.0.1 - a\nCHANGED IN 1.0.1\n- NEW: one\n';
+test('the update notice lists only the versions newer than the running one', () => {
+  const t = uw.whatChanged(LOG, '1.0.1');
+  assert.ok(t.includes('v1.0.3') && t.includes('v1.0.2') && !t.includes('v1.0.1'));
+  assert.ok(t.includes('FIXED: three'));
+  assert.strictEqual(uw.whatChanged(LOG, '1.0.3'), '');
+});
+
+test('the owner is told once per version, and again only for a newer one', async () => {
+  const updater = require('../core/updater');
+  const real = updater.getLatest;
+  const sent = [];
+  const sock = { user: { id: '27899999999:1@s.whatsapp.net' }, sendMessage: async (to, c) => { sent.push(c.text); } };
+  uw.store.data.told = '';
+  updater.getLatest = async () => ({ ok: true, available: true, current: '1.0.1', latest: '1.0.3', notes: LOG });
+  try {
+    assert.strictEqual(await uw.check(sock), true);
+    assert.match(sent[0], /Update available/);
+    assert.match(sent[0], /v1\.0\.1\s+➜\s+v1\.0\.3/);
+    assert.strictEqual(await uw.check(sock), false, 'not twice for the same version');
+    updater.getLatest = async () => ({ ok: true, available: true, current: '1.0.1', latest: '1.0.4', notes: LOG });
+    assert.strictEqual(await uw.check(sock), true, 'a newer version is announced');
+    updater.getLatest = async () => ({ ok: true, available: false, current: '1.0.1', latest: '1.0.1' });
+    assert.strictEqual(await uw.check(sock), false);
+  } finally {
+    updater.getLatest = real;
+    uw.store.data.told = '';
+  }
+});

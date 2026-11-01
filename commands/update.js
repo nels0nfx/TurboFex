@@ -1,6 +1,7 @@
 const { getLatest, applyUpdate, reasonText } = require('../core/updater');
 const { restartBot } = require('../core/restart');
 const brand = require('../core/brand');
+const { whatChanged } = require('../whatsapp/updatewatch');
 const bootnote = require('../core/bootnote');
 
 module.exports = {
@@ -24,7 +25,8 @@ module.exports = {
     }
 
     if (!install) {
-      const notes = info.notes ? `\n\n📝 What's new:\n${info.notes.slice(0, 600)}` : '';
+      const changes = whatChanged(info.notes, info.current);
+      const notes = changes ? `\n\n📝 What's new:\n${changes}` : '';
       return reply(
         `🆕 Update available: v${info.current} → v${info.latest}${notes}\n\nTo install it, send: ${prefix}update now`
       );

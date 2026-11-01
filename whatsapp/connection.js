@@ -17,6 +17,7 @@ const watchers = require('./watchers');
 const store = require('./store');
 const { getText, isCommandText } = require('./utils');
 const startup = require('./startup');
+const updatewatch = require('./updatewatch');
 const ack = require('./ack');
 const { makeCache } = require('../core/cache');
 const { fastKeys } = require('../core/fastkeys');
@@ -331,6 +332,7 @@ async function startWhatsApp() {
         }
       }, 3000);
 
+      updatewatch.start(sock, alive); // tells the owner when a new version is out, and what changed
       // an update that was just installed leaves a marker: turn it into an "update complete" note (once)
       startup.noteFromUpdateMarker();
       // the first time an account connects it gets a welcome message; after a restart or update it gets a short "I am back" message
@@ -356,6 +358,7 @@ async function startWhatsApp() {
     }
 
     if (connection === 'close') {
+      updatewatch.stop();
       scheduler.stop();
       stopWatchdog();
       const status = lastDisconnect?.error?.output?.statusCode;

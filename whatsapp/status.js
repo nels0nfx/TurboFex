@@ -344,6 +344,13 @@ async function handleStatus(sock, msg) {
     } catch (e) {
       fail('status', e);
     }
+    // the daily limit is already reached and nothing else is to be done: skip the slow queue completely
+    const lim = Number(store.statusCfg().dailyLikeLimit) || 0;
+    if (todo.like && !todo.save && lim && likeToday() >= lim) {
+      prog.l = 2;
+      bump('limited');
+      return finish();
+    }
     if (todo.like || todo.save) slowLane(() => slowJob().catch((e) => fail('status', e)).finally(finish));
     else finish();
   });
