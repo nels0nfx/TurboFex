@@ -18,7 +18,7 @@ async function sendAudio(sock, jid, msg, a) {
 
 module.exports = {
   name: 'play',
-  category: 'media',
+  category: 'download',
   slow: true,
   weight: 'medium',
   needs: [],

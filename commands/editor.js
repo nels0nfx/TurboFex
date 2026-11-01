@@ -25,7 +25,7 @@ const EFFECTS = [
 
 module.exports = EFFECTS.map((e) => ({
   name: e.name,
-  category: 'editor',
+  category: 'effect',
   slow: true,
   description: `${e.description}: reply to a picture with ${e.name}`,
   async run(ctx) {

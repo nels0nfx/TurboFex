@@ -2,7 +2,7 @@
 const store = require('../whatsapp/store');
 const apikeys = require('../core/apikeys');
 
-const WHERE = { gemini: 'aistudio.google.com/apikey (free, for ai and chatbot)', groq: 'console.groq.com/keys (free, fast, a second choice for ai and chatbot)', pollinations: 'enter.pollinations.ai (free key, a third choice for ai and chatbot)', removebg: 'remove.bg/api (free)', ocr: 'ocr.space/ocrapi/freekey (free)', musixmatch: 'developer.musixmatch.com (free plan)' };
+const WHERE = { telegram: 'talk to @BotFather on Telegram, send /newbot, copy the token (free, for tgsticker)', gemini: 'aistudio.google.com/apikey (free, for ai and chatbot)', groq: 'console.groq.com/keys (free, fast, a second choice for ai and chatbot)', pollinations: 'enter.pollinations.ai (free key, a third choice for ai and chatbot)', removebg: 'remove.bg/api (free)', ocr: 'ocr.space/ocrapi/freekey (free)', musixmatch: 'developer.musixmatch.com (free plan)' };
 
 module.exports = {
   name: 'setapi',

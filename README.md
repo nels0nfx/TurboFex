@@ -1,11 +1,11 @@
-# ⚡ TurboFex v1.0.3
+# ⚡ TurboFex v1.0.5
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and even
 runs a small "Empire" game where every group becomes its own realm with its own money.
 
-<!-- counts: 315 commands, 14 categories -->
-Members can use **311 commands in 14 categories** (the bot owner has even more, such as settings and diagnostics).
+<!-- counts: 316 commands, 14 categories -->
+Members can use **312 commands in 14 categories** (the bot owner has even more, such as settings and diagnostics).
 Send `.menu` to see them all.
 
 > ⚠️ **Please read:** WhatsApp does not officially allow bots, and a number used for a bot can be banned.

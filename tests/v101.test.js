@@ -79,6 +79,8 @@ test('the update notice lists only the versions newer than the running one', () 
 });
 
 test('the owner is told once per version, and again only for a newer one', async () => {
+  const realLog = console.log;
+  console.log = () => {};
   const updater = require('../core/updater');
   const real = updater.getLatest;
   const sent = [];
@@ -95,6 +97,7 @@ test('the owner is told once per version, and again only for a newer one', async
     updater.getLatest = async () => ({ ok: true, available: false, current: '1.0.1', latest: '1.0.1' });
     assert.strictEqual(await uw.check(sock), false);
   } finally {
+    console.log = realLog;
     updater.getLatest = real;
     uw.store.data.told = '';
   }
@@ -116,4 +119,60 @@ test('an ordinary empty message does not make the bot tell the owner "probably a
     console.log = realLog;
     watchers.timing.answerWait = old;
   }
+});
+
+// ---- v1.0.5: categories and the Telegram sticker command
+test('DOWNLOAD and EFFECT categories hold the right commands', () => {
+  const fs = require('fs');
+  const by = {};
+  for (const f of fs.readdirSync(require('path').join(__dirname, '..', 'commands'))) {
+    const m = require(`../commands/${f}`);
+    for (const c of (Array.isArray(m) ? m : [m])) if (c && c.name) (by[c.category] = by[c.category] || []).push(c.name);
+  }
+  for (const n of ['dl', 'ig', 'play', 'tiktok', 'ytsearch', 'tgsticker']) assert.ok(by.download.includes(n), n);
+  for (const n of ['bass', 'nightcore', 'blur', 'sepia', 'pixelate', 'vreverse', 'rotate', 'circle']) assert.ok(by.effect.includes(n), n);
+  assert.ok(!by.audio && !by.editor, 'audio and editor are empty');
+  for (const n of ['trim', 'compress', 'mute', 'gif']) assert.ok(by.video.includes(n), `${n} stays in video`);
+});
+
+test('tgsticker: understands links and needs a token', async () => {
+  const tg = require('../core/telegram');
+  assert.strictEqual(tg.packName('https://t.me/addstickers/Cool_Pack_1'), 'Cool_Pack_1');
+  assert.strictEqual(tg.packName('t.me/addstickers/abc'), 'abc');
+  assert.strictEqual(tg.packName('Plain_Name'), 'Plain_Name');
+  assert.strictEqual(tg.packName('not a link!'), null);
+  const cmd = require('../commands/tgsticker');
+  store.setApiKey('telegram', null);
+  const out = [];
+  await cmd.run({ args: ['https://t.me/addstickers/Cool_Pack_1'], rest: '', reply: async (t) => out.push(t), prefix: '.', isOwner: true });
+  assert.match(out[0], /setapi telegram/);
+  out.length = 0;
+  await cmd.run({ args: [], rest: '', reply: async (t) => out.push(t), prefix: '.', isOwner: false });
+  assert.match(out[0], /Usage/);
+});
+
+test('tgsticker sends the stickers it converts (Telegram is faked)', async () => {
+  const cmd = require('../commands/tgsticker');
+  const media = require('../whatsapp/media');
+  const realFetch = global.fetch;
+  const realSticker = media.toSticker;
+  store.setApiKey('telegram', '123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+  media.toSticker = async () => Buffer.from('webp');
+  global.fetch = async (url) => {
+    if (/getStickerSet/.test(url)) return { status: 200, ok: true, json: async () => ({ ok: true, result: { title: 'Cool', stickers: [{ file_id: 'a' }, { file_id: 'b', is_animated: true }, { file_id: 'c' }] } }) };
+    if (/getFile/.test(url)) return { status: 200, ok: true, json: async () => ({ ok: true, result: { file_path: 'stickers/x.webp' } }) };
+    return { status: 200, ok: true, arrayBuffer: async () => new ArrayBuffer(4) };
+  };
+  const sent = [];
+  const out = [];
+  try {
+    await cmd.run({ sock: { sendMessage: async (j, c) => sent.push(c) }, jid: 'x@s.whatsapp.net', msg: {}, args: ['https://t.me/addstickers/Cool'], reply: async (t) => out.push(t), prefix: '.', isOwner: true });
+  } finally {
+    global.fetch = realFetch;
+    media.toSticker = realSticker;
+    store.setApiKey('telegram', null);
+  }
+  assert.strictEqual(sent.length, 2, 'two normal stickers sent, the animated one skipped');
+  assert.ok(sent.every((c) => c.sticker));
+  assert.match(out.join('\n'), /Sent 2 stickers/);
 });

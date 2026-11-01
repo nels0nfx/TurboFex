@@ -4,7 +4,7 @@ const { downloadVideo } = require('../core/ytdlp');
 module.exports = {
   name: 'dl',
   aliases: ['video', 'download'],
-  category: 'media',
+  category: 'download',
   slow: true,
   weight: 'heavy',
   needs: [],

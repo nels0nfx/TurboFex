@@ -8,7 +8,7 @@ const { ownerChat } = require('./owner');
 const brand = require('../core/brand');
 
 const js = jsonstore.open('update-notice', () => ({ told: '' }), { delay: 500 }); // the last version the owner was told about
-const EVERY_MS = 6 * 60 * 60 * 1000;
+const EVERY_MS = 60 * 60 * 1000; // once an hour
 
 // the changelog blocks of every version newer than the one running, newest first (max 3 blocks), as short bullet lines
 function whatChanged(raw, current) {
@@ -47,13 +47,22 @@ async function check(sock) {
   running = true;
   try {
     const info = await updater.getLatest();
-    if (!info || !info.ok || !info.available || !info.latest) return false;
+    if (!info || !info.ok) {
+      console.log(`🔄 Update check: ${info?.reason ? updater.reasonText(info.reason) : 'no answer'}`);
+      return false;
+    }
+    if (!info.available || !info.latest) {
+      console.log(`🔄 Update check: v${info.current} is the newest version.`);
+      return false;
+    }
     if (js.data.told === info.latest) return false;
     await sock.sendMessage(ownerChat(sock), { text: compose(info, store.effectivePrefix()) });
+    console.log(`🔄 Update check: told the owner about v${info.latest}.`);
     js.data.told = info.latest; // only remembered once it was really sent
     js.touch();
     return true;
   } catch (err) {
+    console.log(`🔄 Update check failed: ${err.message}`);
     return false; // no network or GitHub busy: tried again at the next check
   } finally {
     running = false;

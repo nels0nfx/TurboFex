@@ -1,3 +1,16 @@
+TurboFex v1.0.5 - Telegram stickers, DOWNLOAD and EFFECT menus, fewer reconnects
+CHANGED IN 1.0.5
+- NEW: tgsticker (aliases tgs, tgpack): turns a Telegram sticker pack into WhatsApp stickers. "tgsticker https://t.me/addstickers/Name" sends the first 10, "tgsticker <link> 11-30" or "all" sends more (up to 50 at a time, with a short pause). Needs a free Telegram bot token once: "setapi telegram <token>" (talk to @BotFather on Telegram). Animated Telegram stickers (.tgs) are skipped.
+- NEW: DOWNLOAD menu category: dl, ig, play, tiktok, ytsearch and tgsticker.
+- NEW: EFFECT menu category: all the audio effects (bass, slow, fast, nightcore, deep, chipmunk, echo, tremble, rewind), all the picture effects (blur, grey, invert, sepia, mirror, flip, sharpen, brighten, contrast, pixelate), plus vreverse, rotate and circle. AUDIO and EDITOR are empty now and hidden. Every command works as before.
+- CHANGED: the connection check waits longer before it reconnects (3 missed checks of 30 seconds, it was 2 of 20). Every reconnect makes WhatsApp show "Finished syncing with WhatsApp on Google Chrome (Ubuntu)" on the phone, so only a really dead connection is reconnected.
+- NEW: when the bot disconnects 3 times or more in an hour, the console says so and why that matters.
+
+TurboFex v1.0.4 - update notice every hour, with a console line for each check
+CHANGED IN 1.0.4
+- CHANGED: the bot looks for a new version one minute after connecting and then every hour (it was every 6 hours), and tells the owner once per version what changed. Each check writes one line to the console (newest version / told the owner / why it could not check).
+- NOTE: the notice exists from v1.0.2 on. A bot that still runs an older version cannot send it until it is updated once.
+
 TurboFex v1.0.3 - no more false "view-once" warnings
 CHANGED IN 1.0.3
 - FIXED: ordinary messages no longer trigger "arrived without its content (probably a view-once)". That message was only a guess; it is now written to the console only. A real view-once that is recognised is still copied to you, or reported with the reason.

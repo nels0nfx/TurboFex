@@ -2,7 +2,7 @@ const media = require('../whatsapp/media');
 
 module.exports = {
   name: 'rotate',
-  category: 'media',
+  category: 'effect',
   slow: true,
   description: 'Turn a picture: reply to it with rotate 90 (90, 180, 270 or -90)',
   async run(ctx) {

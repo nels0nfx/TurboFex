@@ -57,7 +57,7 @@ module.exports = [
   },
   {
     name: 'vreverse',
-    category: 'video',
+    category: 'effect',
     slow: true,
     description: 'Play a video backwards (first 30 seconds): reply to it with vreverse',
     async run(ctx) {

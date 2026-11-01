@@ -6,7 +6,7 @@ const { getQuoted, quotedText } = require('../whatsapp/utils');
 module.exports = {
   name: 'tiktok',
   aliases: ['tt', 'tiktokdl'],
-  category: 'media',
+  category: 'download',
   slow: true,
   weight: 'heavy',
   needs: [],

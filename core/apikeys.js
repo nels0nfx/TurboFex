@@ -12,6 +12,10 @@ async function validate(name, key) {
       const res = await fetch('https://api.remove.bg/v1.0/account', { headers: { 'X-Api-Key': key }, signal: AbortSignal.timeout(10000) });
       if (res.status === 401 || res.status === 403) return { ok: false, why: 'remove.bg says this key is not valid.' };
     }
+    if (name === 'telegram') {
+      const res = await fetch(`https://api.telegram.org/bot${key}/getMe`, { signal: AbortSignal.timeout(10000) });
+      if (res.status === 401 || res.status === 404) return { ok: false, why: 'Telegram says this token is not valid. Get it from @BotFather (it looks like 123456789:AA...).' };
+    }
     if (name === 'groq') {
       const res = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10000) });
       if (res.status === 401 || res.status === 403) return { ok: false, why: 'Groq says this key is not valid.' };

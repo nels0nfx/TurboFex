@@ -75,14 +75,14 @@ function startWatchdog(sock, alive) {
     try {
       await withTimeout(
         sock.query({ tag: 'iq', attrs: { to: 's.whatsapp.net', type: 'get', xmlns: 'w:p' }, content: [{ tag: 'ping', attrs: {} }] }),
-        20000,
+        30000,
         'ping timed out'
       );
       misses = 0;
     } catch (err) {
       misses += 1;
-      console.log(`⚠️ WhatsApp did not answer a health check (${misses}/2): ${err.message}`);
-      if (misses >= 2) {
+      console.log(`⚠️ WhatsApp did not answer a health check (${misses}/3): ${err.message}`);
+      if (misses >= 3) { // every reconnect makes WhatsApp show "Finished syncing" on the phone, so only a really dead connection is reconnected
         misses = 0;
         console.log('🔌 The connection stopped answering. Reconnecting...');
         try {
@@ -114,6 +114,8 @@ function enqueue(jid, task) {
   });
   queues.set(jid, next);
 }
+
+const closeTimes = []; // when the connection closed (last hour)
 
 async function startWhatsApp() {
   const lib = await baileys.load(); // works with the old and the new library version
@@ -364,6 +366,12 @@ async function startWhatsApp() {
       const status = lastDisconnect?.error?.output?.statusCode;
       let delay;
       attempts += 1;
+      // Every new connection makes the phone show "Finished syncing with WhatsApp on Google Chrome (Ubuntu)". Count them, so a
+      // reconnect loop (a bad network, or a second copy of the bot using the same number) is easy to see.
+      const nowMs = Date.now();
+      closeTimes.push(nowMs);
+      while (closeTimes.length && nowMs - closeTimes[0] > 60 * 60 * 1000) closeTimes.shift();
+      if (closeTimes.length >= 3) console.log(`📶 ${closeTimes.length} disconnects in the last hour (latest code ${status}). Each reconnect makes WhatsApp show "Finished syncing" on your phone. Check the network, and make sure only ONE copy of the bot uses this number.`);
       if (status === DisconnectReason.loggedOut) {
         console.log('Logged out of WhatsApp. Clearing saved login, starting fresh...');
         sessionBackup.markLoggedOut(); // the backups are no longer valid

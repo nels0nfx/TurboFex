@@ -15,6 +15,8 @@ const info = {
   economy: { title: 'EMPIRE OF FEX', icon: '⚜️', symbol: '❁' },
   ai: { title: 'AI', icon: '🤖', symbol: '✦' },
   budget: { title: 'BUDGET', icon: '💰', symbol: '❂' },
+  download: { title: 'DOWNLOAD', icon: '📥', symbol: '⇩' },
+  effect: { title: 'EFFECT', icon: '✨', symbol: '❋' },
   media: { title: 'MEDIA', icon: '🎬', symbol: '❈' },
   audio: { title: 'AUDIO', icon: '🎧', symbol: '♪' },
   video: { title: 'VIDEO', icon: '🎞️', symbol: '▣' },

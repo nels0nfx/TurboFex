@@ -6,7 +6,7 @@ const { getQuoted, quotedText } = require('../whatsapp/utils');
 module.exports = {
   name: 'ig',
   aliases: ['instagram', 'insta', 'igdl'],
-  category: 'media',
+  category: 'download',
   slow: true,
   weight: 'heavy',
   needs: [],

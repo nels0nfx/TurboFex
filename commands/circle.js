@@ -2,7 +2,7 @@ const media = require('../whatsapp/media');
 
 module.exports = {
   name: 'circle',
-  category: 'media',
+  category: 'effect',
   slow: true,
   description: 'Make a round sticker from a picture: reply to it with circle',
   async run(ctx) {

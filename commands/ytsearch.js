@@ -26,7 +26,7 @@ function forget() {
 module.exports = {
   name: 'ytsearch',
   aliases: ['yts', 'ytfind'],
-  category: 'media',
+  category: 'download',
   slow: true,
   weight: 'heavy',
   needs: [],

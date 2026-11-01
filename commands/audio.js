@@ -15,7 +15,7 @@ const EFFECTS = [
 
 module.exports = EFFECTS.map((e) => ({
   name: e.name,
-  category: 'audio',
+  category: 'effect',
   slow: true,
   description: `${e.description}: reply to a voice note, audio or video with ${e.name}`,
   async run(ctx) {
