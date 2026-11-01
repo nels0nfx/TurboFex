@@ -37,21 +37,26 @@ const withFakeWeb = async (fake, fn) => {
 };
 
 // ---------------------------------------------------------------- menu
-test('the menu has the new header (no grey box, no spaced-out letters) and the categories look as they always did', async () => {
+test('the menu header and categories open and close with a symbol, one detail per line, no "WhatsApp Assistant"', async () => {
   const out = [];
-  await menu.run({ reply: async (t) => out.push(t), commandList: all(), prefix: '.', args: [], isOwner: false, isAdmin: false });
+  await menu.run({ reply: async (t) => out.push(t), commandList: all(), prefix: '.', args: [], isOwner: false, isAdmin: false, timing: { receivedAt: Date.now() } });
   const text = out[0];
-  assert.match(text, /^╭━+╮\n┃  ✦ \*TURBOFEX\* ✦\n┣━+\n┃ User ▸ Member\n┃ Mode ▸ \w+\n┃ Prefix ▸ \.\n┃ Commands ▸ \d+\n┃ Version ▸ v\d+\.\d+\.\d+\n┃ Uptime ▸ [^\n]+\n╰━+╯\n/);
-  assert.ok(!/WhatsApp Assistant/.test(text), 'the "WhatsApp Assistant" line is gone');
-  assert.ok(!/T U R B O/.test(text), 'the name is not spaced out');
+  assert.match(text, /^┏✦ ◈ \*TURBOFEX\* ◈\n┃ \*ᴜꜱᴇʀ\* ▸ Member\n┃ \*ᴘʀᴇꜰɪx\* ▸ \[ \. \]\n┃ \*ᴍᴏᴅᴇ\* ▸ \w+\n┃ \*ᴄᴏᴍᴍᴀɴᴅꜱ\* ▸ \d+\n┃ \*ᴠᴇʀꜱɪᴏɴ\* ▸ v\d+\.\d+\.\d+\n┃ \*ꜱᴘᴇᴇᴅ\* ▸ \d+ ms\n┃ \*ᴜᴘᴛɪᴍᴇ\* ▸ [^\n]+\n┗✦\n\n┏/);
+  assert.ok(!/WhatsApp Assistant/.test(text) && !/ʜᴏꜱᴛ/.test(text), 'no subtitle; host and memory are for the owner only');
   assert.ok(!text.includes('```'), 'no code block (WhatsApp pads it with empty space)');
-  assert.ok(/\n╰━+╯\n\n┌─ \*/.test(text), 'the first category follows the header after one empty line only');
-  assert.ok(!/\d{1,2}:\d{2}\s?(AM|PM)/i.test(text.split('\n┌─ ')[0]), 'no clock time in the header (WhatsApp underlines it)');
   const lines = text.split('\n');
-  const heads = lines.map((l, i) => [l, i]).filter(([l]) => /^┌─ \*/.test(l));
+  const heads = lines.map((l, i) => [l, i]).filter(([l]) => /^┏\S ◈ \*[A-Z ]+\* ◈$/.test(l)).slice(1); // (the first one is the header)
   assert.ok(heads.length >= 10);
-  for (const [, i] of heads) assert.ok(/^│ \S+ \S/.test(lines[i + 1]), 'a command line follows straight after the category name');
-  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(text), 'no emoji in the menu');
+  for (const [l, i] of heads) {
+    const sym = l[1];
+    assert.ok(new RegExp(`^┃ ${sym} \\S`).test(lines[i + 1]), 'a command line, starting with the category symbol, follows the name');
+    let j = i + 1; while (lines[j] && lines[j] !== `┗${sym}`) j++;
+    assert.strictEqual(lines[j], `┗${sym}`, 'the category closes with the same symbol it opened with');
+  }
+  assert.ok(new Set(heads.map(([l]) => l[1])).size > 8, 'categories have different symbols');
+  const owner = [];
+  await menu.run({ reply: async (t) => owner.push(t), commandList: all(), prefix: '.', args: [], isOwner: true, isAdmin: true, timing: { receivedAt: Date.now() } });
+  assert.match(owner[0], /┃ \*ʜᴏꜱᴛ\* ▸ .+\n┃ \*ᴜꜱᴀɢᴇ\* ▸ \d+ MB of .+\n┃ \*ʀᴀᴍ\* ▸ \[[█░]{10}\] \d+%\n┗✦/);
 });
 
 test('menu <category> is the old look: the name, then the description under it', async () => {
@@ -59,7 +64,7 @@ test('menu <category> is the old look: the name, then the description under it',
   await menu.run({ reply: async (t) => out.push(t), commandList: all(), prefix: '.', args: ['group'], isOwner: false, isAdmin: false });
   const lines = out[0].split('\n');
   const i = lines.findIndex((l) => l.includes('*listonline*'));
-  assert.ok(i > 0 && /^│    _/.test(lines[i + 1]), 'the description sits under the name');
+  assert.ok(i > 0 && /^┃    _/.test(lines[i + 1]), 'the description sits under the name');
 });
 
 // ---------------------------------------------------------------- console lines

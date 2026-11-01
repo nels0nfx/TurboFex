@@ -209,3 +209,21 @@ test('link preview: a reply with a link is never held back for long', () => {
   assert.match(src, /BUDGET_MS = 1500/);
   assert.match(src, /UPLOAD_MS = 1200/);
 });
+
+test('view-once: a download that fails still sends the small preview, and the owner is told', async () => {
+  watchers.resetWarnings();
+  store.updateWatch('viewonce', (w) => { w.mode = 'all'; });
+  baileys.setForTests({ downloadMediaMessage: async () => { throw new Error('404 gone'); } });
+  try {
+    const sock = mkSock();
+    await handler.handleMessage(sock, once('V8', { ...FULL, jpegThumbnail: Buffer.from('tiny') }));
+    await new Promise((r) => setTimeout(r, 3200)); // two tries 1.5 s apart
+    assert.ok(sent.find((s) => s.c.image && /small preview only/.test(s.c.caption)), 'the preview arrived');
+    assert.ok(sent.find((s) => s.c.text && /could not save it/.test(s.c.text)), 'the owner knows');
+  } finally { baileys.setForTests({ downloadMediaMessage: async (m) => Buffer.from(`FILE-${m.key.id}`) }); }
+});
+
+test('view-once: the watcher is started by the connection too, ahead of the chat line', () => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'whatsapp', 'connection.js'), 'utf8');
+  assert.match(src, /watchers\.early\(sock, msg\)/);
+});

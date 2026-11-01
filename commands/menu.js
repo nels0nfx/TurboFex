@@ -1,9 +1,9 @@
-const os = require('os');
 const pkg = require('../package.json');
 const brand = require('../core/brand');
 const clock = require('../core/clock');
 const { smallcaps: sc } = require('../core/fonts');
 const store = require('../whatsapp/store');
+const capacity = require('../core/capacity');
 const { groupByCategory } = require('../whatsapp/categories');
 
 const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
@@ -15,16 +15,26 @@ const mono = (rows) => {
   return '```\n' + rows.map(([k, v]) => `${k.padEnd(w)}${v}`).join('\n') + '\n```';
 };
 
-// one category: a title and its commands, one per line
+// one category: it opens and closes with its own symbol (every category has a different one), and its commands sit between
 function block(section, lines) {
-  return `┌─ *${section.meta.title}*\n${lines.map((l) => `│ ${section.meta.symbol} ${l}`).join('\n')}\n└──────`;
+  const sym = section.meta.symbol;
+  return `┏${sym} ◈ *${section.meta.title}* ◈\n${lines.map((l) => `┃ ${sym} ${l}`).join('\n')}\n┗${sym}`;
+}
+
+const size = (mb) => (mb >= 1024 ? `${(mb / 1024).toFixed(mb >= 10240 ? 0 : 1)} GB` : `${mb} MB`);
+// where the bot runs: a hosting panel, Termux on a phone, or a plain server
+function host() {
+  const e = process.env;
+  if (e.P_SERVER_UUID || e.PTERODACTYL || e.SERVER_PORT) return 'Panel';
+  if (String(e.PREFIX || '').includes('com.termux')) return 'Termux';
+  return { linux: 'Linux server', darwin: 'Mac', win32: 'Windows' }[process.platform] || process.platform;
 }
 
 module.exports = {
   name: 'menu',
   category: 'general',
   description: 'Show the command menu (try: menu group, or menu kick for help with one command)',
-  async run({ reply, commandList, prefix, args, isOwner, isAdmin }) {
+  async run({ reply, commandList, prefix, args, isOwner, isAdmin, timing }) {
     const sections = groupByCategory(commandList, isOwner);
     const all = sections.flatMap((s) => s.cmds);
     const query = (args[0] || '').toLowerCase().replace(/^[^a-z0-9]+/, '');
@@ -32,7 +42,7 @@ module.exports = {
     // menu <category>: every command of it with its description
     const section = sections.find((s) => s.key === query);
     if (query && section) {
-      const items = section.cmds.map((c) => `*${c.name}*\n│    _${c.description}_`);
+      const items = section.cmds.map((c) => `*${c.name}*\n┃    _${c.description}_`);
       return reply(block(section, items));
     }
 
@@ -51,20 +61,25 @@ module.exports = {
       return reply(`*${c.name.toUpperCase()}*\n_${c.description}_\n${RULE}\n${mono(rows)}`);
     }
 
-    // full menu
+    // full menu: a header that opens and closes with a symbol, one detail on every line
     const custom = store.getAuto('menu') || {};
     const title = String(custom.title || brand.botName).toUpperCase();
-    // the subtitle only shows when the owner chose one with "setmenu subtitle" (the default has none)
-    const sub = custom.subtitle ? `┃  _${custom.subtitle}_\n` : '';
-    // every detail has its own line, and every line starts with the stick (no code block: WhatsApp pads those with empty space)
-    const pairs = [
-      ['User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member'], ['Mode', store.getMode() === 'private' ? 'Private' : 'Public'],
-      ['Prefix', prefix || 'none'], ['Commands', String(all.length)],
-      ['Version', `v${pkg.version}`], ['Uptime', clock.uptime()],
+    const mem = capacity.memory();
+    const pct = mem.limitMB ? Math.min(100, Math.round((mem.usedMB / mem.limitMB) * 100)) : 0;
+    const ms = timing && timing.receivedAt ? Math.max(0, Date.now() - timing.receivedAt) : 0;
+    const rows = [
+      ['User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member'],
+      ['Prefix', `[ ${prefix || 'none'} ]`],
+      ['Mode', store.getMode() === 'private' ? 'Private' : 'Public'],
+      ['Commands', String(all.length)],
+      ['Version', `v${pkg.version}`],
+      ['Speed', `${ms} ms`],
+      ['Uptime', clock.uptime()],
     ];
-    if (isOwner) pairs.push(['Memory', `${Math.round(process.memoryUsage().rss / 1048576)} MB`], ['System', `${os.type()}, Node ${process.versions.node.split('.')[0]}`]);
-    const rows = pairs.map(([k, v]) => `┃ ${k} ▸ ${v}`);
-    const head = `╭━━━━━━━━━━━━━━━━╮\n┃  ✦ *${title}* ✦\n${sub}┣━━━━━━━━━━━━━━━━\n${rows.join('\n')}\n╰━━━━━━━━━━━━━━━━╯`;
+    if (isOwner) {
+      rows.push(['Host', host()], ['Usage', `${size(mem.usedMB)} of ${size(mem.limitMB)}`], ['RAM', `[${'█'.repeat(Math.round(pct / 10))}${'░'.repeat(10 - Math.round(pct / 10))}] ${pct}%`]);
+    }
+    const head = `┏✦ ◈ *${title}* ◈\n${custom.subtitle ? `┃ _${custom.subtitle}_\n` : ''}${rows.map(([k, v]) => `┃ *${sc(k)}* ▸ ${v}`).join('\n')}\n┗✦`;
     const body = sections.map((s) => block(s, s.cmds.map((c) => sc(c.name)))).join('\n\n');
     const tips =
       `> ${prefix}menu <category>  details of a category\n` +

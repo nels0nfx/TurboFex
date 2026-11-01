@@ -1,3 +1,11 @@
+TurboFex v0.9.8 - new menu look, view-once sent automatically
+CHANGED IN 0.9.8
+- CHANGED the menu: the header and every category now open with "┏symbol ◈ NAME ◈" and close with "┗symbol", using the category's own symbol (every category has a different one). The header shows User, Prefix [ . ], Mode, Commands, Version, Speed (how fast the bot took the message), Uptime; the owner also sees Host (Panel, Termux or server), Usage (memory used of the limit) and a RAM bar. Labels are in small capitals. menu <category> uses the same frame
+- FIXED auto view-once did not send by itself. The watcher now starts straight from the connection, ahead of the chat's waiting line (a busy chat could hold it back), and a message that arrives with no content at all makes the bot ask the phone for it
+- NEW when the full view-once file cannot be downloaded, the bot tries a third time with a fresh link from WhatsApp, and if that fails it still sends the small preview picture WhatsApp sent along, plus the notice with the reason
+- TESTS menu tests rewritten for the new frame; new view-once tests (preview fallback, started by the connection)
+- STILL NEEDS A REAL WHATSAPP TEST: autoviewonce all, then have someone send you a view-once. If nothing comes, look at the console for lines starting with the eye symbol: "View-once ... (content MISSING)" means WhatsApp held the file back; "could not save it" shows the reason
+
 TurboFex v0.9.7 - faster chatbot, view-once fix, new menu header, holographic console
 CHANGED IN 0.9.7
 - CHANGED the menu header: every detail (User, Mode, Prefix, Commands, Version, Uptime, and Memory and System for the owner) is on its own line under the one before, each line starts with the stick, and the "WhatsApp Assistant" line is gone (a subtitle only shows if the owner sets one with setmenu subtitle)

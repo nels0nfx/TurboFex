@@ -97,14 +97,26 @@ function problem(what, err) {
   console.error(`${what} failed:`, err?.message || err);
 }
 
-// downloads a file, trying twice (the second time asks WhatsApp to send the file again)
+// downloads a file: a second try after a moment, then a third with a fresh link asked from WhatsApp
 async function fetchMedia(sock, source) {
   try {
     return await media.download(sock, source);
   } catch (err) {
     if (err.code === 'TOO_BIG') throw err;
     await new Promise((r) => setTimeout(r, 1500));
-    return media.download(sock, source);
+    try {
+      return await media.download(sock, source);
+    } catch (err2) {
+      if (typeof sock.updateMediaMessage === 'function') {
+        try {
+          const fresh = await withTimeout(Promise.resolve(sock.updateMediaMessage(source)), 15000, 'WhatsApp did not give a new link');
+          return await media.download(sock, fresh || source);
+        } catch (err3) {
+          // the first reason is the useful one
+        }
+      }
+      throw err2;
+    }
   }
 }
 
@@ -170,6 +182,7 @@ async function viewOnce(sock, msg, isGroup) {
   if (vo.empty) {
     if (id && voWait.has(id)) return; // we are already waiting for the complete message
     stats.viewOnce += 1;
+    if (id) voWait.set(id, 0); // claimed at once, so a second call at the same moment does not ask the phone again
     const tell = async () => {
       if (id) voWait.delete(id);
       await warnOwner(sock, `👁️ A view-once ${kind} from ${tagOf(sender)} arrived in ${await chatName(sock, jid)}, but WhatsApp did not send its content to this device.\n${OPEN_ON_PHONE}`, 'viewonce', [sender]);
@@ -203,6 +216,11 @@ async function viewOnce(sock, msg, isGroup) {
     ]);
     if (buffer instanceof Error) {
       if (id) voState.delete(id); // a later delivery may try again
+      const thumb = vo.node.jpegThumbnail;
+      if (thumb && thumb.length && vo.kind === 'image') {
+        // at least the small preview WhatsApp sent along
+        await sock.sendMessage(normalize(sock, cfg.to) || ownerChat(sock), { image: Buffer.from(thumb), caption: `👁️ *View-once ${kind}* (small preview only: the full file could not be downloaded)\n👤 From ${tagOf(sender)} in ${where}` , mentions: [sender] }).catch(() => {});
+      }
       return warnOwner(sock, `👁️ A view-once ${kind} from ${tagOf(sender)} arrived in ${where}, but I could not save it.\nReason: ${String(buffer.message).slice(0, 100)}\n${OPEN_ON_PHONE}`, 'viewonce', [sender]);
     }
     const header = `👁️ *View-once ${kind}*\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`;
@@ -222,7 +240,20 @@ function early(sock, msg) {
     const jid = msg.key?.remoteJid;
     if (!jid || jid.endsWith('@broadcast') || jid.endsWith('@newsletter')) return;
     const vo = findViewOnce(msg.message);
-    if (!vo) return;
+    if (!vo) {
+      // a message that holds nothing at all (only envelope details) can be a view-once whose content was held back: ask the phone for it
+      const content = peel(msg.message).content;
+      const bare = Object.keys(content).every((k) => k === 'messageContextInfo' || k === 'senderKeyDistributionMessage');
+      const id = msg.key.id;
+      if (bare && !msg.messageStubType && id && !voWait.has(id) && inScope(store.watchCfg('viewonce').mode, jid.endsWith('@g.us'))) {
+        console.log(`👁️ A message from ${num(jid.endsWith('@g.us') ? msg.key.participant : jid)} came with no content at all. Asking the phone for it (it may be a view-once).`);
+        voWait.set(id, 0);
+        const forget = setTimeout(() => voWait.delete(id), 60000);
+        if (forget.unref) forget.unref();
+        askPhoneAgain(sock, msg).catch(() => {});
+      }
+      return;
+    }
     if (!vo.empty) keepViewOnce(msg);
     viewOnce(sock, msg, jid.endsWith('@g.us')).catch((e) => {
       problem('View-once', e);

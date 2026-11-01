@@ -403,6 +403,7 @@ async function startWhatsApp() {
         diag.stats.replaysIgnored += 1;
         continue;
       }
+      if (!msg.key.fromMe) watchers.early(sock, msg); // view-once files never wait in the chat's line (the handler's own call finds it already done)
       const run = async () => {
         try {
           await withTimeout(handleMessage(sock, msg), 60000, 'Handling a message took too long');
