@@ -132,6 +132,7 @@ const OPEN_ON_PHONE =
 const voState = new Map(); // message id -> 'busy' | the time the copy was sent
 const voWait = new Map(); // message id -> timer of the "no content" notice (cancelled when the complete message arrives)
 const voKeep = new Map(); // message id -> { msg, at }: view-once messages seen lately, so "vv" can open them even if the reply lost the file details
+const voAsked = new Map(); // message id -> timer: messages that arrived EMPTY and that we asked the phone to send again
 const KEEP_MS = 30 * 60 * 1000;
 const timing = { resendWait: 12000 }; // milliseconds: how long we wait for the phone to send the file after we asked (tests make it tiny)
 
@@ -167,10 +168,10 @@ async function askPhoneAgain(sock, msg) {
 }
 
 // copies one view-once file to the owner (see early() below); throws a clear problem when something unexpected breaks
-async function viewOnce(sock, msg, isGroup) {
+async function viewOnce(sock, msg, isGroup, assume = false) {
   const cfg = store.watchCfg('viewonce');
   if (!inScope(cfg.mode, isGroup)) return;
-  const vo = findViewOnce(msg.message);
+  const vo = findViewOnce(msg.message, assume);
   if (!vo) return;
   const id = msg.key.id;
   if (id && voState.has(id)) return; // already copied, or being copied right now
@@ -196,6 +197,11 @@ async function viewOnce(sock, msg, isGroup) {
   }
 
   // the complete message is here: the "no content" notice is no longer needed
+  if (id && voAsked.has(id)) {
+    clearTimeout(voAsked.get(id));
+    voAsked.delete(id);
+    console.log('👁️ The phone sent the hidden message. Opening it.');
+  }
   if (id && voWait.has(id)) {
     clearTimeout(voWait.get(id));
     voWait.delete(id);
@@ -233,29 +239,54 @@ async function viewOnce(sock, msg, isGroup) {
   }
 }
 
-// Called by the handler for EVERY incoming message, before the "seen before" check (see above). Never throws, never waits.
+// A message arrived with NO content (or only envelope details). WhatsApp does this for view-once files on linked devices:
+// the message is announced but its file is held back. The only way to get it is to ask the phone to send it again. The answer
+// comes back as a normal message with the same id (see early(), "assume"). This used to be skipped for messages with no content
+// at all, so the phone was never asked and nothing was opened.
+const hiddenStub = (t) => t == null || t === 2 || t === 'CIPHERTEXT'; // 2 = could not be read; any other stub is a group event, not a file
+function chaseHidden(sock, msg, jid) {
+  const id = msg.key.id;
+  const isGroup = jid.endsWith('@g.us');
+  if (!id || voWait.has(id) || voAsked.has(id) || !inScope(store.watchCfg('viewonce').mode, isGroup)) return;
+  console.log(`👁️ A message from ${num(isGroup ? msg.key.participant : jid)} came with no content. Asking the phone for it (it may be a view-once).`);
+  const timer = setTimeout(() => {
+    voAsked.delete(id);
+    console.log('👁️ The phone did not send the hidden message back. If it was a view-once, WhatsApp is not giving it to this device: reply to it with vv.');
+  }, 60000);
+  if (timer.unref) timer.unref();
+  voAsked.set(id, timer);
+  stats.viewOnceChased = (stats.viewOnceChased || 0) + 1;
+  askPhoneAgain(sock, msg).then((ok) => {
+    if (!ok && voAsked.get(id) === timer) {
+      clearTimeout(timer);
+      voAsked.delete(id); // a later delivery may try again
+    }
+  }).catch(() => {});
+}
+
+// Called for EVERY incoming message, before the "seen before" check (see above). Never throws, never waits.
 function early(sock, msg) {
   try {
-    if (!msg?.message || msg.key?.fromMe) return;
+    if (!msg || msg.key?.fromMe) return;
     const jid = msg.key?.remoteJid;
     if (!jid || jid.endsWith('@broadcast') || jid.endsWith('@newsletter')) return;
-    const vo = findViewOnce(msg.message);
+    if (!msg.message) {
+      // announced but empty (this is how a hidden view-once looks): ask the phone for it
+      if (hiddenStub(msg.messageStubType)) chaseHidden(sock, msg, jid);
+      return;
+    }
+    const id = msg.key.id;
+    const assume = !!(id && voAsked.has(id)); // the answer to our own request: its view-once flag may be missing, open it anyway
+    const vo = findViewOnce(msg.message, assume);
     if (!vo) {
       // a message that holds nothing at all (only envelope details) can be a view-once whose content was held back: ask the phone for it
       const content = peel(msg.message).content;
       const bare = Object.keys(content).every((k) => k === 'messageContextInfo' || k === 'senderKeyDistributionMessage');
-      const id = msg.key.id;
-      if (bare && !msg.messageStubType && id && !voWait.has(id) && inScope(store.watchCfg('viewonce').mode, jid.endsWith('@g.us'))) {
-        console.log(`👁️ A message from ${num(jid.endsWith('@g.us') ? msg.key.participant : jid)} came with no content at all. Asking the phone for it (it may be a view-once).`);
-        voWait.set(id, 0);
-        const forget = setTimeout(() => voWait.delete(id), 60000);
-        if (forget.unref) forget.unref();
-        askPhoneAgain(sock, msg).catch(() => {});
-      }
+      if (bare && !msg.messageStubType) chaseHidden(sock, msg, jid);
       return;
     }
     if (!vo.empty) keepViewOnce(msg);
-    viewOnce(sock, msg, jid.endsWith('@g.us')).catch((e) => {
+    viewOnce(sock, msg, jid.endsWith('@g.us'), assume).catch((e) => {
       problem('View-once', e);
       return warnOwner(sock, `👁️ I could not handle a view-once message.\nReason: ${String(e.message).slice(0, 100)}`, 'viewonce');
     });

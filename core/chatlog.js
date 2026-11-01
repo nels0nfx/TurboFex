@@ -14,6 +14,7 @@
 //   CONSOLE_CHAT=off       hide the cards            CONSOLE_CHAT=compact   one short line per message
 //   CONSOLE_COLOR=off      no colours                CONSOLE_COLOR=256      for old terminals that do not know full colours
 //   CONSOLE_THEME=holo     (default) cyan, violet, pink      aurora: green, blue, purple      sunset: gold, coral, purple      gold: the old look
+//   CONSOLE_STYLE=off      leave system logs (backups, view-once, errors...) as plain text instead of cards
 //   CONSOLE_WIDTH=36       width of the card (28 to 70). Without it the width follows the screen, or 36.
 // NOTE: this prints what people write to the bot, on the owner's console only. Nothing is saved to a file.
 //
@@ -87,7 +88,7 @@ function gradient(text, a = 0, b = 1, bold = false) {
   return `${bold ? BOLD : ''}${out}${RESET}`;
 }
 // a badge: dark text on a coloured background
-const pill = (text, t) => (colorOn() ? `${bgCode(at(t))}${fgCode(INK)}${BOLD} ${text} ${RESET}` : `[${text}]`);
+const pill = (text, t) => (colorOn() ? `${bgCode(Array.isArray(t) ? t : at(t))}${fgCode(INK)}${BOLD} ${text} ${RESET}` : `[${text}]`);
 
 // ---------------------------------------------------------------- text helpers
 // text people wrote can hold control characters (even colour codes): remove them so they cannot mess up the console
@@ -197,6 +198,10 @@ function line({ time, group, chat, who, text, kind, isCommand, fromMe }) {
   return `${paint(BRIGHT, time, true)} ${pill(group ? 'GROUP' : 'PRIVATE', group ? 0.78 : 0.18)} ${chatPart}${paint(BRIGHT, oneLine(who, 22), true)} ${arrow} ${isCommand ? gradient(body, 0.1, 0.9) : paint(SOFT, body)}`;
 }
 
+// printing: after install() the cards go straight to the real console (so they are never turned into event cards again)
+let rawLog = null;
+const emit = (text) => (rawLog || console.log)(text);
+
 const pending = new WeakMap(); // message -> what we know about it, until the bot is done with it
 
 // the handler tells us about every message it accepts (never throws, never waits)
@@ -236,7 +241,7 @@ function finish(msg) {
   if (!info) return;
   pending.delete(msg);
   try {
-    console.log(compact() ? line(info) : `${card({ ...info, ms: Date.now() - info.at })}\n`);
+    emit(compact() ? line(info) : `${card({ ...info, ms: Date.now() - info.at })}\n`);
   } catch (err) {
     // never break message handling
   }
@@ -244,13 +249,103 @@ function finish(msg) {
 
 // the "bot is online" lines in the same colours
 function banner(text) {
-  if (!enabled() && !colorOn()) return console.log(text);
+  if (!enabled() && !colorOn()) return emit(text);
   const W = width();
-  console.log(
+  emit(
     `\n${gradient('╭─', 0, 0.05)} ${pill('ONLINE', 0.2)} ${pill('READY', 0.6)} ${gradient('─'.repeat(Math.max(2, W - 20)), 0.6, 1)}\n` +
       `${gradient('│', 0.5, 0.5)} ${paint(BRIGHT, text, true)}\n` +
       `${gradient(`╰${'─'.repeat(W - 1)}`, 1, 0.2)}\n`
   );
 }
 
-module.exports = { incoming, finish, card, line, wrap, speed, banner, enabled, colorOn, kindOf, gradient, width };
+
+// ---------------------------------------------------------------- event cards: every other log line, in the same design
+// System messages, view-once, backups, errors... used to appear as plain white text. install() (called from core/quiet.js, before
+// anything else prints) gives each of them a card with the same frame as the chat card: time, a coloured label, aligned rows and
+// a verdict line. Nothing is shortened: a long message is wrapped onto more rows, so it fits a phone screen.
+const TONES = {
+  error: { word: 'error', color: CORAL },
+  warn: { word: 'warning', color: AMBER },
+  ok: { word: 'ok', color: MINT },
+  info: { word: 'info', color: SKY },
+};
+// [label, colour (a position on the theme or an exact colour), tone, how to recognise it]
+const CLASSES = [
+  ['ERROR', CORAL, 'error', /^(❌|🚫|⛔|💥|🛑)/],
+  ['WARNING', AMBER, 'warn', /^(⚠️?|🔌)/],
+  ['VIEW ONCE', 0.62, 'info', /^👁/],
+  ['BACKUP', 0.3, 'info', /^(💾|♻️?|🗄️?|🧹)|login backup/i],
+  ['LINKING', 0.45, 'info', /^(🔗|📱|🔄)/],
+  ['UPDATE', 0.9, 'info', /^(⬇️?|↩️?|🔁)|^(auto-)?update/i],
+  ['ANTI-DELETE', 0.85, 'info', /^🗑/],
+  ['ANTI-EDIT', 0.7, 'info', /^✏/],
+  ['STATUS', 0.55, 'info', /^(📢|📣)/],
+  ['SYSTEM', 0.08, 'ok', /^(✅|⚡|🛠️?|ℹ️?)/],
+];
+
+function classify(level, text) {
+  const t = String(text).replace(/^\s+/, '');
+  for (const [label, color, tone, re] of CLASSES) if (re.test(t)) return { label, color, tone: level === 'error' && tone !== 'error' ? 'error' : tone, level };
+  if (level === 'error') return { label: 'ERROR', color: CORAL, tone: 'error', level };
+  if (level === 'warn') return { label: 'WARNING', color: AMBER, tone: 'warn', level };
+  if (/\b(failed|could not|can't|cannot|crash|refused|not working)\b/i.test(t)) return { label: 'PROBLEM', color: AMBER, tone: 'warn', level };
+  return { label: 'SYSTEM', color: 0.08, tone: 'info', level };
+}
+
+// one card (a pure function, so a test can check it)
+function eventCard({ time, label, color, tone, text, level }) {
+  const W = width();
+  const VALUE = W - 2 - LABEL;
+  const t = TONES[tone] || TONES.info;
+  const used = 3 + time.length + 3 + (label.length + 2) + 1;
+  const rule = (n, a, b) => gradient('─'.repeat(Math.max(2, n)), a, b);
+  const top = `${gradient('╭─', 0, 0.05)} ${paint(BRIGHT, time, true)} ${gradient('─', 0.08, 0.1)} ${pill(label, color)} ${rule(W - used, 0.4, 1)}`;
+  const ink = tone === 'error' ? CORAL : tone === 'warn' ? AMBER : SOFT;
+  const name = level === 'error' ? 'Error' : level === 'warn' || tone === 'warn' ? 'Warning' : 'Event';
+  const body = wrap(text, VALUE, 80);
+  const lines = body.length ? body : [''];
+  const rows = lines.map((l, i) => `${paint(at((i + 1) / (lines.length + 2)), '│')} ${paint(LABEL_COLOR, (i === 0 ? name : '').padEnd(LABEL))}${paint(ink, l, tone === 'error')}`);
+  const bottom = `${gradient('╰─', 0.9, 1)} ${paint(t.color, t.word, true)} ${rule(W - (t.word.length + 4), 0.9, 0.2)}`;
+  return [top, ...rows, bottom].join('\n');
+}
+
+function eventLine({ time, label, color, tone, text }) {
+  const t = TONES[tone] || TONES.info;
+  return `${paint(BRIGHT, time, true)} ${pill(label, color)} ${paint(t.color, oneLine(text, 160))}`;
+}
+
+// lines that must stay exactly as they are: the QR code, the pairing code box, the questions of the setup, anything already coloured
+function keepRaw(text) {
+  return !text.trim() || text.includes('\x1b') || /[█▀▄▌▐]/.test(text) || /^={5,}/m.test(text) || /^\s{2,}\S/.test(text) || /^[╭│╰┏┃┗]/.test(text.trim());
+}
+
+function styleEvent(level, args) {
+  const text = require('util').format(...args).replace(/^\n+|\n+$/g, '');
+  if (keepRaw(text)) return null;
+  const cls = classify(level, text);
+  const data = { time: timeText(), text, ...cls };
+  return compact() ? eventLine(data) : `${eventCard(data)}\n`;
+}
+
+let installed = false;
+function install() {
+  if (installed) return;
+  installed = true;
+  const natives = {};
+  for (const level of ['log', 'info', 'warn', 'error']) natives[level] = console[level].bind(console);
+  rawLog = natives.log;
+  for (const level of ['log', 'info', 'warn', 'error']) {
+    console[level] = (...args) => {
+      let out = null;
+      try {
+        if (!off(process.env.CONSOLE_STYLE)) out = styleEvent(level === 'info' ? 'log' : level, args);
+      } catch (err) {
+        out = null; // a log line must never break the bot
+      }
+      if (out === null) return natives[level](...args);
+      return natives[level === 'error' ? 'error' : 'log'](out);
+    };
+  }
+}
+
+module.exports = { incoming, finish, card, line, wrap, speed, banner, enabled, colorOn, kindOf, gradient, width, eventCard, eventLine, classify, styleEvent, install };

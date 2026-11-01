@@ -36,11 +36,12 @@ function textOf(message) {
 }
 
 // finds a view-once picture, video or voice note: { kind: 'image'|'video'|'audio', node, empty }
-function findViewOnce(message) {
+// assume = true: this message is the answer to a request we made for a hidden view-once, so any picture/video/voice note in it counts
+function findViewOnce(message, assume = false) {
   const { content, viewOnce } = peel(message);
   for (const key of ['imageMessage', 'videoMessage', 'audioMessage']) {
     const node = content[key];
-    if (node && (viewOnce || node.viewOnce)) {
+    if (node && (viewOnce || node.viewOnce || assume)) {
       // a view-once whose file details were not sent to this device
       const empty = !node.mediaKey && !node.url && !node.directPath;
       return { kind: key.replace('Message', ''), node, empty };

@@ -18,7 +18,7 @@ const mono = (rows) => {
 // one category: it opens and closes with its own symbol (every category has a different one), and its commands sit between
 function block(section, lines) {
   const sym = section.meta.symbol;
-  return `┏${sym} ◈ *${section.meta.title}* ◈\n${lines.map((l) => `┃ ${sym} ${l}`).join('\n')}\n┗${sym}`;
+  return `┏${sym} ${sym} *${section.meta.title}* ${sym}\n${lines.map((l) => `┃ ${sym} ${l}`).join('\n')}\n┗${sym}`;
 }
 
 const size = (mb) => (mb >= 1024 ? `${(mb / 1024).toFixed(mb >= 10240 ? 0 : 1)} GB` : `${mb} MB`);

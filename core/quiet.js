@@ -1,6 +1,7 @@
 // Hides the noisy dumps the WhatsApp encryption library prints ("Closing session",
 // "Session error: Bad MAC", ...). Real errors of the bot itself are NOT hidden.
 const health = require('./health');
+require('./chatlog').install(); // every log line becomes a card in the same design as the chat cards (installed first, so the filters below sit in front of it)
 
 const NOISE =
   /^(Closing (open |stale open )?session|Removing old closed session|Opening session|Session already (closed|open)|Migrating session|Decrypted message with closed session)/i;
