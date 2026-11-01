@@ -1,3 +1,8 @@
+TurboFex v1.0.3 - no more false "view-once" warnings
+CHANGED IN 1.0.3
+- FIXED: ordinary messages no longer trigger "arrived without its content (probably a view-once)". That message was only a guess; it is now written to the console only. A real view-once that is recognised is still copied to you, or reported with the reason.
+- NOTE: no other bot feature changed.
+
 TurboFex v1.0.2 - update notices and faster status views at the limit
 CHANGED IN 1.0.2
 - NEW: the bot now messages the owner when a new version is available (checked a minute after connecting, then every 6 hours, once per version), with the list of what changed and how to install it. It works with auto-update on or off. "update" shows the same list.

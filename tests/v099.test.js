@@ -158,9 +158,10 @@ test('console: install() turns plain logs into cards, keeps chat cards and the Q
   assert.strictEqual(printed[3][1], 'plain again');
 });
 
-test('view-once: when the phone never answers the request, the owner is told after a short wait', async () => {
+test('view-once: when the phone never answers the request, the owner is told after a short wait (only with EMPTY_NOTICE=1)', async () => {
   watchers.resetWarnings();
   watchers.timing.answerWait = 60;
+  process.env.EMPTY_NOTICE = '1'; // the guess notice is off by default, because ordinary messages can arrive empty
   try {
     const sock = mkSock({ requestPlaceholderResend: async () => {} });
     watchers.early(sock, empty('E9'));
@@ -169,5 +170,5 @@ test('view-once: when the phone never answers the request, the owner is told aft
     assert.ok(note, 'the owner has a notice');
     assert.strictEqual(note.j, OWNER_CHAT);
     assert.match(note.c.text, /\*vv\*/);
-  } finally { watchers.timing.answerWait = 20000; }
+  } finally { watchers.timing.answerWait = 20000; delete process.env.EMPTY_NOTICE; }
 });

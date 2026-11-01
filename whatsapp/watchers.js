@@ -261,7 +261,9 @@ function chaseHidden(sock, msg, jid) {
   const timer = setTimeout(() => {
     voAsked.delete(id);
     console.log('👁️ The phone did not send the hidden message back. WhatsApp is not giving this view-once to this device.');
-    warnOwner(sock, `👁️ A message from ${tagOf(sender)} arrived without its content (probably a view-once) and I asked your phone for it, but WhatsApp did not send it to this bot.\n${OPEN_ON_PHONE}`, 'viewonce', [sender]).catch(() => {});
+    // Many ordinary messages arrive empty (could not be decrypted yet, group events, reactions), so this is only a GUESS about a
+    // view-once. It stays in the console and is NOT sent to the owner, otherwise normal chats trigger it. EMPTY_NOTICE=1 turns it on.
+    if (process.env.EMPTY_NOTICE === '1') warnOwner(sock, `👁️ A message from ${tagOf(sender)} arrived without its content (probably a view-once) and I asked your phone for it, but WhatsApp did not send it to this bot.\n${OPEN_ON_PHONE}`, 'viewonce', [sender]).catch(() => {});
   }, timing.answerWait);
   if (timer.unref) timer.unref();
   voAsked.set(id, timer);

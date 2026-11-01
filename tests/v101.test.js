@@ -99,3 +99,21 @@ test('the owner is told once per version, and again only for a newer one', async
     uw.store.data.told = '';
   }
 });
+
+test('an ordinary empty message does not make the bot tell the owner "probably a view-once"', async () => {
+  const watchers = require('../whatsapp/watchers');
+  const sent = [];
+  const sock = { user: { id: '27899999999:1@s.whatsapp.net' }, requestPlaceholderResend: async () => {}, sendMessage: async (to, c) => { sent.push(c.text); } };
+  const old = watchers.timing.answerWait;
+  watchers.timing.answerWait = 20;
+  const realLog = console.log;
+  console.log = () => {};
+  try {
+    watchers.early(sock, { key: { remoteJid: '27811111111@s.whatsapp.net', id: 'EMPTY1', fromMe: false }, messageStubType: 2 });
+    await wait(150);
+    assert.deepStrictEqual(sent, []);
+  } finally {
+    console.log = realLog;
+    watchers.timing.answerWait = old;
+  }
+});
