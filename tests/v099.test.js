@@ -80,22 +80,24 @@ test('view-once: an ordinary picture that we never asked about is NOT copied', a
 });
 
 // ---------------------------------------------------------------- menu
-test('menu: every category heading uses its own symbol on both sides, the same one its commands use', async () => {
+test('menu: every category heading is exactly "┏ ❏ NAME ❏", the commands keep the category symbol and the closer is unchanged', async () => {
   const menu = require('../commands/menu');
   const commandList = Object.values(require('../whatsapp/handler').commands || {});
-  const list = commandList.length ? commandList : [{ name: 'a', category: 'autoreply', description: 'x' }, { name: 'b', category: 'budget', description: 'x' }, { name: 'c', category: 'editor', description: 'x' }];
+  const list = commandList.length ? commandList : [{ name: 'a', category: 'autoreply', description: 'x' }, { name: 'b', category: 'budget', description: 'x' }, { name: 'c', category: 'editor', description: 'x' }, { name: 'd', category: 'audio', description: 'x' }, { name: 'e', category: 'ai', description: 'x' }];
   let out = '';
   await menu.run({ reply: async (t) => { out = t; }, commandList: list, prefix: '.', args: [], isOwner: true, isAdmin: true, timing: null });
-  for (const [key, meta] of Object.entries(categories.info)) {
-    const title = meta.title;
-    if (!out.includes(`*${title}*`)) continue;
-    assert.ok(out.includes(`┏${meta.symbol} *${title}* ${meta.symbol}\n┃ ${meta.symbol} `), `${key} heading and command lines share ${meta.symbol}`);
+  let seen = 0;
+  for (const meta of Object.values(categories.info)) {
+    if (!out.includes(`┏ ❏ ${meta.title} ❏\n`)) continue;
+    seen++;
+    assert.ok(out.includes(`┏ ❏ ${meta.title} ❏\n┃ ${meta.symbol} `), `${meta.title}: commands keep ${meta.symbol}`);
+    assert.ok(out.includes(`\n┗${meta.symbol}`), `${meta.title}: closer unchanged`);
   }
-  const body = out.slice(out.indexOf('┗✦')); // (the bot header above it keeps its own frame)
-  assert.ok(!/◈ \*[A-Z ]+\* ◈/.test(body.replace(/┏◈ \*STATUS\* ◈/, '')), 'no leftover diamond pair around a category');
-  assert.strictEqual(categories.info.autoreply.symbol, '✧');
-  assert.strictEqual(categories.info.budget.symbol, '❂');
-  assert.strictEqual(categories.info.editor.symbol, '✎');
+  assert.ok(seen >= 3);
+  const heads = out.split('\n').filter((l) => l.startsWith('┏')).slice(1); // (the first one is the bot header)
+  for (const h of heads) assert.match(h, /^┏ ❏ [A-Z ]+ ❏$/);
+  assert.ok(heads.every((h) => !h.includes('*')), 'no old bold heading style');
+  assert.ok(!/[ᴀ-ᴢ]/.test(heads.join('')), 'no small caps in headings');
 });
 
 // ---------------------------------------------------------------- console cards
@@ -168,13 +170,4 @@ test('view-once: when the phone never answers the request, the owner is told aft
     assert.strictEqual(note.j, OWNER_CHAT);
     assert.match(note.c.text, /\*vv\*/);
   } finally { watchers.timing.answerWait = 20000; }
-});
-
-test('menu: a category heading is "symbol NAME symbol" with no extra symbol, and the command lines keep theirs', async () => {
-  const menu = require('../commands/menu');
-  let out = '';
-  await menu.run({ reply: async (t) => { out = t; }, commandList: [{ name: 'a', category: 'audio', description: 'x' }, { name: 'b', category: 'autoreply', description: 'x' }], prefix: '.', args: [], isOwner: true, isAdmin: true, timing: null });
-  assert.ok(out.includes('┏♪ *ᴀᴜᴅɪᴏ*') || out.includes('┏♪ *AUDIO* ♪'));
-  assert.ok(out.includes('┏✧ *AUTOREPLY* ✧\n┃ ✧ '));
-  assert.ok(!out.includes('✧ ✧ *'));
 });

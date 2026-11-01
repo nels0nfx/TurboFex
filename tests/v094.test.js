@@ -45,15 +45,15 @@ test('the menu header and categories open and close with a symbol, one detail pe
   assert.ok(!/WhatsApp Assistant/.test(text) && !/ʜᴏꜱᴛ/.test(text), 'no subtitle; host and memory are for the owner only');
   assert.ok(!text.includes('```'), 'no code block (WhatsApp pads it with empty space)');
   const lines = text.split('\n');
-  const heads = lines.map((l, i) => [l, i]).filter(([l]) => /^┏(\S) \*[A-Z ]+\* \1$/.test(l)).slice(1); // (the first one is the header)
+  const heads = lines.map((l, i) => [l, i]).filter(([l]) => /^┏ ❏ [A-Z ]+ ❏$/.test(l)).slice(1); // (the first one is the header)
   assert.ok(heads.length >= 10);
   for (const [l, i] of heads) {
-    const sym = l[1];
+    const sym = [...lines[i + 1]][2]; // the commands keep the category's own symbol; the heading is always ┏ ❏ NAME ❏
     assert.ok(new RegExp(`^┃ ${sym} \\S`).test(lines[i + 1]), 'a command line, starting with the category symbol, follows the name');
     let j = i + 1; while (lines[j] && lines[j] !== `┗${sym}`) j++;
-    assert.strictEqual(lines[j], `┗${sym}`, 'the category closes with the same symbol it opened with');
+    assert.strictEqual(lines[j], `┗${sym}`, 'the category closes with the same symbol its commands use');
   }
-  assert.ok(new Set(heads.map(([l]) => l[1])).size > 8, 'categories have different symbols');
+  assert.ok(new Set(heads.map(([, i]) => [...lines[i + 1]][2])).size > 8, 'categories have different symbols');
   const owner = [];
   await menu.run({ reply: async (t) => owner.push(t), commandList: all(), prefix: '.', args: [], isOwner: true, isAdmin: true, timing: { receivedAt: Date.now() } });
   assert.match(owner[0], /┃ \*ʜᴏꜱᴛ\* ▸ .+\n┃ \*ᴜꜱᴀɢᴇ\* ▸ \d+ MB of .+\n┃ \*ʀᴀᴍ\* ▸ \[[█░]{10}\] \d+%\n┗✦/);
