@@ -45,7 +45,7 @@ test('the menu header and categories open and close with a symbol, one detail pe
   assert.ok(!/WhatsApp Assistant/.test(text) && !/ʜᴏꜱᴛ/.test(text), 'no subtitle; host and memory are for the owner only');
   assert.ok(!text.includes('```'), 'no code block (WhatsApp pads it with empty space)');
   const lines = text.split('\n');
-  const heads = lines.map((l, i) => [l, i]).filter(([l]) => /^┏(\S) \1 \*[A-Z ]+\* \1$/.test(l)).slice(1); // (the first one is the header)
+  const heads = lines.map((l, i) => [l, i]).filter(([l]) => /^┏(\S) \*[A-Z ]+\* \1$/.test(l)).slice(1); // (the first one is the header)
   assert.ok(heads.length >= 10);
   for (const [l, i] of heads) {
     const sym = l[1];

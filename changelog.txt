@@ -1,3 +1,10 @@
+TurboFex v0.9.10 - clean menu headings, view-once diagnostics
+CHANGED IN 0.9.10
+- FIXED menu category headings had a doubled symbol ("┏✧ ✧ AUTOREPLY ✧"). Now "┏✧ AUTOREPLY ✧": one symbol before the name, the same one after it, command lines unchanged
+- CHANGED view-once: the console now shows what WhatsApp sent for an empty message (stub type and parameters), that the request to the phone was sent, and whether the phone's answer is still empty. After 20 seconds without an answer the owner gets a message saying WhatsApp did not give the file to this bot (reply with vv)
+- NOTE the log of 0.9.9 showed the phone was asked and did not hand the file over. That part is decided by WhatsApp, not by the bot
+- TESTS owner notice when the phone does not answer; menu heading format
+
 TurboFex v0.9.9 - view-once opened for real, symbols on menu headings, every log is a card
 CHANGED IN 0.9.9
 - FIXED auto view-once never opened anything. Cause found in your console: "A message arrived without content (stub none)". WhatsApp announces a view-once on a linked device but holds the file back, so the message has NO content at all. The watcher (whatsapp/watchers.js, early()) returned at once for such a message, so the phone was never asked for the file (the "ask the phone again" step only ran for messages that had at least an empty envelope). Now an empty message (no stub, or an unreadable one) in a chat covered by autoviewonce makes the bot ask the phone for it, once per message

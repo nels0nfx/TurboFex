@@ -134,7 +134,7 @@ const voWait = new Map(); // message id -> timer of the "no content" notice (can
 const voKeep = new Map(); // message id -> { msg, at }: view-once messages seen lately, so "vv" can open them even if the reply lost the file details
 const voAsked = new Map(); // message id -> timer: messages that arrived EMPTY and that we asked the phone to send again
 const KEEP_MS = 30 * 60 * 1000;
-const timing = { resendWait: 12000 }; // milliseconds: how long we wait for the phone to send the file after we asked (tests make it tiny)
+const timing = { resendWait: 12000, answerWait: 20000 }; // milliseconds: how long we wait for the phone to send the file after we asked (tests make it tiny)
 
 function keepViewOnce(msg) {
   const id = msg.key?.id;
@@ -247,16 +247,27 @@ const hiddenStub = (t) => t == null || t === 2 || t === 'CIPHERTEXT'; // 2 = cou
 function chaseHidden(sock, msg, jid) {
   const id = msg.key.id;
   const isGroup = jid.endsWith('@g.us');
-  if (!id || voWait.has(id) || voAsked.has(id) || !inScope(store.watchCfg('viewonce').mode, isGroup)) return;
-  console.log(`👁️ A message from ${num(isGroup ? msg.key.participant : jid)} came with no content. Asking the phone for it (it may be a view-once).`);
+  if (!id) return;
+  const mode = store.watchCfg('viewonce').mode;
+  if (!inScope(mode, isGroup)) return;
+  if (voAsked.has(id)) {
+    // the same message again: if we already asked, this is the phone's answer and it is STILL empty
+    console.log(`👁️ Message ${id.slice(0, 8)} arrived again and is still empty (stub ${msg.messageStubType ?? 'none'}, params ${JSON.stringify(msg.messageStubParameters || [])}). The phone did not hand over the file.`);
+    return;
+  }
+  if (voWait.has(id)) return;
+  const sender = isGroup ? msg.key.participant : jid;
+  console.log(`👁️ A message from ${num(sender)} came with no content (stub ${msg.messageStubType ?? 'none'}, params ${JSON.stringify(msg.messageStubParameters || [])}). Asking the phone for it (it may be a view-once).`);
   const timer = setTimeout(() => {
     voAsked.delete(id);
-    console.log('👁️ The phone did not send the hidden message back. If it was a view-once, WhatsApp is not giving it to this device: reply to it with vv.');
-  }, 60000);
+    console.log('👁️ The phone did not send the hidden message back. WhatsApp is not giving this view-once to this device.');
+    warnOwner(sock, `👁️ A message from ${tagOf(sender)} arrived without its content (probably a view-once) and I asked your phone for it, but WhatsApp did not send it to this bot.\n${OPEN_ON_PHONE}`, 'viewonce', [sender]).catch(() => {});
+  }, timing.answerWait);
   if (timer.unref) timer.unref();
   voAsked.set(id, timer);
   stats.viewOnceChased = (stats.viewOnceChased || 0) + 1;
   askPhoneAgain(sock, msg).then((ok) => {
+    if (ok) console.log(`👁️ Request sent to the phone for message ${id.slice(0, 8)}. Waiting for its answer.`);
     if (!ok && voAsked.get(id) === timer) {
       clearTimeout(timer);
       voAsked.delete(id); // a later delivery may try again

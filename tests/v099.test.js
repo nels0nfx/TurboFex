@@ -89,10 +89,10 @@ test('menu: every category heading uses its own symbol on both sides, the same o
   for (const [key, meta] of Object.entries(categories.info)) {
     const title = meta.title;
     if (!out.includes(`*${title}*`)) continue;
-    assert.ok(out.includes(`┏${meta.symbol} ${meta.symbol} *${title}* ${meta.symbol}\n┃ ${meta.symbol} `), `${key} heading and command lines share ${meta.symbol}`);
+    assert.ok(out.includes(`┏${meta.symbol} *${title}* ${meta.symbol}\n┃ ${meta.symbol} `), `${key} heading and command lines share ${meta.symbol}`);
   }
   const body = out.slice(out.indexOf('┗✦')); // (the bot header above it keeps its own frame)
-  assert.ok(!/◈ \*[A-Z ]+\* ◈/.test(body.replace(/┏◈ ◈ \*STATUS\* ◈/, '')), 'no leftover diamond pair around a category');
+  assert.ok(!/◈ \*[A-Z ]+\* ◈/.test(body.replace(/┏◈ \*STATUS\* ◈/, '')), 'no leftover diamond pair around a category');
   assert.strictEqual(categories.info.autoreply.symbol, '✧');
   assert.strictEqual(categories.info.budget.symbol, '❂');
   assert.strictEqual(categories.info.editor.symbol, '✎');
@@ -154,4 +154,27 @@ test('console: install() turns plain logs into cards, keeps chat cards and the Q
   assert.match(strip(printed[1][1]), /ERROR/);
   assert.strictEqual(printed[2][1], '  PAIRING CODE:  ABCD');
   assert.strictEqual(printed[3][1], 'plain again');
+});
+
+test('view-once: when the phone never answers the request, the owner is told after a short wait', async () => {
+  watchers.resetWarnings();
+  watchers.timing.answerWait = 60;
+  try {
+    const sock = mkSock({ requestPlaceholderResend: async () => {} });
+    watchers.early(sock, empty('E9'));
+    await new Promise((r) => setTimeout(r, 250));
+    const note = sent.find((s) => s.c.text && /did not send it to this bot/.test(s.c.text));
+    assert.ok(note, 'the owner has a notice');
+    assert.strictEqual(note.j, OWNER_CHAT);
+    assert.match(note.c.text, /\*vv\*/);
+  } finally { watchers.timing.answerWait = 20000; }
+});
+
+test('menu: a category heading is "symbol NAME symbol" with no extra symbol, and the command lines keep theirs', async () => {
+  const menu = require('../commands/menu');
+  let out = '';
+  await menu.run({ reply: async (t) => { out = t; }, commandList: [{ name: 'a', category: 'audio', description: 'x' }, { name: 'b', category: 'autoreply', description: 'x' }], prefix: '.', args: [], isOwner: true, isAdmin: true, timing: null });
+  assert.ok(out.includes('┏♪ *ᴀᴜᴅɪᴏ*') || out.includes('┏♪ *AUDIO* ♪'));
+  assert.ok(out.includes('┏✧ *AUTOREPLY* ✧\n┃ ✧ '));
+  assert.ok(!out.includes('✧ ✧ *'));
 });
