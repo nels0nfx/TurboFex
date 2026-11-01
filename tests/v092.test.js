@@ -165,7 +165,7 @@ test('public README: no claims the code cannot prove', () => {
   assert.ok(!/for months|without attention|every message with a link|every command reply|guarantee/i.test(readme));
 });
 
-test('PROJECT_GUIDE.md exists, covers the required topics and holds no secrets', () => {
+test('PROJECT_GUIDE.md (private, only in the owner\'s copy) covers the required topics and holds no secrets', { skip: fs.existsSync(path.join(ROOT, 'PROJECT_GUIDE.md')) ? false : 'PROJECT_GUIDE.md is private and not in this copy' }, () => {
   const guide = fs.readFileSync(path.join(ROOT, 'PROJECT_GUIDE.md'), 'utf8');
   for (const topic of ['Architecture', 'Folder', 'Baileys', 'Pairing', 'Command', 'Permissions', 'Data storage', 'Environment variables', 'Error handling', 'Update', 'Testing', 'Deployment', 'Known limitations', 'Instructions for AI']) {
     assert.ok(new RegExp(topic, 'i').test(guide), `guide covers ${topic}`);

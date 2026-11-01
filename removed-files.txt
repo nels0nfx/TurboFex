@@ -1,4 +1,4 @@
-# files from older versions that no longer exist
+# files from older versions that no longer exist (read by the self-updater; the private removed.txt is never published)
 whatsapp/games.js
 whatsapp/antilink.js
 core/economy.js

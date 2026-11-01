@@ -271,7 +271,7 @@ function validateEntries(entries, prefix) {
   }
 }
 
-// The paths in removed.txt that may be deleted. A path that the update itself contains is never deleted: removed.txt once listed
+// The paths in removed-files.txt that may be deleted. A path that the update itself contains is never deleted: the list once had
 // commands/market.js (the old market) and so deleted the NEW market and herald commands on every bot that updated.
 function filesToRemove(text, shipped = new Set()) {
   const out = [];
@@ -281,6 +281,28 @@ function filesToRemove(text, shipped = new Set()) {
     out.push(rel);
   }
   return out;
+}
+
+// Files that no longer exist in the new version are listed in removed-files.txt (never a file that this update ships itself).
+// Older versions published the list as removed.txt: it is still read when an update ZIP has it. Every deleted file is first
+// copied into the rollback folder.
+function removeOldFiles(entries, prefix, rootDir, rbDir) {
+  const shipped = new Set(entries.filter((e) => !e.isDirectory && e.entryName.startsWith(prefix)).map((e) => e.entryName.slice(prefix.length)));
+  const removed = [];
+  for (const listName of ['removed-files.txt', 'removed.txt']) {
+    const removedList = entries.find((e) => e.entryName === `${prefix}${listName}`);
+    if (!removedList) continue;
+    for (const rel of filesToRemove(removedList.getData().toString('utf8'), shipped)) {
+      const dest = path.resolve(rootDir, rel);
+      if (!dest.startsWith(rootDir) || !fs.existsSync(dest) || fs.statSync(dest).isDirectory()) continue;
+      const copy = path.join(rbDir, 'files', rel);
+      fs.mkdirSync(path.dirname(copy), { recursive: true });
+      fs.copyFileSync(dest, copy);
+      fs.rmSync(dest, { force: true });
+      removed.push(rel);
+    }
+  }
+  return removed;
 }
 
 async function applyUpdate(info) {
@@ -331,19 +353,7 @@ async function applyUpdate(info) {
     files++;
   }
 
-  // files that no longer exist in the new version are listed in removed.txt (never a file that this update ships itself)
-  const removedList = entries.find((e) => e.entryName === `${prefix}removed.txt`);
-  if (removedList) {
-    const shipped = new Set(entries.filter((e) => !e.isDirectory && e.entryName.startsWith(prefix)).map((e) => e.entryName.slice(prefix.length)));
-    for (const rel of filesToRemove(removedList.getData().toString('utf8'), shipped)) {
-      const dest = path.resolve(ROOT, rel);
-      if (!dest.startsWith(rootDir) || !fs.existsSync(dest) || fs.statSync(dest).isDirectory()) continue;
-      const copy = path.join(rbDir, 'files', rel);
-      fs.mkdirSync(path.dirname(copy), { recursive: true });
-      fs.copyFileSync(dest, copy);
-      fs.rmSync(dest, { force: true });
-    }
-  }
+  removeOldFiles(entries, prefix, rootDir, rbDir);
 
   const after = localVersion();
   fs.writeFileSync(path.join(rbDir, 'manifest.json'), JSON.stringify({ from: before, to: after, created }));
@@ -404,4 +414,4 @@ async function autoUpdateOnStart() {
 }
 
 module.exports = {
-  fromRepoBranch, filesToRemove, validateEntries, getLatest, applyUpdate, autoUpdateOnStart, reasonText, isNewer };
+  fromRepoBranch, filesToRemove, removeOldFiles, validateEntries, getLatest, applyUpdate, autoUpdateOnStart, reasonText, isNewer };

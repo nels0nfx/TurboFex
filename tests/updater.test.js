@@ -67,14 +67,20 @@ test('the update is found from the pushed files of the repo, no zip needed', asy
 });
 
 // v0.7.11 shipped commands/market.js while removed.txt still listed it, so every update deleted the new market and herald commands
-test('removed.txt never lists a file that the project contains', () => {
+test('removed-files.txt (the public list) never lists a file that the project contains, and removed.txt matches it', () => {
   const fs = require('fs');
   const path = require('path');
   const root = path.join(__dirname, '..');
-  const listed = fs.readFileSync(path.join(root, 'removed.txt'), 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  const read = (name) => fs.readFileSync(path.join(root, name), 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  const listed = read('removed-files.txt');
   assert.ok(listed.length > 0);
   const present = listed.filter((rel) => fs.existsSync(path.join(root, rel)));
   assert.deepStrictEqual(present, [], 'these files are shipped but also listed as removed');
+  // the private removed.txt (only in the owner's copy) must not hold anything that the public list lacks
+  if (fs.existsSync(path.join(root, 'removed.txt'))) {
+    const missing = read('removed.txt').filter((rel) => !listed.includes(rel));
+    assert.deepStrictEqual(missing, [], 'removed.txt has paths that removed-files.txt (what bots really read) does not');
+  }
 });
 test('an update never deletes a file it ships itself, but still removes old files', () => {
   const { filesToRemove } = require('../core/updater');

@@ -1,0 +1,8 @@
+# Release ZIPs are made with "git archive". These files are left out of them, in every folder (a second safety net:
+# they are already git-ignored and removed from Git, so this only matters if one is ever added by mistake).
+AGENTS.md export-ignore
+CLAUDE.md export-ignore
+GEMINI.md export-ignore
+PROJECT_GUIDE.md export-ignore
+removed.txt export-ignore
+OWNER_PREFERENCES.private.md export-ignore

@@ -6,3 +6,10 @@ session_id.txt
 config.env
 # private owner preferences for AI agents: stays on the owner's phone, never on GitHub
 OWNER_PREFERENCES.private.md
+# private AI instruction files: they stay on the owner's phone and in his development ZIP,
+# and are NEVER uploaded to GitHub or put in a public release ZIP (the names match in every folder, nested copies too)
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+PROJECT_GUIDE.md
+removed.txt

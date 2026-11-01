@@ -5,15 +5,20 @@ const path = require('path');
 const test = require('node:test');
 const assert = require('node:assert');
 
-const agents = fs.readFileSync(path.join(__dirname, '..', 'AGENTS.md'), 'utf8');
+// AGENTS.md, CLAUDE.md, GEMINI.md, PROJECT_GUIDE.md and removed.txt are private: they are not on GitHub, so a clean clone
+// does not have them. Their tests run only where the files exist (the owner's phone and the development ZIP).
+const agentsFile = path.join(__dirname, '..', 'AGENTS.md');
+const hasAgents = fs.existsSync(agentsFile);
+const agents = hasAgents ? fs.readFileSync(agentsFile, 'utf8') : '';
+const onlyHere = { skip: hasAgents ? false : 'AGENTS.md is private and not in this copy' };
 
-test('AGENTS.md has the push command template, and says to send it with every ZIP', () => {
-  assert.ok(agents.includes('cd ~/TurboFex && unzip -o ~/storage/downloads/TurboFex-hosting-vX_Y_Z.zip -d ~/TurboFex && git add -A && (git commit -m "vX.Y.Z - short summary" || true) && git push origin main && git tag vX.Y.Z && git push origin vX.Y.Z && git archive --format=zip -o ~/TurboFex-hosting.zip HEAD && gh release create vX.Y.Z ~/TurboFex-hosting.zip --title "TurboFex vX.Y.Z" --notes "short summary" --latest && rm ~/TurboFex-hosting.zip'));
+test('AGENTS.md has the push command template, and says to send it with every ZIP', onlyHere, () => {
+  assert.ok(agents.includes('cd ~/TurboFex && unzip -o ~/storage/downloads/TurboFex-hosting-vX_Y_Z.zip -d ~/TurboFex && sh tools/protect-private.sh && git add -A && (git commit -m "vX.Y.Z - short summary" || true) && git push origin main && git tag vX.Y.Z && git push origin vX.Y.Z && sh tools/make-release.sh ~/TurboFex-hosting.zip && gh release create vX.Y.Z ~/TurboFex-hosting.zip --title "TurboFex vX.Y.Z" --notes "short summary" --latest && rm ~/TurboFex-hosting.zip'));
   assert.match(agents, /Every time you hand the owner a ZIP, finish your reply with his push command/);
   assert.match(agents, /TurboFex-hosting-vX_Y_Z\.zip/);
 });
 
-test('AGENTS.md: the example matches the package version style, and the old wipe-everything command is gone', () => {
+test('AGENTS.md: the example matches the package version style, and the old wipe-everything command is gone', onlyHere, () => {
   const example = /TurboFex-hosting-v(\d+)_(\d+)_(\d+)\.zip -d/.exec(agents);
   assert.ok(example, 'there is a filled-in example');
   const version = `${example[1]}.${example[2]}.${example[3]}`;
@@ -26,7 +31,7 @@ test('AGENTS.md: the example matches the package version style, and the old wipe
 const root = path.join(__dirname, '..');
 const PRIVATE = 'OWNER_PREFERENCES.private.md';
 
-test('private preferences: git ignores the file, and AGENTS.md says every agent must read it first', () => {
+test('private preferences: git ignores the file, and AGENTS.md says every agent must read it first', onlyHere, () => {
   const ignore = fs.readFileSync(path.join(root, '.gitignore'), 'utf8').split('\n').map((l) => l.trim());
   assert.ok(ignore.includes(PRIVATE), 'the file is in .gitignore, so GitHub never shows it');
   assert.ok(agents.includes(PRIVATE));
@@ -35,7 +40,7 @@ test('private preferences: git ignores the file, and AGENTS.md says every agent 
   assert.match(agents, /Never delete earlier lines/);
 });
 
-test('private preferences: every AI instruction file points to it (and holds no preferences itself)', () => {
+test('private preferences: every AI instruction file points to it (and holds no preferences itself)', onlyHere, () => {
   for (const f of ['CLAUDE.md', 'GEMINI.md', '.cursorrules', 'AGENTS.md', 'PROJECT_GUIDE.md']) {
     const text = fs.readFileSync(path.join(root, f), 'utf8');
     assert.ok(text.includes(PRIVATE), `${f} points to the private file`);

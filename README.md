@@ -1,4 +1,4 @@
-# ⚡ TurboFex v0.9.12
+# ⚡ TurboFex v0.9.13
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and even
@@ -110,7 +110,7 @@ Group admins can close the Empire in their group with `.realm off` and open it a
 - 🟢 WhatsApp channel: https://whatsapp.com/channel/0029VbDpuKM8qIzkoQscOE2w
 - 💻 Source code and releases: https://github.com/nels0nfx/TurboFex
 
-Developers and AI assistants: see [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) for how the project is built, and [`AGENTS.md`](AGENTS.md) for how it is released.
+Developers: the project is plain Node.js (CommonJS, no build step). `npm test` runs the tests in `tests/`.
 
 ---
 TurboFex is made by Nelson Fx (Trinity Flow). Released under the MIT license.

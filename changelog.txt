@@ -1,3 +1,10 @@
+TurboFex v0.9.13 - private AI files stay off GitHub
+CHANGED IN 0.9.13
+- NEW: AGENTS.md, CLAUDE.md, GEMINI.md, PROJECT_GUIDE.md and removed.txt are git-ignored (every folder) and are no longer uploaded to GitHub or put in the public release ZIP. They stay on the owner's phone and in the development ZIP.
+- NEW: tools/protect-private.sh (takes them out of Git without deleting the local copies, installs commit and push guards, and can list old commits that held them) and tools/make-release.sh (builds the public ZIP and stops if a private file or secret is inside). .gitattributes also leaves them out of "git archive".
+- NEW: removed-files.txt is the public list of old files that self-updating bots delete. Updates still read an old removed.txt when a ZIP has one.
+- CHANGED: the README no longer links to files that are not on GitHub. Tests of the private files are skipped on a clean clone. No bot feature changed.
+
 TurboFex v0.9.12 - menu headings in one style
 CHANGED IN 0.9.12
 - CHANGED menu: every category heading is now exactly "┏ ❏ NAME ❏" (for example "┏ ❏ AUDIO ❏", "┏ ❏ AUTOREPLY ❏", "┏ ❏ GAMES ❏"): plain capitals, no bold marks, no small caps. The old styles are gone. Commands, their symbols, descriptions, order, the "┗" closers and everything else are unchanged
