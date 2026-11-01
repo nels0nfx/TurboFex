@@ -2,6 +2,7 @@
 const store = require('../whatsapp/store');
 const ai = require('../core/ai');
 const chatbot = require('../whatsapp/chatbot');
+const knowledge = require('../whatsapp/botknowledge');
 const web = require('../core/web');
 const media = require('../whatsapp/media');
 const names = require('../whatsapp/names');
@@ -43,11 +44,13 @@ module.exports = [
     name: 'ai',
     aliases: ['ask', 'nelsonfx', 'gpt'],
     description: 'Ask NelsonFx anything: ai what is the capital of Kenya (or reply to a message with ai)',
-    async run({ rest, msg, reply, prefix, isOwner }) {
+    async run({ rest, msg, reply, prefix, isOwner, isRealOwner, isGroup, commandList }) {
       const question = rest || replied(msg);
       if (!question) return reply(`🤖 *${ai.NAME}*\n*Usage:* \`${prefix}ai <your question>\` _(or reply to a message with_ \`${prefix}ai\`_)_\n_Turn on a conversation with_ \`${prefix}chatbot on\``);
       try {
-        const answer = await ai.chat([{ role: 'user', content: rest && replied(msg) ? `${replied(msg)}\n\n${rest}` : question }]);
+        // the AI knows this bot: its commands, version and the notes of the owner (owner-only things only in a private chat with the owner)
+        const system = knowledge.forQuestion({ question, commandList, isOwner, isRealOwner, isGroup });
+        const answer = await ai.chat([{ role: 'user', content: rest && replied(msg) ? `${replied(msg)}\n\n${rest}` : question }], { system });
         await reply(`🤖 ${answer}`);
       } catch (err) {
         console.error('ai failed:', err.message);
@@ -60,7 +63,7 @@ module.exports = [
     name: 'chatbot',
     aliases: ['chat'],
     ownerOnly: true,
-    description: 'Let NelsonFx chat with people: chatbot on / off / where / add / remove / clear / test (owner only)',
+    description: 'Let NelsonFx chat with people: chatbot on / off / where / add / remove / clear / test / teach / notes / unteach (owner only)',
     async run({ args, jid, isGroup, reply, prefix }) {
       const cfg = chatbot.settings();
       const w = (args[0] || '').toLowerCase();
@@ -82,6 +85,26 @@ module.exports = [
         chatbot.save({ chats: [...chats].slice(-200) });
         return reply(`✅ *${w === 'add' ? 'Added' : 'Removed'}:* this ${isGroup ? 'group' : 'chat'}\n_Use_ \`${prefix}chatbot where selected\` _to answer only in the added chats._`);
       }
+      if (w === 'teach') {
+        const text = args.slice(1).join(' ').trim();
+        if (!text) return reply(`🧠 *Teach ${ai.NAME}*\n*Usage:* \`${prefix}chatbot teach <a fact to remember>\`\n*Example:* \`${prefix}chatbot teach Our group meets every Friday at 6pm\`\n_${ai.NAME} already learns the bot by itself (every command, the version and what is new). Use this for your own facts. Anyone who asks can hear them, so never teach secrets._`);
+        const r = knowledge.addNote(text);
+        if (!r.ok) {
+          const why = { full: `⚠️ *I already know ${knowledge.MAX_NOTES} notes.* Remove one with \`${prefix}chatbot unteach <number>\`.`, same: '⚠️ *I already know that.*', secret: '⚠️ *That looks like a key, a session ID or a password.* I never keep those, because anyone who asks me could hear it.', empty: '⚠️ *Write the fact after teach.*' };
+          return reply(why[r.why] || why.empty);
+        }
+        return reply(`🧠 *Learned* _(note ${r.n})_\n${r.text}\n_Anyone who asks me can hear this, so never teach me secrets._`);
+      }
+      if (w === 'notes') {
+        const notes = knowledge.listNotes();
+        if (!notes.length) return reply(`🧠 *No notes yet.*\n_Add one with_ \`${prefix}chatbot teach <a fact>\``);
+        return reply(`🧠 *What I was taught* _(${notes.length}/${knowledge.MAX_NOTES})_\n\n${notes.map((n, i) => `*${i + 1}.* ${n}`).join('\n')}\n\n_Remove one with_ \`${prefix}chatbot unteach <number>\` _or_ \`${prefix}chatbot unteach all\``);
+      }
+      if (w === 'unteach') {
+        const r = knowledge.removeNote(args[1] || '');
+        if (!r.ok) return reply(`*Usage:* \`${prefix}chatbot unteach <number>\` _(or_ \`all\`_)_\n_See the numbers with_ \`${prefix}chatbot notes\``);
+        return reply(`✅ *Forgot ${r.removed === 1 && r.text ? 'note' : `${r.removed} notes`}.*${r.text ? `\n_${r.text}_` : ''}`);
+      }
       if (w === 'clear') {
         chatbot.forget(jid);
         return reply('✅ *I forgot this conversation.*');
@@ -95,8 +118,8 @@ module.exports = [
         return reply(`🤖 *AI test*\n\n${lines.join('\n')}\n\n${anyOk ? '_The chatbot can answer._' : `_Nothing answered._${anyKey ? '' : ' No AI key is set.'} Get a free key at *aistudio.google.com/apikey* and send \`${prefix}setapi gemini <key>\``}`);
       }
       await reply(
-        `🤖 *Chatbot – ${ai.NAME}*\n*Status:* ${state(cfg.on)}\n*Answers in:* ${placeText[cfg.scope]}\n*Chosen chats:* ${cfg.chats.length}\n*Keys:* ${['gemini', 'groq', 'pollinations'].filter((k) => store.getApiKey(k)).join(', ') || 'none (only the free service, which may not work)'}\n\n` +
-          `▸ \`${prefix}chatbot on\` / \`${prefix}chatbot off\`\n▸ \`${prefix}chatbot where dms\` _(dms, groups, all, selected)_\n▸ \`${prefix}chatbot add\` / \`${prefix}chatbot remove\` _(this chat)_\n▸ \`${prefix}chatbot clear\` _(forget this chat)_\n▸ \`${prefix}chatbot test\` _(check that the AI answers)_\n\n` +
+        `🤖 *Chatbot – ${ai.NAME}*\n*Status:* ${state(cfg.on)}\n*Answers in:* ${placeText[cfg.scope]}\n*Chosen chats:* ${cfg.chats.length}\n*Notes taught:* ${knowledge.listNotes().length}\n*Keys:* ${['gemini', 'groq', 'pollinations'].filter((k) => store.getApiKey(k)).join(', ') || 'none (only the free service, which may not work)'}\n\n` +
+          `▸ \`${prefix}chatbot on\` / \`${prefix}chatbot off\`\n▸ \`${prefix}chatbot where dms\` _(dms, groups, all, selected)_\n▸ \`${prefix}chatbot add\` / \`${prefix}chatbot remove\` _(this chat)_\n▸ \`${prefix}chatbot clear\` _(forget this chat)_\n▸ \`${prefix}chatbot teach <fact>\` / \`notes\` / \`unteach <number>\` _(your own facts for the AI)_\n▸ \`${prefix}chatbot test\` _(check that the AI answers)_\n\n` +
           `_The chatbot needs a free AI key: get one at aistudio.google.com/apikey and send_ \`${prefix}setapi gemini <key>\``
       );
     },

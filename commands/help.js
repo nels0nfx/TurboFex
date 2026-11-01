@@ -1,14 +1,30 @@
 const brand = require('../core/brand');
 const store = require('../whatsapp/store');
 const { groupByCategory } = require('../whatsapp/categories');
+const knowledge = require('../whatsapp/botknowledge');
+const ai = require('../core/ai');
 
 // A short, friendly guide for people who have never used the bot. The long list of commands is in the menu command.
 module.exports = {
   name: 'help',
   category: 'general',
-  description: 'A quick guide: how to use the bot and find commands',
-  async run({ reply, prefix, commandList, isOwner, isAdmin }) {
+  description: 'A quick guide: how to use the bot and find commands (help ask <question> asks the AI about the bot)',
+  async run({ reply, prefix, commandList, isOwner, isRealOwner, isAdmin, isGroup, args }) {
     const p = prefix || '';
+    // "help ask <question>": the AI answers, and it knows every command of this bot (the owner also hears about owner commands in a private chat)
+    if ((args[0] || '').toLowerCase() === 'ask') {
+      const question = args.slice(1).join(' ').trim();
+      if (!question) return reply(`💡 *Ask me about the bot*\n*Usage:* \`${p}help ask <your question>\`\n*Examples:*\n▸ \`${p}help ask how do I make a sticker\`\n▸ \`${p}help ask what can the bot do in a group\``);
+      try {
+        const system = knowledge.forQuestion({ question, commandList, isOwner, isRealOwner, isGroup });
+        return await reply(`💡 ${await ai.chat([{ role: 'user', content: question }], { system })}`);
+      } catch (err) {
+        // the AI is not answering: the commands that fit are still found without it
+        const hits = knowledge.search(question, commandList, knowledge.levelFor({ isOwner, isGroup }), isRealOwner, 5);
+        const found = hits.length ? `\n\n*These commands may help:*\n${hits.map((h) => `▸ \`${p}${h.cmd.name}\` - ${String(h.cmd.description).slice(0, 110)}`).join('\n')}` : `\n\n_Try_ \`${p}menu\``;
+        return reply(`⚠️ *I could not think of an answer just now.* Please try again in a moment.${found}${isOwner ? `\n\n_Owner: run_ \`${p}chatbot test\` _to check the AI services._` : ''}`);
+      }
+    }
     const sections = groupByCategory(commandList, isOwner);
     const total = sections.reduce((n, s) => n + s.cmds.length, 0);
     const lines = [
@@ -21,6 +37,7 @@ module.exports = {
       `▸ \`${p}menu group\` shows one category, with a short description of each command.`,
       `▸ \`${p}menu kick\` shows help for one command.`,
       `▸ \`${p}list\` shows every command with its description.`,
+      `▸ \`${p}help ask <question>\` lets you ask me anything about the bot, for example \`${p}help ask how do I make a sticker\`.`,
       '',
       '*If a command needs more from you*',
       '▸ Leave something out and I will tell you what is missing and show an example.',

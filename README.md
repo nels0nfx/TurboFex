@@ -1,4 +1,4 @@
-# ⚡ TurboFex v1.0.5
+# ⚡ TurboFex v1.0.6
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and even
@@ -55,6 +55,7 @@ Every command starts with a symbol, called the *prefix*. The default is a dot: `
 | `.menu group` | One category with a description of each command |
 | `.menu kick` | Help for one command: who can use it and where |
 | `.list` | Every command with its description |
+| `.help ask <question>` | Ask the AI about the bot, for example `.help ask how do I make a sticker`. It knows every command and is always up to date |
 
 If you leave something out, the bot tells you what is missing and shows an example. For instance, `.weather` alone explains that it
 needs a city and shows `.weather Lagos`.

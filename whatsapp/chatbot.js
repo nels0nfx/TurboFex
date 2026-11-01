@@ -2,6 +2,7 @@
 // In a group it answers when it is tagged, when someone replies to one of its messages, or when a message starts with "NelsonFx".
 const store = require('./store');
 const ai = require('../core/ai');
+const knowledge = require('./botknowledge');
 const { num, getContextInfo } = require('./utils');
 
 const SCOPES = ['all', 'groups', 'dms', 'selected'];
@@ -54,7 +55,7 @@ function addressed(msg, text, botIds) {
 const failedAt = new Map(); // chat -> when we last said "I could not answer" (so a broken service does not make the bot nag)
 const NAG_GAP_MS = 2 * 60 * 1000;
 
-async function maybeReply({ sock, msg, jid, text, botIds, isOwner }) {
+async function maybeReply({ sock, msg, jid, text, botIds, isOwner, isRealOwner, commandList }) {
   const cfg = settings();
   if (!enabledFor(cfg, jid) || msg.key.fromMe || !text || text.length > 800) return;
   const isGroup = jid.endsWith('@g.us');
@@ -72,7 +73,17 @@ async function maybeReply({ sock, msg, jid, text, botIds, isOwner }) {
   typing();
   const typingTimer = setInterval(typing, 7000);
   try {
-    const answer = await ai.chat(history.slice(-MAX_TURNS));
+    // what the bot knows about itself, built fresh for this question (owner-only things only for the owner in a private chat)
+    let asker = false;
+    let askerReal = false;
+    try {
+      asker = !!(isOwner && (await isOwner()));
+      askerReal = !!(isRealOwner && (await isRealOwner()));
+    } catch (e) {
+      asker = false;
+    }
+    const system = knowledge.forQuestion({ question: ask, commandList, isOwner: asker, isRealOwner: askerReal, isGroup });
+    const answer = await ai.chat(history.slice(-MAX_TURNS), { system });
     history.push({ role: 'assistant', content: answer });
     memory.set(jid, history.slice(-MAX_TURNS));
     if (memory.size > 500) memory.delete(memory.keys().next().value);

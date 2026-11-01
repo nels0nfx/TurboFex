@@ -1,3 +1,11 @@
+TurboFex v1.0.6 - the AI knows the bot
+CHANGED IN 1.0.6
+- NEW: NelsonFx (the ai command, the chatbot and the new "help ask") now knows this bot: every command with its other names, category and who may use it, the version, what is new, and short guides for linking, modes, updates, AI keys and the Empire of Fex. It is built fresh from the bot for every question, so when the bot updates it knows the new commands at once. Nothing has to be trained.
+- NEW: "help ask <question>" (everybody): ask the AI how to use the bot. When the AI is not answering, the commands that fit the question are still listed.
+- NEW: the owner can teach it own facts: "chatbot teach <fact>", "chatbot notes" and "chatbot unteach <number or all>" (up to 25 notes). Keys, session IDs and passwords are refused, because anyone who asks the AI could hear a note.
+- PRIVACY: members, and everybody in a group chat, only hear about the commands the menu shows them. Owner-only commands are explained only to the owner in a private chat with the bot (the commands only the real owner may use: only to the real owner). Keys, session IDs and passwords are never part of what the AI knows.
+- NOTE: no command was added or removed.
+
 TurboFex v1.0.5 - Telegram stickers, DOWNLOAD and EFFECT menus, fewer reconnects
 CHANGED IN 1.0.5
 - NEW: tgsticker (aliases tgs, tgpack): turns a Telegram sticker pack into WhatsApp stickers. "tgsticker https://t.me/addstickers/Name" sends the first 10, "tgsticker <link> 11-30" or "all" sends more (up to 50 at a time, with a short pause). Needs a free Telegram bot token once: "setapi telegram <token>" (talk to @BotFather on Telegram). Animated Telegram stickers (.tgs) are skipped.

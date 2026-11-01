@@ -79,7 +79,7 @@ const thinkTries = (model) => {
 };
 const thinkPick = {}; // model -> position in its list that worked
 
-const gemini = (messages, key) =>
+const gemini = (messages, key, persona = PERSONA) =>
   viaModels('gemini', async (model) => {
     const tries = thinkTries(model);
     let lastErr;
@@ -90,7 +90,7 @@ const gemini = (messages, key) =>
           `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
           { 'x-goog-api-key': key },
           {
-            systemInstruction: { parts: [{ text: PERSONA }] },
+            systemInstruction: { parts: [{ text: persona }] },
             contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
             generationConfig: { maxOutputTokens: thinking ? 600 : 1500, temperature: 0.8, ...(thinking ? { thinkingConfig: thinking } : {}) },
           }
@@ -114,13 +114,13 @@ const reasoningTries = (service, model) => {
   if (/qwen3/.test(model)) return [{ reasoning_effort: 'none' }, {}];
   return [{}];
 };
-const openaiStyle = (service, url, key, messages) =>
+const openaiStyle = (service, url, key, messages, persona = PERSONA) =>
   viaModels(service, async (model) => {
     const tries = reasoningTries(service, model);
     let lastErr;
     for (let n = 0; n < tries.length; n++) {
       try {
-        const j = await post(url, key ? { Authorization: `Bearer ${key}` } : {}, { model, messages: [{ role: 'system', content: PERSONA }, ...messages], max_tokens: 700, temperature: 0.8, ...tries[n] });
+        const j = await post(url, key ? { Authorization: `Bearer ${key}` } : {}, { model, messages: [{ role: 'system', content: persona }, ...messages], max_tokens: 700, temperature: 0.8, ...tries[n] });
         return j?.choices?.[0]?.message?.content || '';
       } catch (err) {
         lastErr = err;
@@ -131,10 +131,10 @@ const openaiStyle = (service, url, key, messages) =>
   });
 
 // the old address that needed no key (kept as the very last try)
-async function legacy(messages) {
+async function legacy(messages, persona = PERSONA) {
   const problems = [];
   try {
-    const j = await post('https://text.pollinations.ai/openai', {}, { model: 'openai', messages: [{ role: 'system', content: PERSONA }, ...messages], max_tokens: 600 }, 15000);
+    const j = await post('https://text.pollinations.ai/openai', {}, { model: 'openai', messages: [{ role: 'system', content: persona }, ...messages], max_tokens: 600 }, 15000);
     const t = stripThinking(j?.choices?.[0]?.message?.content);
     if (t) return { text: t, model: 'openai' };
     problems.push('empty answer');
@@ -143,7 +143,7 @@ async function legacy(messages) {
   }
   try {
     const last = messages[messages.length - 1]?.content || '';
-    const t = stripThinking(await web.getText(`https://text.pollinations.ai/${encodeURIComponent(last.slice(0, 1500))}?model=openai&system=${encodeURIComponent(PERSONA)}`, { timeout: 15000 }));
+    const t = stripThinking(await web.getText(`https://text.pollinations.ai/${encodeURIComponent(last.slice(0, 1500))}?model=openai&system=${encodeURIComponent(persona.length <= 1500 ? persona : PERSONA)}`, { timeout: 15000 }));
     if (t) return { text: t, model: 'openai' };
     problems.push('empty answer');
   } catch (err) {
@@ -153,15 +153,15 @@ async function legacy(messages) {
 }
 
 // the services that can be tried right now
-function services() {
+function services(persona = PERSONA) {
   const list = [];
   const g = store.getApiKey('gemini');
   const q = store.getApiKey('groq');
   const p = store.getApiKey('pollinations');
-  if (g) list.push({ id: 'Gemini', run: (m) => gemini(m, g) });
-  if (q) list.push({ id: 'Groq', run: (m) => openaiStyle('groq', 'https://api.groq.com/openai/v1/chat/completions', q, m) });
-  if (p) list.push({ id: 'Pollinations', run: (m) => openaiStyle('pollinations', 'https://gen.pollinations.ai/v1/chat/completions', p, m) });
-  list.push({ id: 'Free service', run: legacy, keyless: true });
+  if (g) list.push({ id: 'Gemini', run: (m) => gemini(m, g, persona) });
+  if (q) list.push({ id: 'Groq', run: (m) => openaiStyle('groq', 'https://api.groq.com/openai/v1/chat/completions', q, m, persona) });
+  if (p) list.push({ id: 'Pollinations', run: (m) => openaiStyle('pollinations', 'https://gen.pollinations.ai/v1/chat/completions', p, m, persona) });
+  list.push({ id: 'Free service', run: (m) => legacy(m, persona), keyless: true });
   return list;
 }
 
@@ -170,12 +170,14 @@ let lastUsed = null; // { service, model } of the last good answer
 const timing = { hedge: 6000, giveUp: 32000 }; // milliseconds. hedge: a service that has not answered after this long gets company (the next one starts too). giveUp: nobody waits longer than this (tests make them tiny)
 
 // messages: [{ role: 'user' | 'assistant', content }]  ->  the answer text
+// opts.system: extra knowledge for THIS question only (what the bot knows about itself, see whatsapp/botknowledge.js)
 // The services start one after the other; the next one starts when the one before it FAILS or has been quiet for HEDGE_MS.
 // The first good answer wins.
-async function chat(messages) {
+async function chat(messages, opts = {}) {
   const clean = messages.map((m) => ({ role: m.role, content: shorten(m.content, 1500) })).filter((m) => m.content);
   if (!clean.length) throw new Error('empty question');
-  const list = services();
+  const persona = opts.system ? `${PERSONA}\n\n${shorten(opts.system, 8000)}` : PERSONA;
+  const list = services(persona);
   const problems = [];
 
   const answer = await new Promise((resolve, reject) => {
