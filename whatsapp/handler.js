@@ -363,7 +363,14 @@ async function handleMessageInner(sock, msg) {
   await execute();
 }
 
-const handleMessage = (sock, msg) => handleMessageInner(sock, msg);
+// the console card (core/chatlog.js) is printed when the message is fully handled, so its speed is real
+const handleMessage = async (sock, msg) => {
+  try {
+    return await handleMessageInner(sock, msg);
+  } finally {
+    chatlog.finish(msg);
+  }
+};
 
 // Runs a command as if the owner typed it in that chat (used by "schedule"). text = the command with its prefix (if any).
 async function runText(sock, jid, text) {

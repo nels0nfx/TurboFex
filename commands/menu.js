@@ -15,9 +15,9 @@ const mono = (rows) => {
   return '```\n' + rows.map(([k, v]) => `${k.padEnd(w)}${v}`).join('\n') + '\n```';
 };
 
-// one category: its name, and the commands right underneath it (no empty line, no gap)
+// one category: a title and its commands, one per line
 function block(section, lines) {
-  return `┏━ ${section.meta.symbol} *${section.meta.title}*\n${lines.map((l) => `┃ ${l}`).join('\n')}\n┗━━━━━━`;
+  return `┌─ *${section.meta.title}*\n${lines.map((l) => `│ ${section.meta.symbol} ${l}`).join('\n')}\n└──────`;
 }
 
 module.exports = {
@@ -32,7 +32,7 @@ module.exports = {
     // menu <category>: every command of it with its description
     const section = sections.find((s) => s.key === query);
     if (query && section) {
-      const items = section.cmds.map((c) => `*${c.name}* – _${c.description}_`);
+      const items = section.cmds.map((c) => `*${c.name}*\n│    _${c.description}_`);
       return reply(block(section, items));
     }
 

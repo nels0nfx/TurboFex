@@ -37,79 +37,90 @@ const withFakeWeb = async (fake, fn) => {
 };
 
 // ---------------------------------------------------------------- menu
-test('the menu has a new header, no spaced-out letters, and the commands sit right under the category name', async () => {
+test('the menu has the new header (no grey box, no spaced-out letters) and the categories look as they always did', async () => {
   const out = [];
   await menu.run({ reply: async (t) => out.push(t), commandList: all(), prefix: '.', args: [], isOwner: false, isAdmin: false });
   const text = out[0];
   assert.match(text, /^╭━+╮\n┃  ✦ \*TURBOFEX\* ✦\n┃  _WhatsApp Assistant_\n┣━+\n┃ User ▸ Member  ·  Mode ▸ \w+\n/);
-  assert.ok(!text.includes('```'), 'no code block (WhatsApp pads it with empty space)');
-  assert.ok(/\n╰━+╯\n\n┏━ /.test(text), 'the first category follows the header after one empty line only');
-  assert.ok(!/\d{1,2}:\d{2}\s?(AM|PM)/i.test(text.split('\n┏━ ')[0]), 'no clock time in the header (WhatsApp underlines it)');
   assert.ok(!/T U R B O/.test(text), 'the name is not spaced out');
+  assert.ok(!text.includes('```'), 'no code block (WhatsApp pads it with empty space)');
+  assert.ok(/\n╰━+╯\n\n┌─ \*/.test(text), 'the first category follows the header after one empty line only');
+  assert.ok(!/\d{1,2}:\d{2}\s?(AM|PM)/i.test(text.split('\n┌─ ')[0]), 'no clock time in the header (WhatsApp underlines it)');
   const lines = text.split('\n');
-  const heads = lines.map((l, i) => [l, i]).filter(([l]) => /^┏━ /.test(l));
+  const heads = lines.map((l, i) => [l, i]).filter(([l]) => /^┌─ \*/.test(l));
   assert.ok(heads.length >= 10);
-  for (const [, i] of heads) {
-    assert.ok(/^┃ \S/.test(lines[i + 1]), `a command line follows straight after the category name (line ${i + 1})`);
-    assert.ok(lines[i + 1].trim() !== '', 'no empty line after the category name');
-  }
+  for (const [, i] of heads) assert.ok(/^│ \S+ \S/.test(lines[i + 1]), 'a command line follows straight after the category name');
   assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(text), 'no emoji in the menu');
 });
 
-test('menu <category> puts the name and the description on one line', async () => {
+test('menu <category> is the old look: the name, then the description under it', async () => {
   const out = [];
   await menu.run({ reply: async (t) => out.push(t), commandList: all(), prefix: '.', args: ['group'], isOwner: false, isAdmin: false });
-  const line = out[0].split('\n').find((l) => l.includes('*listonline*'));
-  assert.ok(line && line.includes('–'), 'name and description share a line');
+  const lines = out[0].split('\n');
+  const i = lines.findIndex((l) => l.includes('*listonline*'));
+  assert.ok(i > 0 && /^│    _/.test(lines[i + 1]), 'the description sits under the name');
 });
 
 // ---------------------------------------------------------------- console lines
-test('console lines: gold badge for the time, white badge for GROUP / PRIVATE, no colour codes from people, and a plain mode', () => {
+const cardOf = (extra = {}) => chatlog.card({ time: '21:35:07', group: true, chat: 'Fex Squad', members: 128, who: 'Ada', role: 'Admin', number: '+27833333333', kind: 'text', isCommand: false, command: '', text: 'hello', ms: 48, ...extra });
+const plain = (t) => t.replace(/\x1b\[[0-9;]*m/g, '');
+
+test('console card: gold, white and black, every field there, wraps long text, and fits a phone screen', () => {
   const was = { c: process.env.CONSOLE_COLOR, n: process.env.NO_COLOR };
   delete process.env.CONSOLE_COLOR; delete process.env.NO_COLOR;
   try {
-    const line = chatlog.format({ time: '21:35', group: true, chat: 'Fex Squad', who: 'Ada', text: 'hello \x1b[31mRED\x1b[0m\nsecond', isCommand: false });
-    assert.ok(line.includes('\x1b[48;5;220m') && line.includes('\x1b[30m'), 'black text on a gold badge');
-    assert.ok(line.includes('\x1b[107m'), 'black text on a white badge');
-    assert.ok(line.includes('\x1b[38;5;220m'), 'gold chat name');
-    assert.ok(line.includes('\x1b[97m'), 'white text');
-    assert.ok(/GROUP/.test(line) && /Fex Squad/.test(line) && /Ada/.test(line));
-    assert.ok(!line.includes('\x1b[31m'), 'a colour code typed by a person is removed');
-    assert.ok(line.includes('second') && line.includes('⏎'), 'a new line in a message becomes one line');
-    const dm = chatlog.format({ time: '21:36', group: false, chat: '', who: 'Tunde', text: '', kind: 'image' });
-    assert.ok(/PRIVATE/.test(dm) && /\[image\]/.test(dm));
+    const coloured = cardOf({ isCommand: true, command: 'menu', text: '.menu' });
+    assert.ok(coloured.includes('\x1b[48;5;220m') && coloured.includes('\x1b[30m'), 'black text on a gold badge (the time)');
+    assert.ok(coloured.includes('\x1b[107m'), 'black text on a white badge (GROUP)');
+    assert.ok(coloured.includes('\x1b[38;5;220m'), 'gold frame and chat name');
+    assert.ok(coloured.includes('\x1b[97m'), 'white text');
+    const lines = plain(coloured).split('\n');
+    assert.match(lines[0], /^┏━ 21:35:07 ━ GROUP ━+$/);
+    for (const label of ['Chat   Fex Squad (128)', 'From   Ada · Admin', 'Number +27833333333', 'Kind   text · command menu', 'Text   .menu']) assert.ok(lines.some((l) => l === `┃ ${label}`), label);
+    assert.match(lines[lines.length - 2], /^┃ Speed  ▰{8}  48 ms · instant$/);
+    assert.match(lines[lines.length - 1], /^┗━+$/);
+    const long = plain(cardOf({ text: 'word '.repeat(80) })).split('\n');
+    assert.ok(long.filter((l) => /^┃ (Text   |       )\S/.test(l)).length === 3, 'a long message is cut after three lines');
+    assert.ok(long.some((l) => l.endsWith('…')));
+    for (const l of [...lines, ...long]) assert.ok([...l].length <= 46, `fits a phone: ${l}`);
+    // a colour code typed by a person is removed
+    assert.ok(!cardOf({ text: 'hello \x1b[31mRED\x1b[0m' }).includes('\x1b[31m'));
+    // other kinds
+    const dm = plain(cardOf({ group: false, chat: '', members: 0, role: '', kind: 'reaction', text: '❤️', ms: 1700 }));
+    assert.ok(/PRIVATE/.test(dm) && /Chat   Private chat/.test(dm) && /Kind   reaction/.test(dm) && /Text   ❤️/.test(dm) && /1\.70 s · slowish/.test(dm));
+    const mine = plain(cardOf({ group: false, who: 'You', fromMe: true, number: '', kind: 'image', text: '', ms: 3200 }));
+    assert.ok(/From   You · bot account/.test(mine) && !/Number/.test(mine) && !/Text/.test(mine) && /slow/.test(mine));
     process.env.CONSOLE_COLOR = 'off';
-    const plain = chatlog.format({ time: '21:36', group: true, chat: 'G', who: 'Ada', text: 'hi' });
-    assert.ok(!plain.includes('\x1b'), 'no colour codes when colours are off');
-    assert.match(plain, /21:36\s+GROUP\s+G › Ada │ hi/);
-    const long = chatlog.format({ time: '1:00', group: false, chat: '', who: 'X', text: 'a'.repeat(500) });
-    assert.ok(long.length < 260, 'long messages are cut');
+    assert.ok(!cardOf().includes('\x1b'), 'no colour codes when colours are off');
   } finally {
     if (was.c === undefined) delete process.env.CONSOLE_COLOR; else process.env.CONSOLE_COLOR = was.c;
     if (was.n !== undefined) process.env.NO_COLOR = was.n;
   }
 });
 
-test('the handler prints one line for each message when the console log is on, and nothing when it is off', async () => {
+test('console: the handler prints one card per message, with the group name, the real speed and the command; off and compact work', async () => {
   const baileys = require('../core/baileys');
   baileys.setForTests({});
   const handler = require('../whatsapp/handler');
-  const lines = [];
+  const prints = [];
   const keep = console.log;
-  const sock = { user: { id: '27899999999:1@s.whatsapp.net', lid: '999888777:1@lid' }, sendMessage: async () => ({ key: { id: 'K' } }), groupMetadata: async () => ({ subject: 'Fex Squad', participants: [] }) };
+  const sock = { user: { id: '27899999999:1@s.whatsapp.net', lid: '999888777:1@lid' }, sendMessage: async () => ({ key: { id: 'K' } }), groupMetadata: async () => ({ subject: 'Fex Squad', participants: [{ id: '27833333333@s.whatsapp.net', admin: 'admin' }, { id: '27800000001@s.whatsapp.net' }] }) };
   let n = 0;
-  const send = async (text, group = true) => {
+  const send = async (text, group = true, extra = {}) => {
     const jid = group ? GROUP : '27833333333@s.whatsapp.net';
-    await handler.handleMessage(sock, { key: { remoteJid: jid, participant: group ? '27833333333@s.whatsapp.net' : undefined, id: `L${++n}`, fromMe: false }, message: { conversation: text }, messageTimestamp: Math.floor(Date.now() / 1000), pushName: 'Ada' });
+    await handler.handleMessage(sock, { key: { remoteJid: jid, participant: group ? '27833333333@s.whatsapp.net' : undefined, id: `L${++n}`, fromMe: false }, message: extra.message || { conversation: text }, messageTimestamp: Math.floor(Date.now() / 1000), pushName: 'Ada' });
     await handler.idle();
   };
   process.env.CONSOLE_COLOR = 'off';
   try {
     process.env.CONSOLE_CHAT = 'on';
-    console.log = (...a) => lines.push(a.join(' '));
+    console.log = (...a) => prints.push(a.join(' '));
     await send('hello there');
-    await send('second message');
+    await send('.menu');
     await send('a private hello', false);
+    await send('', true, { message: { reactionMessage: { text: '❤️', key: { id: 'X' } } } });
+    process.env.CONSOLE_CHAT = 'compact';
+    await send('short line');
     process.env.CONSOLE_CHAT = 'off';
     await send('this one is not shown');
   } finally {
@@ -117,12 +128,19 @@ test('the handler prints one line for each message when the console log is on, a
     process.env.CONSOLE_CHAT = 'off';
     delete process.env.CONSOLE_COLOR;
   }
-  const mine = lines.filter((l) => /GROUP|PRIVATE/.test(l));
-  assert.strictEqual(mine.length, 3, 'three messages, three lines');
-  assert.ok(mine.some((l) => /hello there/.test(l) && /Ada/.test(l)));
-  assert.ok(mine.some((l) => /Fex Squad/.test(l)), 'the group name shows once it is known');
-  assert.ok(mine.some((l) => /PRIVATE/.test(l) && /a private hello/.test(l)));
-  assert.ok(!mine.some((l) => /not shown/.test(l)));
+  const cards = prints.filter((p) => /┏━/.test(p));
+  assert.strictEqual(cards.length, 4, 'four cards, one for each message');
+  assert.ok(prints.every((p) => !/not shown/.test(p)));
+  const first = cards[0];
+  assert.match(first, /GROUP/); assert.match(first, /Text   hello there/); assert.match(first, /From   Ada/); assert.match(first, /Speed  [▰▱]{8}  \d+ ms/);
+  assert.match(cards[1], /Chat   Fex Squad \(2\)/, 'the group name and size show once the group is known');
+  assert.match(cards[1], /From   Ada · Admin/);
+  assert.match(cards[1], /Kind   text · command menu/);
+  assert.match(cards[2], /PRIVATE/); assert.match(cards[2], /Chat   Private chat/);
+  assert.match(cards[3], /Kind   reaction/); assert.match(cards[3], /Text   ❤️/);
+  const short = prints.filter((p) => /short line/.test(p));
+  assert.strictEqual(short.length, 1);
+  assert.ok(!/┏━/.test(short[0]) && !short[0].includes('\n'), 'compact is one line');
 });
 
 // ---------------------------------------------------------------- recipes

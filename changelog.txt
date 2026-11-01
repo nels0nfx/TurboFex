@@ -1,3 +1,10 @@
+TurboFex v0.9.6 - console cards, old category look back, push command saved for AI helpers
+CHANGED IN 0.9.6
+- NEW the console prints a small card for every message, in gold, white and black: a gold badge with the time (with seconds), a white badge with GROUP or PRIVATE, then Chat (group name and size), From (name and role: Creator, Admin or Member), Number, Kind (text, image, reaction... and the command name), Text (long messages wrap onto 3 lines, then are cut), and Speed with a bar and a word (instant to very slow). The card is printed when the bot has finished with the message, so the speed is real. It is 44 characters wide so it fits a phone. CONSOLE_CHAT=off hides it, CONSOLE_CHAT=compact gives one short line per message, CONSOLE_COLOR=off drops the colours
+- CHANGED the menu categories and the menu <category> view look as they did before 0.9.4 (the "┌─ NAME" box with "│" lines). The new header stays (a boxed title, details on plain lines, no grey code box, no clock time)
+- CHANGED AGENTS.md now holds the owner's real push command (unzip, commit, push, tag, GitHub Release in one line) and tells every AI helper to send it, filled in, with every ZIP. The ZIP is named TurboFex-hosting-vX_Y_Z.zip. The old wipe-first command was removed from it. New tests/agents.test.js checks this
+- NOTE 0.9.4 and 0.9.5 were never pushed: this version holds their changes too (chatbot and AI keys, anime, recipe steps)
+
 TurboFex v0.9.5 - menu header without the grey box
 CHANGED IN 0.9.5
 - FIXED the menu header left a big empty space above and below the details. WhatsApp pads grey code boxes, so the details are now plain lines inside the header box, two items per line (User, Mode, Prefix, Commands, Version, Uptime; the owner also sees Memory and System). The clock time and date were removed from the header: WhatsApp underlines them like links. The first category now follows the header after one empty line, and its commands sit directly under its name

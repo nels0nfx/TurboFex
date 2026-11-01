@@ -14,19 +14,27 @@ For how the code itself works (architecture, commands, permissions, data, testin
 3. Do not edit `core/brand.js` or `core/integrity.js`: the bot refuses to start (exit code 43) if the bot name changes.
 4. Never commit secrets or live data: `session/`, `data/`, `session_id.txt`, `config.env`, `.env`, `node_modules/` are in `.gitignore` and are kept by the updater.
 5. Propose big changes and let the owner decide before implementing them. Small fixes can just be done.
+6. **Every time you hand the owner a ZIP, finish your reply with his push command (the template below), filled in for that version.** Do not make him ask for it. Name the ZIP exactly `TurboFex-hosting-vX_Y_Z.zip`: underscores in the file name (`v0_9_6`), dots everywhere else (`v0.9.6`).
 
-## How the owner pushes (Termux on Android)
-The owner has no desktop. Work arrives as a ZIP of the whole project saved to the phone's Downloads, and is pushed like this (replaces everything except `.git`, then commits):
+## How the owner pushes (Termux on Android): THE PUSH COMMAND
+The owner has no desktop. Work arrives as a ZIP of the whole project saved to the phone's Downloads. One command unpacks it, commits, pushes, tags and creates the GitHub Release (the hosting download for people). **Send this with every ZIP, with `X_Y_Z` / `X.Y.Z` filled in and a short summary:**
 
 ```
-cp ~/storage/downloads/TurboFex-hosting-vX.Y.Z.zip ~/ && cd ~/TurboFex && find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} + && unzip -oq ~/TurboFex-hosting-vX.Y.Z.zip -d ~/TurboFex && grep '"version"' package.json && git add -A && git commit -m "vX.Y.Z - short summary" && git push && rm ~/TurboFex-hosting-vX.Y.Z.zip
+cd ~/TurboFex && unzip -o ~/storage/downloads/TurboFex-hosting-vX_Y_Z.zip -d ~/TurboFex && git add -A && (git commit -m "vX.Y.Z - short summary" || true) && git push origin main && git tag vX.Y.Z && git push origin vX.Y.Z && git archive --format=zip -o ~/TurboFex-hosting.zip HEAD && gh release create vX.Y.Z ~/TurboFex-hosting.zip --title "TurboFex vX.Y.Z" --notes "short summary" --latest && rm ~/TurboFex-hosting.zip
+```
+
+Example for version 0.9.6 (the ZIP is named `TurboFex-hosting-v0_9_6.zip`):
+
+```
+cd ~/TurboFex && unzip -o ~/storage/downloads/TurboFex-hosting-v0_9_6.zip -d ~/TurboFex && git add -A && (git commit -m "v0.9.6 - console cards and menu fix" || true) && git push origin main && git tag v0.9.6 && git push origin v0.9.6 && git archive --format=zip -o ~/TurboFex-hosting.zip HEAD && gh release create v0.9.6 ~/TurboFex-hosting.zip --title "TurboFex v0.9.6" --notes "console cards and menu fix" --latest && rm ~/TurboFex-hosting.zip
 ```
 
 Consequences you must respect:
-- Because the folder is wiped first, **the ZIP must contain every project file**. A file missing from the ZIP is deleted from the repo.
-- The ZIP must be **flat**: `index.js`, `package.json`, `core/`, ... at the top level, no wrapper folder.
+- `unzip -o` overwrites files but **does not delete** anything. If a version removes a file, add `rm -f path/to/file &&` right after the `unzip` part of the command, and also list the file in `removed.txt` (for bots that update themselves).
+- The ZIP must contain every project file and must be **flat**: `index.js`, `package.json`, `core/`, ... at the top level, no wrapper folder.
 - A ZIP must never contain `.github/`, `node_modules/`, `session/`, `data/`, `session_id.txt` or `config.env`.
-- To delete a file for bots that update themselves, list it in `removed.txt` (one path per line, `#` for notes).
+- The tag and the release fail if that version already exists, so **every ZIP needs a new version number** (bump it as described below).
+- The command ends by building `TurboFex-hosting.zip` from the committed files with `git archive` (flat, no `.git`, nothing from `.gitignore`). Keep the asset name exactly `TurboFex-hosting.zip` so `https://github.com/nels0nfx/TurboFex/releases/latest/download/TurboFex-hosting.zip` always gives the newest flat ZIP. (`gh` is installed with `pkg install gh`; log in once with `gh auth login`.)
 
 ## Releasing a new version
 1. Change the code. Add or update tests in `tests/`.
@@ -38,16 +46,7 @@ Consequences you must respect:
    - NEW / FIXED ... one line per change
 
    ```
-4. Run `npm test`. Build the flat ZIP and push it with the command above.
-5. After pushing, create the GitHub Release (the hosting download for people), from the repo folder in Termux:
-   ```
-   cd ~/TurboFex
-   git archive --format=zip -o ~/TurboFex-hosting.zip HEAD
-   gh release create vX.Y.Z ~/TurboFex-hosting.zip --title "TurboFex vX.Y.Z" --notes "short summary" --latest
-   rm ~/TurboFex-hosting.zip
-   ```
-   `git archive` builds a flat ZIP of the committed files only (no `.git`, nothing from `.gitignore`). Keep the asset name exactly `TurboFex-hosting.zip` so
-   `https://github.com/nels0nfx/TurboFex/releases/latest/download/TurboFex-hosting.zip` always gives the newest flat ZIP. (`gh` is installed with `pkg install gh`; log in once with `gh auth login`.)
+4. Run `npm test`. Build the flat ZIP `TurboFex-hosting-vX_Y_Z.zip`, then give the owner the ZIP **and the push command above, filled in**.
 
 ## Why the green "Code > Download ZIP" button does not work for hosting
 GitHub wraps that download in an extra `TurboFex-main/` folder. On the panel `index.js` then sits in `/home/container/TurboFex-main/`, and the bot fails with `Cannot find module '/home/container/index.js'`. A repo cannot turn this off without GitHub Actions. People should download the **hosting ZIP from Releases** instead. If someone already used the green button: open `TurboFex-main`, select everything inside, move it up one level, delete the empty folder.
