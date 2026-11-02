@@ -22,8 +22,11 @@ const higherlower = require('./higherlower');
 const mines = require('./mines');
 const blackjack = require('./blackjack');
 const bingo = require('./bingo');
+const wordchain = require('./wordchain');
+const memorygame = require('./memorygame');
+const battleship = require('./battleship');
 
-const handlers = { ttt, guess, hangman, scramble, trivia, mathquiz, rps, slots, riddle, emojiquiz, wordle, connect4, duel, typerace, flags, capitals, higherlower, mines, blackjack, bingo };
+const handlers = { ttt, guess, hangman, scramble, trivia, mathquiz, rps, slots, riddle, emojiquiz, wordle, connect4, duel, typerace, flags, capitals, higherlower, mines, blackjack, bingo, wordchain, memorygame, battleship };
 const active = new Map();
 const EXPIRE_MS = 10 * 60 * 1000; // a game nobody touches for 10 minutes disappears
 
@@ -86,7 +89,7 @@ function parseRounds(args, fallback = 5) {
 // Who may end the game: whoever started it, or a player in tic-tac-toe
 function canEnd(game, ids) {
   if (ids.some((i) => game.starter.includes(i))) return true;
-  if (['connect4', 'duel', 'blackjack', 'mines', 'higherlower', 'bingo'].includes(game.type)) return isPlayer(game, ids); // the players may end their own game
+  if (['connect4', 'duel', 'blackjack', 'mines', 'higherlower', 'bingo', 'wordchain', 'memorygame', 'battleship'].includes(game.type)) return isPlayer(game, ids); // the players may end their own game
   return game.type === 'ttt' && !!game.x && (ttt.isPlayer(game.x, ids) || ttt.isPlayer(game.o, ids));
 }
 
@@ -365,5 +368,5 @@ async function fromCommand(ctx, type, { defaultRounds = 5, options = {} } = {}) 
 
 module.exports = { claims,
   get, end, open, busyText, canEnd, parseRounds, route, fromCommand, settings,
-  ttt, guess, hangman, scramble, trivia, mathquiz, rps, slots, riddle, emojiquiz, wordle, connect4, duel, typerace, flags, capitals, higherlower, mines, blackjack, bingo,
+  ttt, guess, hangman, scramble, trivia, mathquiz, rps, slots, riddle, emojiquiz, wordle, connect4, duel, typerace, flags, capitals, higherlower, mines, blackjack, bingo, wordchain, memorygame, battleship,
 };

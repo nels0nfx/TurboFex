@@ -16,6 +16,7 @@ const brand = require('../core/brand');
 const store = require('./store');
 const categories = require('./categories');
 const jsonstore = require('../core/jsonstore');
+const persona = require('./persona');
 const fs = require('fs');
 const path = require('path');
 
@@ -209,9 +210,9 @@ const ABOUT_BOT = /\b(bot|command|commands|menu|help|prefix|admin|admins|owner|f
 const WANTS_OVERVIEW = /\b(what can|what do you|commands|features|everything|list|menu|categories|overview|capabilities|able to)\b/i;
 
 // The text that is added to the AI's instructions for ONE question.
-// opts: { question, commandList, isOwner, isRealOwner, isGroup }
+// opts: { question, commandList, isOwner, isRealOwner, isGroup, jid }  (jid: the chat, for its chosen style)
 function forQuestion(opts = {}) {
-  const { question = '', commandList = [], isOwner = false, isRealOwner = false, isGroup = false } = opts;
+  const { question = '', commandList = [], isOwner = false, isRealOwner = false, isGroup = false, jid = '' } = opts;
   const level = levelFor({ isOwner, isGroup });
   const p = store.effectivePrefix();
   const list = visible(commandList, level, isRealOwner);
@@ -232,6 +233,9 @@ function forQuestion(opts = {}) {
           '.\n') +
       '- For normal chat that is not about the bot, just chat as usual.'
   );
+
+  const style = persona.styleFor(jid);
+  if (style) out.push(style);
 
   out.push(
     `BOT KNOWLEDGE\n${brand.botName} v${version()} by ${brand.creator}: a WhatsApp bot for group management, protections, games, tools, downloads, stickers, AI chat and the Empire of Fex game. ` +

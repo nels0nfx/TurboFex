@@ -79,7 +79,7 @@ const thinkTries = (model) => {
 };
 const thinkPick = {}; // model -> position in its list that worked
 
-const gemini = (messages, key, persona = PERSONA) =>
+const geminiRaw = (contents, key, persona = PERSONA) =>
   viaModels('gemini', async (model) => {
     const tries = thinkTries(model);
     let lastErr;
@@ -91,7 +91,7 @@ const gemini = (messages, key, persona = PERSONA) =>
           { 'x-goog-api-key': key },
           {
             systemInstruction: { parts: [{ text: persona }] },
-            contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+            contents,
             generationConfig: { maxOutputTokens: thinking ? 600 : 1500, temperature: 0.8, ...(thinking ? { thinkingConfig: thinking } : {}) },
           }
         );
@@ -105,6 +105,7 @@ const gemini = (messages, key, persona = PERSONA) =>
     }
     throw lastErr;
   });
+const gemini = (messages, key, persona = PERSONA) => geminiRaw(messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })), key, persona);
 
 // Groq and Pollinations both speak the "OpenAI" way
 // (reasoning models are asked to think very little: a chat reply does not need more, and it is much faster)
@@ -225,6 +226,44 @@ async function chat(messages, opts = {}) {
   throw Object.assign(new Error(`${problems.join(' | ') || 'no answer in time'}${hasKey ? '' : ' | No AI key is set'}`), { noKey: !hasKey });
 }
 
+// Understanding a PICTURE (the describe and solve commands): Gemini first, then the vision model of Groq.
+// The picture is sent once, as base64. A picture needs a Gemini or a Groq key (the key-free services cannot see).
+const VISION_GROQ = () => uniq([process.env.GROQ_VISION_MODEL, 'meta-llama/llama-4-scout-17b-16e-instruct']);
+async function see(image, mime, instruction, opts = {}) {
+  const gKey = store.getApiKey('gemini');
+  const qKey = store.getApiKey('groq');
+  const persona = opts.system ? `${PERSONA}\n\n${shorten(opts.system, 2000)}` : PERSONA;
+  const data = Buffer.from(image).toString('base64');
+  const problems = [];
+  if (gKey) {
+    try {
+      const r = await geminiRaw([{ role: 'user', parts: [{ inlineData: { mimeType: mime, data } }, { text: instruction }] }], gKey, persona);
+      return shorten(r.text, 3500);
+    } catch (err) {
+      problems.push(`gemini: ${err.message}`);
+    }
+  }
+  if (qKey) {
+    for (const model of VISION_GROQ()) {
+      try {
+        const j = await post(
+          'https://api.groq.com/openai/v1/chat/completions',
+          { Authorization: `Bearer ${qKey}` },
+          { model, messages: [{ role: 'system', content: persona }, { role: 'user', content: [{ type: 'text', text: instruction }, { type: 'image_url', image_url: { url: `data:${mime};base64,${data}` } }] }], max_tokens: 900, temperature: 0.5 },
+          25000
+        );
+        const text = stripThinking(j?.choices?.[0]?.message?.content || '');
+        if (!text) throw new Error('empty answer');
+        return shorten(text, 3500);
+      } catch (err) {
+        problems.push(`groq ${model}: ${err.message}`);
+        if (err.status === 401 || err.status === 403) break;
+      }
+    }
+  }
+  throw Object.assign(new Error(problems.join(' | ') || 'No AI key is set (a picture needs a Gemini or a Groq key)'), { noKey: !gKey && !qKey });
+}
+
 // one single instruction (summarize, grammar...)
 const task = (instruction, text) => chat([{ role: 'user', content: `${instruction}\n\n${shorten(text, 3000)}` }]);
 
@@ -246,4 +285,4 @@ async function diagnose() {
 
 const status = () => ({ lastUsed, keys: { gemini: !!store.getApiKey('gemini'), groq: !!store.getApiKey('groq'), pollinations: !!store.getApiKey('pollinations') } });
 
-module.exports = { NAME, chat, task, diagnose, status, MODELS, timing };
+module.exports = { NAME, chat, task, see, diagnose, status, MODELS, timing };

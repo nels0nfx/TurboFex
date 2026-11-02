@@ -4,6 +4,7 @@ const config = require('../config');
 const store = require('./store');
 const meta = require('./metadata');
 const activity = require('./activity');
+const groupstats = require('./groupstats');
 const recent = require('./recent');
 const categories = require('./categories');
 const seen = require('./seen');
@@ -190,6 +191,11 @@ async function handleMessageInner(sock, msg) {
   if (isGroup && !msg.key.fromMe) {
     activity.count(jid, msg.key.participant);
     recent.touch(jid, msg.key.participant); // for listonline
+    try {
+      groupstats.onMessage(jid, msg.key.participant, text, { name: msg.pushName, isCommand: isCommandText(text, prefix, isKnownCommand), extraWords: store.getGroup(jid).badWords }); // groupstats, swearjar, catchup
+    } catch (err) {
+      console.error('Group counters failed:', err.message);
+    }
     if (await runProtections({ sock, msg, jid, text, getRoles: roles })) return;
     if (text && captcha.check(sock, msg, jid, text, botIds)) return; // an answer to the verification question
     autosticker.maybe(sock, msg, jid, botIds).catch(() => {}); // pictures and videos become stickers (only when switched on)

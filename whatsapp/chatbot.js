@@ -82,7 +82,7 @@ async function maybeReply({ sock, msg, jid, text, botIds, isOwner, isRealOwner, 
     } catch (e) {
       asker = false;
     }
-    const system = knowledge.forQuestion({ question: ask, commandList, isOwner: asker, isRealOwner: askerReal, isGroup });
+    const system = knowledge.forQuestion({ question: ask, commandList, isOwner: asker, isRealOwner: askerReal, isGroup, jid });
     const answer = await ai.chat(history.slice(-MAX_TURNS), { system });
     history.push({ role: 'assistant', content: answer });
     memory.set(jid, history.slice(-MAX_TURNS));

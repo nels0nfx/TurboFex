@@ -1,3 +1,16 @@
+TurboFex v1.0.7 - 60 new commands
+CHANGED IN 1.0.7
+- NEW, GROUP (10): lockdown (emergency lock, lockdown off undoes it), votekick, groupstats, catchup (AI summary of what you missed; an admin switches it on and the messages stay in memory only), topwarned, swearjar, announce, quiettime (close at night, open in the morning), welcomedm (a private welcome with the rules for new members) and weeklyrecap (also every Sunday with weeklyrecap on).
+- NEW, AI (10): explain, rewrite, describe (the AI looks at a picture), solve (a picture or text), caption, story, poem, brainstorm, persona (NelsonFx talks in a style you choose in a chat) and quizme.
+- NEW, DOWNLOADS AND MEDIA (10): spotify, facebook, twitter, pinterest, soundcloud, ytthumb, emojimix, tovideo, collage (a picture from the profile pictures of the members) and resize.
+- NEW, TOOLS (10): calendar, dateadd, loan, interest, fuelcost, teams, shuffle, habit (daily streaks), shoplist and gradecalc.
+- NEW, LOOKUPS (10): movie, tvshow, rhyme, synonym, wordofday, namemeaning, dialcode, postcode, hadith and emojimeaning.
+- NEW, GAMES AND FUN (10): neverhaveiever, twotruths, hotseat, wordchain, storychain, spinwheel, memorygame, pet (your own virtual pet), fish (earn Aurum in the Empire of Fex) and battleship.
+- NEW: the AI can look at pictures with a Gemini or a Groq key (describe, solve, caption on a picture).
+- PRIVACY: the group counters save only numbers (data/groupstats.json). The text of messages is never saved: catchup keeps the last 200 messages of a group in memory only, only when an admin switched it on, for 12 hours at most.
+- The AI (ai, chatbot, help ask) already knows all the new commands.
+- NOTE: the downloaders and lookups use free public services that can change or stop. When one does not answer, the command says so.
+
 TurboFex v1.0.6 - the AI knows the bot
 CHANGED IN 1.0.6
 - NEW: NelsonFx (the ai command, the chatbot and the new "help ask") now knows this bot: every command with its other names, category and who may use it, the version, what is new, and short guides for linking, modes, updates, AI keys and the Empire of Fex. It is built fresh from the bot for every question, so when the bot updates it knows the new commands at once. Nothing has to be trained.

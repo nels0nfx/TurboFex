@@ -44,12 +44,12 @@ module.exports = [
     name: 'ai',
     aliases: ['ask', 'nelsonfx', 'gpt'],
     description: 'Ask NelsonFx anything: ai what is the capital of Kenya (or reply to a message with ai)',
-    async run({ rest, msg, reply, prefix, isOwner, isRealOwner, isGroup, commandList }) {
+    async run({ rest, msg, jid, reply, prefix, isOwner, isRealOwner, isGroup, commandList }) {
       const question = rest || replied(msg);
       if (!question) return reply(`🤖 *${ai.NAME}*\n*Usage:* \`${prefix}ai <your question>\` _(or reply to a message with_ \`${prefix}ai\`_)_\n_Turn on a conversation with_ \`${prefix}chatbot on\``);
       try {
         // the AI knows this bot: its commands, version and the notes of the owner (owner-only things only in a private chat with the owner)
-        const system = knowledge.forQuestion({ question, commandList, isOwner, isRealOwner, isGroup });
+        const system = knowledge.forQuestion({ question, commandList, isOwner, isRealOwner, isGroup, jid });
         const answer = await ai.chat([{ role: 'user', content: rest && replied(msg) ? `${replied(msg)}\n\n${rest}` : question }], { system });
         await reply(`🤖 ${answer}`);
       } catch (err) {

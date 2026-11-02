@@ -5,6 +5,7 @@ const joined = require('./joined');
 const { num } = require('./utils');
 const adminguard = require('./adminguard');
 const captcha = require('./captcha');
+const welcomedm = require('./welcomedm');
 
 const recent = new Map();
 
@@ -88,6 +89,7 @@ async function handleParticipants(sock, update) {
     }
   }
 
+  if (action === 'add' && !stale) welcomedm.send(sock, id, ids.filter((x) => !removed.includes(x))).catch((e) => console.error('Private welcome error:', e.message));
   if (action === 'add' && (!g.welcome || stale)) return;
   if (action === 'remove' && (!g.goodbye || stale)) return;
 
