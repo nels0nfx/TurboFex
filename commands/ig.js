@@ -8,7 +8,7 @@ module.exports = {
   aliases: ['instagram', 'insta', 'igdl'],
   category: 'download',
   slow: true,
-  weight: 'heavy',
+  weight: 'medium',
   needs: [],
   description: 'Download an Instagram post, reel or story: ig <link>',
   async run({ sock, jid, msg, rest, reply, prefix, isOwner }) {
@@ -16,7 +16,7 @@ module.exports = {
     if (!link) return reply(`Send an Instagram link (post, reel or story).\nExample: ${prefix}ig https://www.instagram.com/reel/...\n(You can also reply to a message that has the link.)`);
     if (links.kindOf(link) !== 'instagram') return reply('⚠️ That is not an Instagram link. Use *dl* for other sites.');
     const kind = links.instagramKind(link);
-    await reply(`⏳ Downloading the Instagram ${kind === 'other' ? 'video' : kind}...`);
+    reply(`⏳ Downloading the Instagram ${kind === 'other' ? 'video' : kind}...`).catch(() => {}); // not awaited: the download starts at once
     try {
       const v = await ytdlp.downloadVideo(link, { onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
       const caption = [`📸 *${(v.title || 'Instagram').slice(0, 100)}*`, v.artist && `👤 ${v.artist}`].filter(Boolean).join('\n');

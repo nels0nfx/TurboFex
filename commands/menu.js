@@ -67,19 +67,20 @@ module.exports = {
     const mem = capacity.memory();
     const pct = mem.limitMB ? Math.min(100, Math.round((mem.usedMB / mem.limitMB) * 100)) : 0;
     const ms = timing && timing.receivedAt ? Math.max(0, Date.now() - timing.receivedAt) : 0;
+    // every name in the header starts with an emoji that fits it (the bot name above them has none)
     const rows = [
-      ['User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member'],
-      ['Prefix', `[ ${prefix || 'none'} ]`],
-      ['Mode', store.getMode() === 'private' ? 'Private' : 'Public'],
-      ['Commands', String(all.length)],
-      ['Version', `v${pkg.version}`],
-      ['Speed', `${ms} ms`],
-      ['Uptime', clock.uptime()],
+      ['👤', 'User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member'],
+      ['⌨️', 'Prefix', `[ ${prefix || 'none'} ]`],
+      [store.getMode() === 'private' ? '🔒' : '🌍', 'Mode', store.getMode() === 'private' ? 'Private' : 'Public'],
+      ['📋', 'Commands', String(all.length)],
+      ['🏷️', 'Version', `v${pkg.version}`],
+      ['⚡', 'Speed', `${ms} ms`],
+      ['⏱️', 'Uptime', clock.uptime()],
     ];
     if (isOwner) {
-      rows.push(['Host', host()], ['Usage', `${size(mem.usedMB)} of ${size(mem.limitMB)}`], ['RAM', `[${'█'.repeat(Math.round(pct / 10))}${'░'.repeat(10 - Math.round(pct / 10))}] ${pct}%`]);
+      rows.push(['🖥️', 'Host', host()], ['💾', 'Usage', `${size(mem.usedMB)} of ${size(mem.limitMB)}`], ['📊', 'RAM', `[${'█'.repeat(Math.round(pct / 10))}${'░'.repeat(10 - Math.round(pct / 10))}] ${pct}%`]);
     }
-    const head = `┏✦ ◈ *${title}* ◈\n${custom.subtitle ? `┃ _${custom.subtitle}_\n` : ''}${rows.map(([k, v]) => `┃ *${sc(k)}* ▸ ${v}`).join('\n')}\n┗✦`;
+    const head = `┏✦ ◈ *${title}* ◈\n${custom.subtitle ? `┃ _${custom.subtitle}_\n` : ''}${rows.map(([icon, k, v]) => `┃ ${icon} *${sc(k)}* ▸ ${v}`).join('\n')}\n┗✦`;
     const body = sections.map((s) => block(s, s.cmds.map((c) => sc(c.name)))).join('\n\n');
     const tips =
       `> ${prefix}menu <category>  details of a category\n` +

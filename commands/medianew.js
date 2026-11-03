@@ -5,7 +5,7 @@ const safefetch = require('../core/safefetch');
 const { downloadAudio, downloadVideo, youtubeId } = require('../core/ytdlp');
 const { getQuoted, quotedText } = require('../whatsapp/utils');
 
-const dl = { category: 'download', slow: true, weight: 'heavy', needs: [] };
+const dl = { category: 'download', slow: true, weight: 'medium', needs: [] };
 const mm = { category: 'media', slow: true, needs: [] };
 
 // the first web address in a text (also one typed without https://)
@@ -53,6 +53,36 @@ const siteVideo = (name, aliases, test, description, example) => ({
   },
 });
 
+// A picture of two mixed emojis. Two services are tried one after the other (and the emojis in both orders):
+// NO_MIX = the services answered but do not have this pair, anything else = they did not answer.
+// The Tenor key is the public one of the Google emoji kitchen; put your own in TENOR_KEY if it stops working.
+const isImage = (b) => Buffer.isBuffer(b) && b.length > 100 && (b.slice(0, 4).toString('hex') === '89504e47' || b.slice(0, 2).toString('hex') === 'ffd8' || b.slice(8, 12).toString() === 'WEBP');
+async function mixImage(a, b) {
+  const enc = encodeURIComponent;
+  const tenorKey = process.env.TENOR_KEY || 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
+  const tries = [
+    ...[[a, b], [b, a]].map(([x, y]) => async () => web.getBuffer(`https://emojik.vercel.app/s/${enc(x)}_${enc(y)}?size=512`, { timeout: 12000, max: 3 * 1024 * 1024 })),
+    async () => {
+      const j = await web.getJson(`https://tenor.googleapis.com/v2/featured?key=${tenorKey}&contentfilter=high&media_filter=png_transparent&component=proactive&collection=emoji_kitchen_v5&q=${enc(a)}_${enc(b)}`, { timeout: 12000 });
+      const url = j?.results?.[0]?.media_formats?.png_transparent?.url;
+      if (!url) throw Object.assign(new Error('this pair is not in the kitchen'), { code: 'NO_MIX' });
+      return web.getBuffer(url, { timeout: 12000, max: 3 * 1024 * 1024 });
+    },
+  ];
+  let answered = false;
+  for (const attempt of tries) {
+    try {
+      const img = await attempt();
+      if (isImage(img)) return img;
+      answered = true; // a page that is not a picture: the service has no such mix
+    } catch (err) {
+      if (err.code === 'NO_MIX' || /answered (400|404|422)/.test(err.message)) answered = true;
+      console.error('emojimix source failed:', err.message);
+    }
+  }
+  throw Object.assign(new Error(answered ? 'no mix for this pair' : 'the mixing services did not answer'), { code: answered ? 'NO_MIX' : 'DOWN' });
+}
+
 module.exports = [
   {
     ...dl,
@@ -75,7 +105,7 @@ module.exports = [
           const artist = parts.find((p) => p && p.toLowerCase() !== title.toLowerCase() && !/^\d{4}$/.test(p)) || '';
           if (!title) throw new Error('no title in the page');
           query = `${artist} ${title}`.trim();
-          await reply(`🎧 *${title}*${artist ? ` - ${artist}` : ''}\n⏳ Getting the audio...`);
+          reply(`🎧 *${title}*${artist ? ` - ${artist}` : ''}\n⏳ Getting the audio...`).catch(() => {}); // not awaited: the download starts at once
         } catch (err) {
           return nice(ctx, err, 'spotify');
         }
@@ -99,7 +129,7 @@ module.exports = [
       const link = linkIn(textOf(ctx));
       if (!link) return reply(`Send a link.\nExample: ${prefix}pinterest https://pin.it/...`);
       if (!hostIs(link, 'pinterest.com', 'pin.it') && !/^pinterest\./i.test(hostOf(link).replace(/^www\./, ''))) return reply('⚠️ That is not a Pinterest link. Example: https://pin.it/...');
-      await reply('⏳ Getting your pin...');
+      reply('⏳ Getting your pin...').catch(() => {}); // not awaited: the download starts at once
       try {
         const v = await downloadVideo(link, { onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
         const caption = `📌 *${v.title || 'Pinterest'}*`;
@@ -134,7 +164,7 @@ module.exports = [
       if (!target) return reply(`Send a SoundCloud link or a name.\nExample: ${prefix}soundcloud burna boy last last`);
       const link = linkIn(target);
       if (link && !hostIs(link, 'soundcloud.com')) return reply('⚠️ That is not a SoundCloud link. Send a soundcloud.com link or just a song name.');
-      await reply('⏳ Getting your audio, one moment...');
+      reply('⏳ Getting your audio, one moment...').catch(() => {}); // not awaited: the download starts at once
       try {
         const a = await downloadAudio(link || target, { source: 'soundcloud', onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
         const lines = [`🎵 *${a.title || 'Audio'}*`, a.artist && `👤 ${a.artist}`, a.duration && `⏱️ ${a.duration}`, a.url && `🔗 ${a.url}`].filter(Boolean);
@@ -181,13 +211,14 @@ module.exports = [
       const found = String(rest || '').match(/\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*/gu) || [];
       if (found.length < 2) return reply(`🎨 *Usage:* \`${prefix}emojimix 😀 😎\`\n_Two emojis make one new sticker._`);
       try {
-        const png = await web.getBuffer(`https://emojik.vercel.app/s/${encodeURIComponent(found[0])}_${encodeURIComponent(found[1])}?size=512`, { timeout: 15000, max: 3 * 1024 * 1024 });
+        const png = await mixImage(found[0], found[1]);
         const webp = await media.toSticker('image', png);
         return await sock.sendMessage(jid, { sticker: webp }, { quoted: msg });
       } catch (err) {
         console.error('emojimix failed:', err.message);
         if (err.code === 'NEED_SHARP') return reply(isOwner ? '⚠️ This needs the "sharp" package, which is not installed on this server.' : media.NOT_HERE);
-        return reply('⚠️ *These two emojis do not mix* (or the mixing service is not answering). Try two other emojis.');
+        if (err.code === 'NO_MIX') return reply('⚠️ *These two emojis do not mix.* Try two other emojis (faces and animals mix best).');
+        return reply('⚠️ *The emoji mixing service is not answering right now.* Please try again in a moment.');
       }
     },
   },

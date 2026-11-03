@@ -28,7 +28,7 @@ module.exports = {
   aliases: ['yts', 'ytfind'],
   category: 'download',
   slow: true,
-  weight: 'heavy',
+  weight: 'medium',
   needs: [],
   description: 'Search YouTube and download a result: ytsearch <words>, then ytsearch video 2 or ytsearch audio 2',
   async run({ sock, jid, msg, args, rest, reply, prefix, myIds, isOwner }) {
@@ -42,7 +42,7 @@ module.exports = {
       if (!list || Date.now() - list.at > KEEP_MS) return reply(`Search first: ${prefix}ytsearch <words> (the list is kept for 30 minutes).`);
       const item = list.items[Number(args[1]) - 1];
       if (!item) return reply(`Pick a number from 1 to ${list.items.length}.`);
-      await reply(`⏳ Downloading ${kind === 'video' ? 'the video' : 'the audio'}: *${item.title.slice(0, 70)}*`);
+      reply(`⏳ Downloading ${kind === 'video' ? 'the video' : 'the audio'}: *${item.title.slice(0, 70)}*`).catch(() => {}); // not awaited: the download starts at once
       const onSetup = () => reply('⏳ Setting up the downloader (first time only, about a minute)...');
       try {
         if (kind === 'video') {

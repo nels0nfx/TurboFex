@@ -6,12 +6,12 @@ module.exports = {
   aliases: ['video', 'download'],
   category: 'download',
   slow: true,
-  weight: 'heavy',
+  weight: 'medium',
   needs: [],
   description: 'Download a video from a link or a name (up to 720p): dl <link or name>. For music use play',
   async run({ sock, jid, msg, rest, reply, prefix, isOwner }) {
     if (!rest) return reply(`Send a link or a name.\nExample: ${prefix}dl https://youtu.be/...`);
-    await reply('⏳ Downloading, this can take a moment...');
+    reply('⏳ Downloading, this can take a moment...').catch(() => {}); // not awaited: the download starts at once
     try {
       const v = await downloadVideo(rest, { onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
       const caption = [`🎬 *${v.title || 'Video'}*`, v.artist && `👤 ${v.artist}`, v.duration && `⏱️ ${v.duration}`].filter(Boolean).join('\n');

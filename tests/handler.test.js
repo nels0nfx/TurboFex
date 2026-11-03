@@ -29,12 +29,12 @@ test('private mode (the default): a stranger gets no reply at all, the owner doe
   await settle();
   assert.ok(texts()[0].includes('ᴘɪɴɢ') && !texts()[0].includes('.ping'));
 });
-test('the menu lists categories alphabetically without emojis', async () => {
+test('the menu lists categories alphabetically without emojis (only the header lines at the top have them, on purpose)', async () => {
   const menu = texts()[0];
   const heads = [...menu.matchAll(/┏ ❏ ([A-Z ]+) ❏/g)].map((m) => m[1]).slice(1); // (the first one is the header)
   assert.ok(heads.length > 5, 'the category headings are found');
   assert.deepStrictEqual(heads, [...heads].sort());
-  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(menu));
+  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(menu.split('┗✦')[1]), 'no emoji below the header');
 });
 test('public mode: everybody can use commands', async () => {
   store.setMode('public');

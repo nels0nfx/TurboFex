@@ -1,3 +1,11 @@
+TurboFex v1.0.8 - faster downloads and fixes
+CHANGED IN 1.0.8
+- FASTER DOWNLOADS (play, dl, tiktok, ig, ytsearch, facebook, twitter, pinterest, soundcloud, spotify): (1) songs are no longer converted to MP3 (that was the slowest step): the m4a is sent as it is, and a webm is only repacked (about a second); (2) the downloader is not started just to ask its version before every download; (3) the way that worked last time is tried first, so a download no longer begins with ways that fail; (4) videos prefer a ready-made H.264 mp4 (nothing to join, and WhatsApp plays it) and every download uses 4 connections at once; (5) the download commands now run 3 at a time instead of one at a time, and the waiting message no longer holds the download back; (6) play looks at 6 search results instead of 10.
+- FIXED: dialcode now has the dial codes of 240 countries built in, so it works without any website (before: "I could not find a country called Kenya").
+- FIXED: movie looks in iTunes and then in Wikipedia, takes the best match, and says clearly when the services are down (before: "I could not find a movie" for every title).
+- FIXED: emojimix tries a second service and both emoji orders, and says "not answering" when the services are down (before it always said the emojis do not mix).
+- CHANGED: the menu header: every line name (User, Prefix, Mode, Commands, Version, Speed, Uptime and, for the owner, Host, Usage, RAM) starts with an emoji that fits it. The bot name has none. The categories below stay plain.
+
 TurboFex v1.0.7 - 60 new commands
 CHANGED IN 1.0.7
 - NEW, GROUP (10): lockdown (emergency lock, lockdown off undoes it), votekick, groupstats, catchup (AI summary of what you missed; an admin switches it on and the messages stay in memory only), topwarned, swearjar, announce, quiettime (close at night, open in the morning), welcomedm (a private welcome with the rules for new members) and weeklyrecap (also every Sunday with weeklyrecap on).

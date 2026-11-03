@@ -29,9 +29,12 @@ function works(bin) {
   return new Promise((resolve) => execFile(bin, ['--version'], { timeout: 15000 }, (err) => resolve(!err)));
 }
 
+let foundBin = null; // the tool that worked last time: asking it again for its version on every download cost 1 to 3 seconds
 async function findBinary() {
+  if (foundBin && (foundBin === 'yt-dlp' || fs.existsSync(foundBin))) return foundBin;
+  foundBin = null;
   for (const c of [process.env.YTDLP_PATH, localPath(), 'yt-dlp'].filter(Boolean)) {
-    if ((c === 'yt-dlp' || fs.existsSync(c)) && (await works(c))) return c;
+    if ((c === 'yt-dlp' || fs.existsSync(c)) && (await works(c))) return (foundBin = c);
   }
   return null;
 }
@@ -48,7 +51,8 @@ async function install() {
     if (!WIN) fs.chmodSync(tmp, 0o755);
     fs.renameSync(tmp, localPath());
     if (!(await works(localPath()))) throw new Error('the downloader was installed but does not run on this server');
-    return localPath();
+    foundBin = localPath();
+    return foundBin;
   })().finally(() => {
     installing = null;
   });
@@ -95,9 +99,10 @@ function run(bin, args, timeoutMs) {
 }
 
 // Runs the downloader, and when a site changes or blocks us tries other ways: other clients, then a self-update.
+let goodWay = 0; // the number of the way that worked last time
 async function runWithRetries(bin, build, limits = {}) {
   let out;
-  const attempts = [
+  const ways = [
     [],
     ['--extractor-args', 'youtube:player_client=android_vr'],
     ['--extractor-args', 'youtube:player_client=tv,web_safari'],
@@ -105,10 +110,14 @@ async function runWithRetries(bin, build, limits = {}) {
     ['--extractor-args', 'youtube:player_client=ios'],
     ['--js-runtimes', 'node'],
   ];
+  // the same ways, but the one that worked last time is first
+  const order = [goodWay, ...ways.map((_, n) => n).filter((n) => n !== goodWay)];
+  const attempts = order.map((n) => ways[n]);
   let lastErr;
   for (let i = 0; i < attempts.length && out === undefined; i++) {
     try {
       out = await run(bin, build(attempts[i]), 180000);
+      goodWay = order[i];
     } catch (err) {
       lastErr = err;
       const text = String(err.stderr || err.message);
@@ -124,6 +133,20 @@ async function runWithRetries(bin, build, limits = {}) {
     throw lastErr;
   }
   return out;
+}
+
+// faster downloads: 4 pieces at the same time, no waiting for a stuck connection, no touching the file date
+const FAST = ['-N', '4', '--socket-timeout', '20', '--retries', '2', '--fragment-retries', '2', '--no-mtime'];
+
+// A file WhatsApp cannot play as audio (webm) is repacked into ogg WITHOUT re-encoding (about a second); if that fails it is
+// converted to aac. Before, every song was converted to MP3, which is slow on a small server.
+function makePlayable(file, ff) {
+  const ext = path.extname(file).toLowerCase();
+  if (!ff || ['.m4a', '.mp4', '.mp3', '.aac', '.ogg', '.opus', '.wav'].includes(ext)) return Promise.resolve(file);
+  const attempt = (args, to) =>
+    new Promise((resolve, reject) => execFile(ff, ['-y', '-v', 'error', '-i', file, '-vn', ...args, to], { timeout: 90000 }, (err) => (err ? reject(err) : resolve(to))));
+  const base = file.slice(0, -ext.length);
+  return attempt(['-c:a', 'copy'], `${base}.ogg`).catch(() => attempt(['-c:a', 'aac', '-b:a', '128k'], `${base}.m4a`)).catch(() => file);
 }
 
 const MIME = { '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.mp4': 'audio/mp4', '.aac': 'audio/aac', '.ogg': 'audio/ogg; codecs=opus', '.opus': 'audio/ogg; codecs=opus', '.wav': 'audio/wav' };
@@ -145,8 +168,9 @@ async function downloadAudio(target, { onSetup, source = 'youtube' } = {}) {
     '--match-filter', `duration<=${MAX_SECONDS}`,
     '-o', path.join(dir, '%(id)s.%(ext)s'),
     '--print', 'after_move:%(title)s\t%(uploader)s\t%(duration_string)s\t%(webpage_url)s\t%(filepath)s',
-    // MP3 when ffmpeg exists (plays everywhere), else the best audio the site gives (usually m4a)
-    ...(ff ? ['-f', 'bestaudio/best', '-x', '--audio-format', 'mp3', '--audio-quality', '5', '--ffmpeg-location', ff] : ['-f', 'bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio/best']),
+    // m4a (aac) is taken as it is: it plays in WhatsApp and needs no conversion (this made every song much faster)
+    '-f', 'bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio/best',
+    ...FAST,
     ...(fs.existsSync(COOKIES) ? ['--cookies', COOKIES] : process.env.YTDLP_COOKIES ? ['--cookies', process.env.YTDLP_COOKIES] : []),
     ...extra,
     isLink ? target : `${source === 'soundcloud' ? 'scsearch1' : 'ytsearch1'}:${target}`,
@@ -157,8 +181,9 @@ async function downloadAudio(target, { onSetup, source = 'youtube' } = {}) {
 
     const line = out.trim().split('\n').filter(Boolean).pop() || '';
     const [title, uploader, duration, url, file] = line.split('\t');
-    const filePath = file && fs.existsSync(file) ? file : fs.readdirSync(dir).map((f) => path.join(dir, f))[0];
-    if (!filePath || !fs.existsSync(filePath)) throw new Error('nothing was downloaded');
+    const found = file && fs.existsSync(file) ? file : fs.readdirSync(dir).map((f) => path.join(dir, f))[0];
+    if (!found || !fs.existsSync(found)) throw new Error('nothing was downloaded');
+    const filePath = await makePlayable(found, ff);
     const buffer = fs.readFileSync(filePath);
     const ext = path.extname(filePath).toLowerCase();
     return { buffer, mimetype: MIME[ext] || 'audio/mp4', title: title || '', artist: uploader && uploader !== 'NA' ? uploader : '', duration: duration && duration !== 'NA' ? duration : '', url: url && url !== 'NA' ? url : isLink ? target : '' };
@@ -189,8 +214,9 @@ async function downloadVideo(target, { onSetup, noWatermark = false } = {}) {
     // with ffmpeg: the best picture and sound up to 720p joined into an mp4; without it: a ready-made mp4
     // noWatermark (TikTok): the format called "download" is the one with the logo, it is never chosen
     ...(noWatermark
-      ? (ff ? ['-f', 'bv*[format_id!*=download][height<=1080]+ba/b[format_id!*=download][height<=1080]/bv*[format_id!*=download]+ba/b[format_id!*=download]', '--merge-output-format', 'mp4', '--ffmpeg-location', ff] : ['-f', 'b[format_id!*=download][ext=mp4]/b[format_id!*=download]'])
-      : ff ? ['-f', 'bv*[height<=720]+ba/b[height<=720]/b', '--merge-output-format', 'mp4', '--ffmpeg-location', ff] : ['-f', 'b[height<=720][ext=mp4]/b[ext=mp4]/b']),
+      ? (ff ? ['-f', 'b[format_id!*=download][ext=mp4][height<=1080]/bv*[format_id!*=download][vcodec^=avc1][height<=1080]+ba[ext=m4a]/bv*[format_id!*=download][height<=1080]+ba/b[format_id!*=download]', '--merge-output-format', 'mp4', '--ffmpeg-location', ff] : ['-f', 'b[format_id!*=download][ext=mp4]/b[format_id!*=download]'])
+      : ff ? ['-f', 'b[height<=720][ext=mp4]/bv*[height<=720][vcodec^=avc1]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/b', '--merge-output-format', 'mp4', '--ffmpeg-location', ff] : ['-f', 'b[height<=720][ext=mp4]/b[ext=mp4]/b']),
+    ...FAST,
     ...(fs.existsSync(COOKIES) ? ['--cookies', COOKIES] : process.env.YTDLP_COOKIES ? ['--cookies', process.env.YTDLP_COOKIES] : []),
     ...extra,
     isLink ? target : `ytsearch1:${target}`,

@@ -2,6 +2,7 @@
 // They use free public services that need no key (iTunes, TVmaze, Datamuse, dictionaryapi.dev, REST Countries, Zippopotam,
 // the Hadith API on jsDelivr) and the AI for names and emojis. Each one says clearly when its service is down.
 const web = require('../core/web');
+const dialcodes = require('../core/dialcodes');
 const ai = require('../core/ai');
 const clock = require('../core/clock');
 const { getQuoted, quotedText } = require('../whatsapp/utils');
@@ -39,6 +40,33 @@ const wordOfToday = (date = new Date()) => {
   return WORDS[days % WORDS.length];
 };
 
+// ---- where the movie facts come from (the first one that knows the title wins)
+async function movieFromItunes(q) {
+  const j = await web.getJson(`https://itunes.apple.com/search?term=${enc(q)}&media=movie&entity=movie&limit=5&country=US`);
+  const results = Array.isArray(j?.results) ? j.results : [];
+  if (!results.length) {
+    console.error('movie: iTunes had nothing for this title:', JSON.stringify(j).slice(0, 160));
+    return null;
+  }
+  const w = q.toLowerCase();
+  const rank = (r) => (String(r.trackName).toLowerCase() === w ? 3 : String(r.trackName).toLowerCase().startsWith(w) ? 2 : String(r.trackName).toLowerCase().includes(w) ? 1 : 0);
+  const m = [...results].sort((a, b) => rank(b) - rank(a))[0];
+  const year = String(m.releaseDate || '').slice(0, 4);
+  const lines = [`🎬 *${m.trackName}*${year ? ` (${year})` : ''}`, m.primaryGenreName && `🎭 *Genre:* ${m.primaryGenreName}`, m.artistName && `🎥 *Director:* ${m.artistName}`, m.trackTimeMillis && `⏱️ *Length:* ${Math.round(m.trackTimeMillis / 60000)} min`, m.contentAdvisoryRating && `🔞 *Rated:* ${m.contentAdvisoryRating}`, '', cut(m.longDescription || m.shortDescription, 450), m.trackViewUrl && `\n🔗 ${m.trackViewUrl}`].filter((x) => x || x === '');
+  return { text: lines.join('\n'), picture: String(m.artworkUrl100 || '').replace('100x100bb', '600x600bb') };
+}
+
+async function movieFromWikipedia(q) {
+  const found = await web.getJson(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${enc(`${q} film`)}&srlimit=5&format=json&origin=*`);
+  const hits = found?.query?.search || [];
+  const hit = hits.find((h) => /film|movie/i.test(`${h.title} ${h.snippet}`)) || hits[0];
+  if (!hit) return null;
+  const page = await web.getJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${enc(hit.title.replace(/ /g, '_'))}`);
+  if (!page?.extract) return null;
+  const lines = [`🎬 *${page.title}*`, page.description && `_${page.description}_`, '', cut(page.extract, 500), page.content_urls?.desktop?.page && `\n🔗 ${page.content_urls.desktop.page}`].filter((x) => x || x === '');
+  return { text: lines.join('\n'), picture: page.thumbnail?.source };
+}
+
 module.exports = [
   {
     ...base,
@@ -48,16 +76,17 @@ module.exports = [
     async run(ctx) {
       const q = textOf(ctx);
       if (!q) return ctx.reply(`🎬 *Usage:* \`${ctx.prefix}movie <title>\`\n*Example:* \`${ctx.prefix}movie Black Panther\``);
-      try {
-        const j = await web.getJson(`https://itunes.apple.com/search?term=${enc(q.slice(0, 80))}&media=movie&entity=movie&limit=1`);
-        const m = (j.results || [])[0];
-        if (!m) return ctx.reply(`🔎 I could not find a movie called *${cut(q, 40)}*.`);
-        const year = String(m.releaseDate || '').slice(0, 4);
-        const lines = [`🎬 *${m.trackName}*${year ? ` (${year})` : ''}`, m.primaryGenreName && `🎭 *Genre:* ${m.primaryGenreName}`, m.artistName && `🎥 *Director:* ${m.artistName}`, m.trackTimeMillis && `⏱️ *Length:* ${Math.round(m.trackTimeMillis / 60000)} min`, m.contentAdvisoryRating && `🔞 *Rated:* ${m.contentAdvisoryRating}`, '', cut(m.longDescription || m.shortDescription, 450), m.trackViewUrl && `\n🔗 ${m.trackViewUrl}`].filter((x) => x || x === '');
-        return withPicture(ctx, String(m.artworkUrl100 || '').replace('100x100bb', '600x600bb'), lines.join('\n'));
-      } catch (err) {
-        return ctx.reply(down('The movie service'));
+      let failed = 0;
+      for (const source of [movieFromItunes, movieFromWikipedia]) {
+        try {
+          const found = await source(q.slice(0, 80));
+          if (found) return withPicture(ctx, found.picture, found.text);
+        } catch (err) {
+          failed += 1;
+          console.error(`movie (${source.name}) failed:`, err.message);
+        }
       }
+      return ctx.reply(failed === 2 ? down('The movie service') : `🔎 I could not find a movie called *${cut(q, 40)}*.`);
     },
   },
 
@@ -181,32 +210,16 @@ module.exports = [
     async run({ rest, reply, prefix }) {
       const q = rest.trim();
       if (!q) return reply(`📞 *Usage:* \`${prefix}dialcode <country>\` _or_ \`${prefix}dialcode +234\`\n*Examples:* \`${prefix}dialcode Kenya\` · \`${prefix}dialcode 44\``);
-      // REST Countries gives a root and endings (the UK is root +4 and ending 4: +44). +1 and +7 are shared by many places.
-      const shared = (root) => root === '+1' || root === '+7';
-      const codes = (c) => {
-        const root = c.idd?.root || '';
-        const suffixes = c.idd?.suffixes || [];
-        if (!root) return [];
-        return !suffixes.length || shared(root) ? [root] : suffixes.map((s) => root + s);
-      };
-      try {
-        if (/^\+?\d{1,4}$/.test(q)) {
-          const want = `+${q.replace('+', '')}`;
-          const all = await web.getJson('https://restcountries.com/v3.1/all?fields=name,idd,flag');
-          const hits = all
-            .filter((c) => (c.idd?.suffixes?.length ? c.idd.suffixes.map((x) => c.idd.root + x) : [c.idd?.root]).includes(want) || (shared(want) && c.idd?.root === want))
-            .map((c) => `${c.flag || '🌍'} ${c.name?.common}`)
-            .sort();
-          return reply(hits.length ? `📞 *${want}*\n\n${hits.slice(0, 15).join('\n')}${hits.length > 15 ? `\n_...and ${hits.length - 15} more_` : ''}` : `📞 I do not know a country with the code *${want}*.`);
-        }
-        const list = await web.getJson(`https://restcountries.com/v3.1/name/${enc(q.slice(0, 60))}?fields=name,idd,flag`);
-        const c = (Array.isArray(list) ? list : []).find((x) => String(x.name?.common).toLowerCase() === q.toLowerCase()) || list[0];
-        if (!c) return reply(`🔎 I could not find a country called *${cut(q, 30)}*.`);
-        const list2 = codes(c);
-        return reply(`${c.flag || '🌍'} *${c.name?.common}*\n📞 *Dial code:* ${list2.length ? list2.slice(0, 6).join(', ') : 'unknown'}\n_Dial_ ${list2[0] || '+code'} _then the number without the first 0._`);
-      } catch (err) {
-        return reply(notFound(err) ? `🔎 I could not find *${cut(q, 30)}*.` : down('The country service'));
+      if (/^\+?\d{1,4}$/.test(q)) {
+        const digits = q.replace('+', '');
+        const hits = dialcodes.byCode(digits);
+        if (!hits.length) return reply(`📞 I do not know a country with the code *+${digits}*.`);
+        const list = hits.slice(0, 15).map((c) => `${c.flag} ${c.name} (${dialcodes.show(c)})`);
+        return reply(`📞 *+${digits}*\n\n${list.join('\n')}${hits.length > 15 ? `\n_...and ${hits.length - 15} more_` : ''}${digits === '1' ? '\n\n_+1 is shared by many countries. The Caribbean ones add an area code, for example +1 876 is Jamaica._' : ''}`);
       }
+      const c = dialcodes.byName(q);
+      if (!c) return reply(`🔎 I could not find a country called *${cut(q, 30)}*.`);
+      return reply(`${c.flag} *${c.name}*\n📞 *Dial code:* ${dialcodes.show(c)}\n_From abroad dial_ ${dialcodes.show(c).replace(' ', '')} _then the number without its first 0._`);
     },
   },
 

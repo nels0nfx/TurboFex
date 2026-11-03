@@ -44,7 +44,7 @@ module.exports = {
       }
     }
 
-    await reply('⏳ Getting your audio, one moment...');
+    reply('⏳ Getting your audio, one moment...').catch(() => {}); // not awaited: the download starts at once
     const setup = { onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') };
     const isLink = /^https?:\/\//i.test(rest);
     const log = (what, err) => console.error(`Play (${what}) failed:`, err.message);
@@ -75,11 +75,11 @@ module.exports = {
     let picks = [];
     if (query && !isLink) {
       try {
-        picks = songmatch.rank(await searchFlat(query, { source: 'youtube', limit: 10, onSetup: setup.onSetup }), query);
+        picks = songmatch.rank(await searchFlat(query, { source: 'youtube', limit: 6, onSetup: setup.onSetup }), query);
       } catch (err) {
         log('search', err);
         try {
-          picks = songmatch.rank(await ytsearch.search(query, 10), query); // the search page itself, when the downloader cannot search
+          picks = songmatch.rank(await ytsearch.search(query, 6), query); // the search page itself, when the downloader cannot search
         } catch (err2) {
           log('search page', err2);
         }

@@ -642,8 +642,6 @@ test('lookups: movie, tvshow, rhyme, synonym, wordofday, dialcode, postcode, had
     if (url.includes('rel_syn')) return json([{ word: 'joyful' }, { word: 'glad' }]);
     if (url.includes('rel_ant')) return json([{ word: 'sad' }]);
     if (url.includes('dictionaryapi.dev')) return json([{ word: 'x', phonetic: '/x/', meanings: [{ partOfSpeech: 'noun', definitions: [{ definition: 'A fine thing.', example: 'What a fine thing.' }] }] }]);
-    if (url.includes('restcountries.com/v3.1/all')) return json([{ name: { common: 'Nigeria' }, flag: '🇳🇬', idd: { root: '+2', suffixes: ['34'] } }, { name: { common: 'United Kingdom' }, flag: '🇬🇧', idd: { root: '+4', suffixes: ['4'] } }, { name: { common: 'Canada' }, flag: '🇨🇦', idd: { root: '+1', suffixes: ['204', '226'] } }, { name: { common: 'United States' }, flag: '🇺🇸', idd: { root: '+1', suffixes: ['201', '202'] } }]);
-    if (url.includes('restcountries.com/v3.1/name')) return url.includes('Atlantis') ? new Response('', { status: 404 }) : json([{ name: { common: 'Kenya' }, flag: '🇰🇪', idd: { root: '+2', suffixes: ['54'] } }]);
     if (url.includes('zippopotam.us')) return url.includes('00000') ? new Response('{}', { status: 404 }) : json({ 'post code': '90210', country: 'United States', places: [{ 'place name': 'Beverly Hills', state: 'California' }] });
     if (url.includes('hadith-api')) return url.includes('/9999.json') ? new Response('', { status: 404 }) : json({ hadiths: [{ hadithnumber: 1, text: 'Actions are judged by intentions.' }] });
     return new Response('?', { status: 500 });
@@ -660,13 +658,7 @@ test('lookups: movie, tvshow, rhyme, synonym, wordofday, dialcode, postcode, had
     assert.match(last(await run('rhyme', 'night')), /light, fight, right, sight/);
     assert.match(last(await run('synonym', 'happy')), /joyful, glad[\s\S]*Opposite:\* sad/);
     assert.match(last(await run('wordofday', '')), /Word of the day[\s\S]*A fine thing\./);
-    assert.match(last(await run('dialcode', 'Kenya')), /Kenya[\s\S]*\+254/);
-    assert.match(last(await run('dialcode', 'Atlantis')), /could not find/);
-    assert.match(last(await run('dialcode', '+234')), /Nigeria/);
-    assert.match(last(await run('dialcode', '44')), /United Kingdom/);
-    const one = last(await run('dialcode', '1'));
-    assert.match(one, /Canada/);
-    assert.match(one, /United States/);
+    assert.ok(!log.some((l) => l.url.includes('restcountries')), 'the dial codes need no website');
     assert.match(last(await run('postcode', 'us 90210')), /90210.*United States[\s\S]*Beverly Hills, California/);
     assert.match(last(await run('postcode', '90210')), /Beverly Hills/, 'a 5 digit code is a US zip');
     assert.match(last(await run('postcode', 'us 00000')), /could not find the postcode/);
@@ -677,7 +669,7 @@ test('lookups: movie, tvshow, rhyme, synonym, wordofday, dialcode, postcode, had
   });
   // a service that is down says so, and a member sees no technical text
   await withFetch(() => new Response('x', { status: 500 }), async () => {
-    for (const [n, t] of [['movie', 'Cars'], ['tvshow', 'Lost'], ['rhyme', 'cat'], ['synonym', 'big'], ['postcode', 'us 12345'], ['hadith', '5'], ['dialcode', 'Kenya']]) {
+    for (const [n, t] of [['movie', 'Cars'], ['tvshow', 'Lost'], ['rhyme', 'cat'], ['synonym', 'big'], ['postcode', 'us 12345'], ['hadith', '5']]) {
       const text = last(await run(n, t));
       assert.match(text, /not answering right now/, n);
       assert.ok(!/500/.test(text), n);
@@ -967,5 +959,188 @@ test('every new command that needs an argument says how to use it when it gets n
   for (const n of needsText) {
     const t = last(await run(n, ''));
     assert.ok(t && /usage|send a|write|example|resize|\bsend\b|\bname\b|\blink\b|\bemojis?\b|prefix|\.${n}/i.test(t) || t.includes(`.${n}`), `${n} explains itself: ${t.slice(0, 60)}`);
+  }
+});
+
+test('dialcode works without any website: names, other names, codes and shared codes', async () => {
+  const keep = global.fetch;
+  global.fetch = async () => { throw new Error('no internet'); };
+  try {
+    assert.match(last(await run('dialcode', 'Kenya')), /🇰🇪 \*Kenya\*[\s\S]*\+254/);
+    assert.match(last(await run('dialcode', 'kenya')), /\+254/);
+    assert.match(last(await run('dialcode', 'UK')), /United Kingdom[\s\S]*\+44/);
+    assert.match(last(await run('dialcode', 'ng')), /Nigeria[\s\S]*\+234/);
+    assert.match(last(await run('dialcode', "Cote d'Ivoire")), /Ivory Coast[\s\S]*\+225/);
+    assert.match(last(await run('dialcode', 'Jamaica')), /\+1 876/);
+    assert.match(last(await run('dialcode', 'Atlantis')), /could not find a country/);
+    assert.match(last(await run('dialcode', '+234')), /🇳🇬 Nigeria/);
+    const uk = last(await run('dialcode', '44'));
+    for (const n of ['United Kingdom', 'Jersey', 'Guernsey', 'Isle of Man']) assert.match(uk, new RegExp(n));
+    const one = last(await run('dialcode', '+1'));
+    assert.match(one, /United States/);
+    assert.match(one, /Canada/);
+    assert.match(one, /shared by many countries/);
+    assert.match(last(await run('dialcode', '1876')), /Jamaica/);
+    assert.match(last(await run('dialcode', '9999')), /do not know a country/);
+    assert.match(last(await run('dialcode', '')), /Usage/);
+  } finally { global.fetch = keep; }
+  const dial = require('../core/dialcodes');
+  assert.ok(dial.COUNTRIES.length >= 235);
+  assert.strictEqual(new Set(dial.COUNTRIES.map((c) => c.iso)).size, dial.COUNTRIES.length, 'every country once');
+  for (const c of dial.COUNTRIES) assert.match(c.code, /^\d{1,4}$/, c.name);
+});
+
+test('movie: iTunes first, Wikipedia when iTunes does not know the title, a clear message when both are down', async () => {
+  const wiki = (url) => {
+    if (url.includes('list=search')) return json({ query: { search: [{ title: 'Black Panther (film)', snippet: 'a 2018 film' }] } });
+    if (url.includes('page/summary')) return json({ title: 'Black Panther (film)', description: '2018 Marvel film', extract: 'Black Panther is a 2018 superhero film.', thumbnail: { source: 'https://upload.wikimedia.org/x.jpg' }, content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Black_Panther_(film)' } } });
+    return null;
+  };
+  // iTunes answers with no results (or something else): Wikipedia is used
+  for (const itunes of [{ resultCount: 0, results: [] }, { weird: true }]) {
+    await withFetch((url) => (url.includes('itunes.apple.com') ? json(itunes) : url.includes('upload.wikimedia') ? new Response(Buffer.from('IMG')) : wiki(url)), async (log) => {
+      const m = await run('movie', 'Black Panther');
+      const text = m.sent[0]?.c.caption || last(m);
+      assert.match(text, /Black Panther \(film\)[\s\S]*2018 Marvel film[\s\S]*superhero film[\s\S]*wikipedia\.org/);
+      assert.ok(log[0].url.includes('itunes') && log.some((l) => l.url.includes('wikipedia')));
+    });
+  }
+  // the best match of several iTunes results is taken, not simply the first
+  await withFetch(() => json({ results: [{ trackName: 'Black Panther: Wakanda Forever', releaseDate: '2022-11-11T00:00:00Z' }, { trackName: 'Black Panther', releaseDate: '2018-02-16T00:00:00Z', primaryGenreName: 'Action' }] }), async () => {
+    assert.match(last(await run('movie', 'Black Panther')), /Black Panther\* \(2018\)/);
+  });
+  // nothing anywhere
+  await withFetch((url) => (url.includes('itunes') ? json({ results: [] }) : json({ query: { search: [] } })), async () => {
+    assert.match(last(await run('movie', 'Zzzxqj')), /could not find a movie called \*Zzzxqj\*/);
+  });
+  // both services down
+  await withFetch(() => new Response('x', { status: 503 }), async () => {
+    const t = last(await run('movie', 'Cars'));
+    assert.match(t, /not answering right now/);
+    assert.ok(!/503/.test(t));
+  });
+});
+
+test('emojimix: a second service and the right message when they are down or do not know the pair', async () => {
+  const pic = await png(64, 64);
+  // the first service is down, the second (Tenor) has it
+  await withFetch((url) => {
+    if (url.includes('emojik')) return new Response('down', { status: 503 });
+    if (url.includes('tenor.googleapis.com')) return json({ results: [{ media_formats: { png_transparent: { url: 'https://media.tenor.com/mix.png' } } }] });
+    return new Response(pic);
+  }, async (log) => {
+    const m = await run('emojimix', '😀 😎');
+    assert.ok(Buffer.isBuffer(m.sent[0].c.sticker));
+    assert.ok(log.some((l) => l.url.includes('tenor.googleapis.com') && l.url.includes('emoji_kitchen')));
+    assert.ok(log.filter((l) => l.url.includes('emojik')).length === 2, 'both orders were tried');
+  });
+  // a page that is not a picture is not a mix
+  await withFetch((url) => (url.includes('tenor') ? json({ results: [] }) : new Response('<html>not found</html>')), async () => {
+    assert.match(last(await run('emojimix', '🫠 🦄')), /do not mix/);
+  });
+  // everything down: not "do not mix"
+  await withFetch(() => new Response('x', { status: 500 }), async () => {
+    const t = last(await run('emojimix', '😀 😎'));
+    assert.match(t, /not answering right now/);
+    assert.ok(!/do not mix/.test(t));
+  });
+});
+
+test('menu header: every line name starts with a matching emoji, the bot name has none, categories stay plain', async () => {
+  const sent = [];
+  const m = mk();
+  m.ctx.commandList = all;
+  m.ctx.isOwner = false;
+  m.ctx.args = [];
+  await cmd('menu').run(m.ctx);
+  const text = m.out[0];
+  const header = text.split('┗✦')[0].split('\n');
+  assert.match(header[0], /^┏✦ ◈ \*[A-Z ]+\* ◈$/, 'the bot name line has no emoji');
+  const rows = header.slice(1).filter((l) => l.startsWith('┃'));
+  assert.ok(rows.length >= 7);
+  const want = { User: '👤', Prefix: '⌨️', Mode: /^(🔒|🌍)$/, Commands: '📋', Version: '🏷️', Speed: '⚡', Uptime: '⏱️' };
+  const names = { ᴜꜱᴇʀ: 'User', ᴘʀᴇꜰɪx: 'Prefix', ᴍᴏᴅᴇ: 'Mode', ᴄᴏᴍᴍᴀɴᴅꜱ: 'Commands', ᴠᴇʀꜱɪᴏɴ: 'Version', ꜱᴘᴇᴇᴅ: 'Speed', ᴜᴘᴛɪᴍᴇ: 'Uptime' };
+  for (const row of rows) {
+    const [, icon, label] = /^┃ (\S+) \*(\S+)\*/.exec(row);
+    const key = names[label];
+    assert.ok(key, `known name ${label}`);
+    assert.ok(want[key] instanceof RegExp ? want[key].test(icon) : icon === want[key], `${key} has ${icon}`);
+  }
+  // the owner sees three more lines, with their own emojis
+  const o = mk();
+  o.ctx.commandList = all;
+  o.ctx.isOwner = true;
+  o.ctx.args = [];
+  await cmd('menu').run(o.ctx);
+  assert.match(o.out[0], /┃ 🖥️ \*ʜᴏꜱᴛ\*[\s\S]*┃ 💾 \*ᴜꜱᴀɢᴇ\*[\s\S]*┃ 📊 \*ʀᴀᴍ\*/);
+  // below the header: no emoji at all
+  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(text.split('┗✦').slice(1).join('')));
+});
+
+// ---------------------------------------------------------------- fast downloads
+test('downloads: three at a time, no waiting message before the download starts', () => {
+  for (const n of ['dl', 'tiktok', 'ig', 'ytsearch', 'play', 'facebook', 'twitter', 'pinterest', 'soundcloud', 'spotify']) assert.strictEqual(cmd(n).weight, 'medium', `${n} runs 3 at a time, not one`);
+  for (const f of ['dl', 'tiktok', 'ig', 'play', 'medianew']) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'commands', `${f}.js`), 'utf8');
+    assert.ok(!/await reply\(['"`]⏳/.test(src), `${f}: the waiting message is not awaited`);
+  }
+});
+
+test('the downloader: the tool is asked once, the way that worked is used first, m4a is not converted, mp4 first', async () => {
+  const os = require('os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fakedl-'));
+  const log = path.join(dir, 'calls.log');
+  const bin = path.join(dir, 'yt-dlp');
+  // a fake yt-dlp: --version works; a download only works with the android_vr client; it writes a small m4a or mp4
+  fs.writeFileSync(bin, `#!/bin/sh
+echo "$@" >> "${log}"
+if [ "$1" = "--version" ]; then echo 2026.01.01; exit 0; fi
+if [ "$1" = "-U" ]; then exit 0; fi
+case "$*" in *player_client=android_vr*) ;; *) echo "ERROR: first way fails" >&2; exit 1;; esac
+out=""; prev=""
+for a in "$@"; do if [ "$prev" = "-o" ]; then out="$a"; fi; prev="$a"; done
+ext="m4a"; case "$*" in *height*) ext="mp4";; esac
+file=$(echo "$out" | sed "s/%(id)s/abc/; s/%(ext)s/$ext/")
+head -c 3000 /dev/zero > "$file"
+printf 'Title\tSinger\t3:00\thttps://x/y\t%s\n' "$file"
+`);
+  fs.chmodSync(bin, 0o755);
+  const keepEnv = process.env.YTDLP_PATH;
+  process.env.YTDLP_PATH = bin;
+  const real = require('../core/ytdlp');
+  // the real functions are needed here (the file-level fakes replaced them)
+  delete require.cache[require.resolve('../core/ytdlp')];
+  const dl = require('../core/ytdlp');
+  try {
+    const a = await dl.downloadAudio('https://8.8.8.8/song');
+    assert.strictEqual(a.mimetype, 'audio/mp4');
+    assert.strictEqual(a.title, 'Title');
+    const lines1 = fs.readFileSync(log, 'utf8').trim().split('\n');
+    const downloads1 = lines1.filter((l) => l.includes('--no-simulate'));
+    assert.ok(downloads1.length >= 2, 'the first download had to find the way that works');
+    const args = downloads1[downloads1.length - 1];
+    assert.match(args, /-f bestaudio\[ext=m4a\]\//, 'm4a is taken as it is');
+    assert.ok(!/--audio-format|-x /.test(args), 'no conversion to mp3');
+    assert.match(args, /-N 4/);
+    assert.match(args, /--socket-timeout 20/);
+    // the second download goes straight to the way that worked
+    fs.writeFileSync(log, '');
+    const b = await dl.downloadAudio('https://8.8.8.8/song2');
+    assert.ok(b.buffer.length === 3000);
+    const lines2 = fs.readFileSync(log, 'utf8').trim().split('\n');
+    assert.strictEqual(lines2.length, 1, 'one call only: no version check, no failed tries');
+    assert.match(lines2[0], /player_client=android_vr/);
+    // video: a ready-made mp4 first, H.264 before anything else
+    fs.writeFileSync(log, '');
+    const v = await dl.downloadVideo('https://8.8.8.8/video');
+    assert.strictEqual(v.ext, '.mp4');
+    const vArgs = fs.readFileSync(log, 'utf8').trim().split('\n').pop();
+    assert.match(vArgs, /-f b\[height<=720\]\[ext=mp4\]\//);
+    assert.match(vArgs, /-N 4/);
+    assert.ok(fs.readFileSync(log, 'utf8').split('\n').filter((l) => l.includes('--version')).length === 0, 'the tool is not asked for its version again');
+  } finally {
+    if (keepEnv === undefined) delete process.env.YTDLP_PATH; else process.env.YTDLP_PATH = keepEnv;
+    delete require.cache[require.resolve('../core/ytdlp')];
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 });

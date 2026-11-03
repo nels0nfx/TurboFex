@@ -8,14 +8,14 @@ module.exports = {
   aliases: ['tt', 'tiktokdl'],
   category: 'download',
   slow: true,
-  weight: 'heavy',
+  weight: 'medium',
   needs: [],
   description: 'Download a TikTok video without the watermark: tiktok <link>',
   async run({ sock, jid, msg, rest, reply, prefix, isOwner }) {
     const link = links.firstLink(rest) || links.firstLink(quotedText(getQuoted(msg)));
     if (!link) return reply(`Send a TikTok link.\nExample: ${prefix}tiktok https://vm.tiktok.com/...\n(You can also reply to a message that has the link.)`);
     if (links.kindOf(link) !== 'tiktok') return reply('⚠️ That is not a TikTok link. Use *dl* for other sites.');
-    await reply('⏳ Getting the TikTok without the watermark...');
+    reply('⏳ Getting the TikTok without the watermark...').catch(() => {}); // not awaited: the download starts at once
     try {
       const v = await ytdlp.downloadVideo(link, { noWatermark: true, onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
       const caption = [`🎵 *${v.title || 'TikTok'}*`, v.artist && `👤 ${v.artist}`, v.duration && `⏱️ ${v.duration}`, '✅ No watermark'].filter(Boolean).join('\n');
