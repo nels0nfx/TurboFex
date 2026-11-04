@@ -10,15 +10,29 @@ async function tryRemove(sock, jid, id) {
   }
 }
 
+// Deletes a member's message as an admin. A group status needs the sender in the key, so it is filled in when WhatsApp left it
+// out; if the first try fails, a second one is made with a plain revoke message after a short wait.
+async function deleteOffending(sock, jid, msg, sender) {
+  const key = { ...msg.key, remoteJid: jid, fromMe: false, participant: msg.key.participant || sender };
+  try {
+    await sock.sendMessage(jid, { delete: key });
+    return true;
+  } catch (err) {
+    console.log('Could not delete message (first try):', err.message);
+  }
+  try {
+    await new Promise((r) => setTimeout(r, process.env.TURBOFEX_FAST ? 1 : 1200));
+    await sock.relayMessage(jid, { protocolMessage: { key, type: 0 } }, {});
+    return true;
+  } catch (err) {
+    console.log('Could not delete message (second try):', err.message);
+    return false;
+  }
+}
+
 // Applies delete / warn / kick to a member who broke a rule
 async function enforce({ sock, jid, sender, mode, msg, reason, rule, deleteMessage = true }) {
-  if (deleteMessage && msg) {
-    try {
-      await sock.sendMessage(jid, { delete: msg.key });
-    } catch (err) {
-      console.log('Could not delete message:', err.message);
-    }
-  }
+  if (deleteMessage && msg) await deleteOffending(sock, jid, msg, sender);
   if (mode === 'delete') return;
 
   const tag = `@${num(sender)}`;

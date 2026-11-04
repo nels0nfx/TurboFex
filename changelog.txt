@@ -1,5 +1,6 @@
-TurboFex v1.0.10 - download fixes, clean replies, response standard
-CHANGED IN 1.0.10
+TurboFex v1.1.0 - antigstatus fix, download fixes, clean replies, response standard
+CHANGED IN 1.1.0
+- FIXED: antigstatus (and the delete step of every protection) did not remove group statuses. WhatsApp names this message type differently between versions, so any "group status" message is now recognised, the sender is found even when WhatsApp hides it in the message key, and when the first delete fails a second one is made after a moment. If the bot is not an admin, the console now says so. antigm (group mention in a status) got the same sender fix.
 - FIXED: the reminder confirmation. `amute remind 10` now says "Reminder set successfully. I'll notify the group 10 minutes before the scheduled change." The inner detail about tagging is gone from every reply and from the amute status.
 - FIXED (dl, facebook, twitter, tiktok, ig, pinterest, soundcloud, play, ytsearch): "Failed to extract entry ... _ARC4.abi3.so" and "No space left on device". The downloader unpacked itself into the system temp folder every time, and stopped downloads left their files behind. Now all temporary files live in data/tmp, old leftovers are removed at start and every hour, the free space is checked before each download, and the downloader is never installed again just because the disk was full. A full disk now gives a clear message instead of a wrong one.
 - FIXED: Facebook links that open a login page ("Unsupported URL ... facebook.com/login"). Tracking parts and mobile hosts are removed from the link first, and a private or login-only post gets a clear answer ("It looks private, or the site wants a login") instead of six useless retries.

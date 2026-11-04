@@ -95,6 +95,17 @@ async function notice(sock, jid, sender, text) {
 
 const GROUP_MENTION = ['groupStatusMentionMessage']; // "X mentioned this group in a status"
 const GROUP_POST = ['groupStatusMessage', 'groupStatusMessageV2']; // a status posted inside the group
+// WhatsApp changes the name of this message type between versions (V1, V2, ...): any key that says "group status" counts,
+// at any depth, except the "mentioned this group" kind, which has its own switch (antigm).
+const GROUP_POST_NAME = /^groupStatus(?!Mention)/i;
+function isGroupStatusPost(obj, depth = 6) {
+  if (!obj || typeof obj !== 'object' || depth < 0) return false;
+  for (const k of Object.keys(obj)) {
+    if (GROUP_POST_NAME.test(k) && obj[k]) return true;
+    if (obj[k] && typeof obj[k] === 'object' && isGroupStatusPost(obj[k], depth - 1)) return true;
+  }
+  return false;
+}
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -110,7 +121,7 @@ function findBadWord(text, words) {
 
 // Returns true if the message broke a rule and was dealt with
 async function runProtections({ sock, msg, jid, text, getRoles }) {
-  const sender = msg.key.participant;
+  const sender = msg.key.participant || msg.key.participantAlt || msg.participant; // newer WhatsApp can hide the first one
   if (!sender) return false;
   const g = store.getGroup(jid);
 
@@ -118,7 +129,7 @@ async function runProtections({ sock, msg, jid, text, getRoles }) {
   const badWord = g.antiwordMode !== 'off' && text ? findBadWord(text, g.badWords) : null;
   const spam = g.antispamMode !== 'off' ? isSpam(jid, sender, { limit: g.antispamLimit, seconds: g.antispamSeconds, repeat: g.antispamRepeat }, text) : false;
   const groupMention = g.antigmMode !== 'off' && hasType(msg.message, GROUP_MENTION);
-  const groupPost = g.antigstatusMode !== 'off' && hasType(msg.message, GROUP_POST);
+  const groupPost = g.antigstatusMode !== 'off' && (hasType(msg.message, GROUP_POST) || isGroupStatusPost(msg.message));
   const media = Object.values(g.antimedia).some(Boolean) ? mediaKindOf(msg.message) : null;
   const blockedMedia = media && g.antimedia[media] ? media : null;
   const slow = g.slowmode ? tooSoon(jid, sender, g.slowmode) : false;
@@ -128,7 +139,10 @@ async function runProtections({ sock, msg, jid, text, getRoles }) {
   if (!hasLink && !badWord && !spam && !groupMention && !groupPost && !blockedMedia && !slow && !silenced && !otherBot && !massTag) return false;
 
   const roles = await getRoles();
-  if (!roles.isBotAdmin || roles.isAdmin || roles.isOwner) return false;
+  if (!roles.isBotAdmin || roles.isAdmin || roles.isOwner) {
+    if ((groupPost || groupMention) && !roles.isBotAdmin) console.log(`Anti group status: a group status was posted in ${jid}, but the bot is not an admin there, so it cannot be deleted.`);
+    return false;
+  }
 
   if (silenced) {
     const key = levels.keyOf(sender);
@@ -182,4 +196,4 @@ async function runProtections({ sock, msg, jid, text, getRoles }) {
   return true;
 }
 
-module.exports = { mediaKindOf, looksLikeBot, botVerdict, mentionCount, runProtections, LINK_REGEX, findBadWord, hasType, GROUP_MENTION, GROUP_POST };
+module.exports = { mediaKindOf, looksLikeBot, botVerdict, mentionCount, runProtections, LINK_REGEX, findBadWord, hasType, GROUP_MENTION, GROUP_POST, isGroupStatusPost };

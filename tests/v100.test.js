@@ -231,6 +231,6 @@ test('pdf command: text to PDF, help, and the add / list / make / clear list tha
   }
 });
 
-test('version is 1.0.x and README counts match', () => {
-  assert.match(require('../package.json').version, /^1\.0\.\d+$/);
+test('version is 1.x.x and README counts match', () => {
+  assert.match(require('../package.json').version, /^1\.\d+\.\d+$/);
 });

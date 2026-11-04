@@ -179,3 +179,39 @@ test('the downloader runs with the bot temp folder (not the system one)', async 
     assert.strictEqual(fs.readFileSync(path.join(t.dir, 'tmpdir.txt'), 'utf8').trim(), dltemp.root());
   });
 });
+
+// ------------------------------------------------------------ antigstatus: group statuses are found and deleted
+test('antigstatus: a group status (any version of the message name) is deleted; a normal message is not', async () => {
+  const store = require('../whatsapp/store');
+  const { runProtections, isGroupStatusPost } = require('../whatsapp/protect');
+  assert.ok(isGroupStatusPost({ messageContextInfo: {}, groupStatusMessageV2: { message: { imageMessage: {} } } }));
+  assert.ok(isGroupStatusPost({ ephemeralMessage: { message: { groupStatusMessageV3: { message: {} } } } }), 'a newer name, inside a wrapper');
+  assert.ok(!isGroupStatusPost({ groupStatusMentionMessage: { x: 1 } }), 'the mention kind belongs to antigm');
+  assert.ok(!isGroupStatusPost({ conversation: 'hello' }));
+  const jid = '120369000000300001@g.us';
+  store.getGroup(jid);
+  store.update(jid, (g) => { g.antigstatusMode = 'delete'; });
+  const sender = '27811110009@s.whatsapp.net';
+  const calls = [];
+  const sock = { sendMessage: async (j, c) => { calls.push(c); }, relayMessage: async () => {} };
+  const roles = async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false });
+  const post = { key: { remoteJid: jid, id: 'S1', participant: sender }, message: { groupStatusMessageV3: { message: { conversation: 'x' } } } };
+  assert.strictEqual(await runProtections({ sock, msg: post, jid, text: '', getRoles: roles }), true);
+  assert.ok(calls.some((c) => c.delete && c.delete.id === 'S1' && c.delete.participant === sender), 'the status was deleted with the sender in the key');
+  // the sender is hidden in the key: it is taken from the other field and the delete still works
+  calls.length = 0;
+  const hidden = { key: { remoteJid: jid, id: 'S2', participantAlt: sender }, message: { groupStatusMessageV2: { message: {} } } };
+  assert.strictEqual(await runProtections({ sock, msg: hidden, jid, text: '', getRoles: roles }), true);
+  assert.ok(calls.some((c) => c.delete && c.delete.id === 'S2' && c.delete.participant === sender));
+  // a normal message is left alone
+  calls.length = 0;
+  const normal = { key: { remoteJid: jid, id: 'N1', participant: sender }, message: { conversation: 'hi' } };
+  assert.strictEqual(await runProtections({ sock, msg: normal, jid, text: 'hi', getRoles: roles }), false);
+  assert.strictEqual(calls.length, 0);
+  // the first delete fails: the second way is used
+  let relayed = 0;
+  const flaky = { sendMessage: async () => { throw new Error('nope'); }, relayMessage: async () => { relayed += 1; } };
+  process.env.TURBOFEX_FAST = '1';
+  await runProtections({ sock: flaky, msg: { key: { remoteJid: jid, id: 'S3', participant: sender }, message: { groupStatusMessageV2: {} } }, jid, text: '', getRoles: roles });
+  assert.strictEqual(relayed, 1);
+});
