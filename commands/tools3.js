@@ -113,14 +113,14 @@ module.exports = [
     ...base,
     name: 'timer',
     aliases: ['countdowntimer', 'settimer'],
-    description: 'Start a timer and I tag you when it ends: timer 10m (or timer 25m study)',
+    description: 'Start a timer and I remind you when it ends: timer 10m (or timer 25m study)',
     async run({ jid, args, myIds, myJid, reply, prefix }) {
       const at = parseWhen(args[0]);
       if (!at) return reply(`Say how long.\n${prefix}timer 10m\n${prefix}timer 1h30m pizza\n\nShortest: 30 seconds. Longest: 30 days.`);
       if (store.reminders().filter((r) => r.jid === jid).length >= MAX_TIMERS_PER_CHAT) return reply(`⚠️ This chat already has ${MAX_TIMERS_PER_CHAT} timers and reminders. Remove one with ${prefix}unremind <number>`);
       const label = args.slice(1).join(' ').trim().slice(0, 200);
       const item = store.addReminder({ jid, who: myJid, ids: myIds, at, text: label ? `Your timer is up: ${label}` : 'Your timer is up!' });
-      return reply(`⏱️ *Timer set for ${clock.duration(at - Date.now())}.* I will tag you at ${clock.stamp(at)}.\nCancel it with ${prefix}unremind ${item.id}`);
+      return reply(`⏱️ *Timer set for ${clock.duration(at - Date.now() + 500)}.*\n▸ I'll remind you at ${clock.stamp(at)}.\n_Cancel it with_ \`${prefix}unremind ${item.id}\``);
     },
   },
   {

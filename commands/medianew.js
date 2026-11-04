@@ -2,7 +2,7 @@
 const media = require('../whatsapp/media');
 const web = require('../core/web');
 const safefetch = require('../core/safefetch');
-const { downloadAudio, downloadVideo, youtubeId } = require('../core/ytdlp');
+const { downloadAudio, downloadVideo, youtubeId, explain } = require('../core/ytdlp');
 const { getQuoted, quotedText } = require('../whatsapp/utils');
 
 const dl = { category: 'download', slow: true, weight: 'medium', needs: [] };
@@ -34,9 +34,7 @@ function metaContent(html, prop) {
 function nice(ctx, err, what) {
   console.error(`${what} failed:`, err.message);
   const { reply, isOwner, prefix } = ctx;
-  if (['TOO_LONG', 'TOO_BIG', 'BLOCKED'].includes(err.code)) return reply(`⚠️ ${err.message}`);
-  if (err.code === 'BOT_BLOCK') return reply(isOwner ? `⚠️ The site blocked this server.\n🍪 Fix: send a cookies.txt with *${prefix}ytcookies*.` : '⚠️ I could not download that right now. Please try another link or try again later.');
-  return reply(`⚠️ I could not get that.${isOwner ? `\nReason: ${String(err.message).slice(0, 120)}` : ' Check the link and try again.'}`);
+  return reply(explain(err, { isOwner, prefix, what: 'that' }));
 }
 
 // a link from one site is handed to the normal video downloader (the dl command)
@@ -131,12 +129,11 @@ module.exports = [
       if (!hostIs(link, 'pinterest.com', 'pin.it') && !/^pinterest\./i.test(hostOf(link).replace(/^www\./, ''))) return reply('⚠️ That is not a Pinterest link. Example: https://pin.it/...');
       reply('⏳ Getting your pin...').catch(() => {}); // not awaited: the download starts at once
       try {
-        const v = await downloadVideo(link, { onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
+        const v = await downloadVideo(link, { onSetup: () => reply('⏳ *Getting ready, one moment...*') });
         const caption = `📌 *${v.title || 'Pinterest'}*`;
         if (v.ext === '.mp4') return await sock.sendMessage(jid, { video: v.buffer, mimetype: 'video/mp4', caption }, { quoted: msg });
         return await sock.sendMessage(jid, { document: v.buffer, mimetype: v.mimetype, fileName: `pin${v.ext}`, caption }, { quoted: msg });
       } catch (err) {
-        if (['TOO_LONG', 'TOO_BIG', 'BLOCKED'].includes(err.code)) return reply(`⚠️ ${err.message}`);
         // a pin with only a picture: the picture of the page is sent in full size
         try {
           const page = await safefetch.get(link, { timeout: 9000, maxBytes: 600 * 1024 });
@@ -166,7 +163,7 @@ module.exports = [
       if (link && !hostIs(link, 'soundcloud.com')) return reply('⚠️ That is not a SoundCloud link. Send a soundcloud.com link or just a song name.');
       reply('⏳ Getting your audio, one moment...').catch(() => {}); // not awaited: the download starts at once
       try {
-        const a = await downloadAudio(link || target, { source: 'soundcloud', onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
+        const a = await downloadAudio(link || target, { source: 'soundcloud', onSetup: () => reply('⏳ *Getting ready, one moment...*') });
         const lines = [`🎵 *${a.title || 'Audio'}*`, a.artist && `👤 ${a.artist}`, a.duration && `⏱️ ${a.duration}`, a.url && `🔗 ${a.url}`].filter(Boolean);
         await sock.sendMessage(jid, { text: lines.join('\n') }, { quoted: msg });
         return await sock.sendMessage(jid, { audio: a.buffer, mimetype: a.mimetype });

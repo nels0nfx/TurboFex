@@ -45,7 +45,7 @@ module.exports = {
       const mode = w === 'on' ? 'warn' : w;
       set((x) => { x.antispamMode = mode; x.antispam = mode !== 'off'; });
       await reply(`✅ *Anti-spam is now ${mode.toUpperCase()}.*${mode === 'warn' ? `\n_Flooders are warned, and removed after ${store.getLimit(jid)} warnings._` : mode === 'kick' ? '\n_Flooders are removed straight away._' : mode === 'delete' ? '\n_Only the flooding messages are deleted._' : ''}`);
-      if (mode !== 'off' && !isBotAdmin) await reply('⚠️ *Note:* I must be a group admin to delete messages and remove people.');
+      if (mode !== 'off' && !isBotAdmin) await reply('⚠️ *I need admin rights for this to work.*\n▸ Make me a group admin so I can delete messages and remove people.');
       return;
     }
 

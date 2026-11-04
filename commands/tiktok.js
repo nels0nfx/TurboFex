@@ -17,14 +17,13 @@ module.exports = {
     if (links.kindOf(link) !== 'tiktok') return reply('⚠️ That is not a TikTok link. Use *dl* for other sites.');
     reply('⏳ Getting the TikTok without the watermark...').catch(() => {}); // not awaited: the download starts at once
     try {
-      const v = await ytdlp.downloadVideo(link, { noWatermark: true, onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
+      const v = await ytdlp.downloadVideo(link, { noWatermark: true, onSetup: () => reply('⏳ *Getting ready, one moment...*') });
       const caption = [`🎵 *${v.title || 'TikTok'}*`, v.artist && `👤 ${v.artist}`, v.duration && `⏱️ ${v.duration}`, '✅ No watermark'].filter(Boolean).join('\n');
       if (v.ext === '.mp4') return await sock.sendMessage(jid, { video: v.buffer, mimetype: 'video/mp4', caption }, { quoted: msg });
       return await sock.sendMessage(jid, { document: v.buffer, mimetype: v.mimetype, fileName: `tiktok${v.ext}`, caption }, { quoted: msg });
     } catch (err) {
       console.error('tiktok failed:', err.message);
-      if (['TOO_LONG', 'TOO_BIG', 'BLOCKED'].includes(err.code)) return reply(`⚠️ ${err.message}`);
-      return reply(`⚠️ I could not get that TikTok. It may be private, removed, or has no clean version.${isOwner ? `\nReason: ${String(err.message).slice(0, 120)}` : ''}`);
+      return reply(ytdlp.explain(err, { isOwner, prefix, what: 'that TikTok' }));
     }
   },
 };

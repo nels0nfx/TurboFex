@@ -5,7 +5,7 @@
 //   amute close 22:00          -> the same
 //   amute open 06:00           -> open the group every day at 06:00 (aunmute 06:00 does the same)
 //   amute 22:00 06:00          -> both at once (quiettime 22:00 06:00 does the same)
-//   amute remind 10            -> 10 minutes BEFORE it closes or opens, tell everybody (everybody is tagged, no names are listed)
+//   amute remind 10            -> 10 minutes BEFORE it closes or opens, notify the group (a hidden tag; never say so in the reply)
 //   amute remind off           -> no reminder
 //   amute off                  -> stop closing and opening (close off / open off stop only one)
 // The timed jobs themselves run in core/scheduler.js.
@@ -21,7 +21,7 @@ const minutesText = (n) => `${n} minute${n === 1 ? '' : 's'}`;
 
 function status(g, prefix) {
   const am = g.autoMute;
-  const remind = am.remind > 0 ? `*${minutesText(am.remind)}* before _(everybody is tagged, no names listed)_` : '*OFF*';
+  const remind = am.remind > 0 ? `*${minutesText(am.remind)}* before the change` : '*OFF*';
   return (
     `⏰ *Auto open and close* _(${clock.zone()} time)_\n\n` +
     `🔒 *Closes at:* ${am.mute ? `*${am.mute}* every day` : '*OFF*'}\n` +
@@ -30,7 +30,7 @@ function status(g, prefix) {
     `▸ \`${prefix}amute close 22:00\` – close every day at that time\n` +
     `▸ \`${prefix}amute open 06:00\` – open every day at that time\n` +
     `▸ \`${prefix}amute 22:00 06:00\` – both at once\n` +
-    `▸ \`${prefix}amute remind 10\` – remind everybody 10 minutes before\n` +
+    `▸ \`${prefix}amute remind 10\` – notify the group 10 minutes before\n` +
     `▸ \`${prefix}amute off\` – stop it all`
   );
 }
@@ -41,7 +41,7 @@ module.exports = {
   name: 'amute',
   aliases: ['aunmute', 'quiettime', 'nightmode', 'autoclose', 'autoopen'],
   category: 'group',
-  description: 'Close and open the group by itself every day: amute 22:00 06:00, amute remind 10 tags everybody before it happens (admins only)',
+  description: 'Close and open the group by itself every day: amute 22:00 06:00, amute remind 10 notifies the group before it happens (admins only)',
   groupOnly: true,
   adminOnly: true,
   botAdminRequired: true,
@@ -70,7 +70,7 @@ module.exports = {
         grp.autoMute.remUnmute = null;
       });
       const times = g.autoMute.mute || g.autoMute.unmute ? '' : `\n_Now set a time, for example_ \`${prefix}amute close 22:00\``;
-      return reply(`✅ *Reminder set.* ${minutesText(n)} before the group closes or opens, I tag everybody (no names are listed).${times}`);
+      return reply(`✅ *Reminder set successfully.*\n▸ I'll notify the group ${minutesText(n)} before the scheduled change.${times}`);
     }
 
     // ---- turn it off
@@ -105,7 +105,7 @@ module.exports = {
         grp.autoMute[closeWord ? 'ranMute' : 'ranUnmute'] = null;
         grp.autoMute[closeWord ? 'remMute' : 'remUnmute'] = null;
       });
-      const rem = g.autoMute.remind > 0 ? `\n_I remind everybody ${minutesText(g.autoMute.remind)} before._` : '';
+      const rem = g.autoMute.remind > 0 ? `\n▸ I'll notify the group ${minutesText(g.autoMute.remind)} before.` : '';
       return reply(`${closeWord ? '🔒' : '🔓'} *The group will ${closeWord ? 'close' : 'open'} every day at ${t}* _(${clock.zone()} time)_.${rem}`);
     }
 
@@ -124,7 +124,7 @@ module.exports = {
           grp.autoMute.remUnmute = null;
         }
       });
-      const rem = g.autoMute.remind > 0 ? `\n_I remind everybody ${minutesText(g.autoMute.remind)} before._` : '';
+      const rem = g.autoMute.remind > 0 ? `\n▸ I'll notify the group ${minutesText(g.autoMute.remind)} before.` : '';
       return reply(
         to
           ? `🌙 *Quiet time is ON.* The group closes at *${from}* and opens at *${to}* every day _(${clock.zone()} time)_.${rem}`

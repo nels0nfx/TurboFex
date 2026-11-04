@@ -112,7 +112,7 @@ module.exports = [
       const key = levels.keyOf(target);
       if (key === me) return reply('😅 *You cannot start a vote against yourself.*');
       if (isAdminKey(meta, key)) return reply('⛔ *Admins cannot be voted out.* Ask another admin.');
-      if (!isBotAdmin) return reply('⚠️ *I must be a group admin* to remove people, so a vote would be useless.');
+      if (!isBotAdmin) return reply('⚠️ *I need admin rights to remove people.*\n▸ Make me a group admin, then start the vote again.');
       const gap = `${jid}|${me}`;
       if (now - (lastStart.get(gap) || 0) < START_GAP_MS) return reply('⏳ *You started a vote a short while ago.* Please wait a little.');
       lastStart.set(gap, now);
@@ -131,7 +131,7 @@ module.exports = [
     async run({ jid, args, reply, groupMetadata: meta }) {
       const days = Math.min(30, Math.max(1, parseInt(args.find((a) => /^\d+$/.test(a)), 10) || 7));
       const s = stats.summary(jid, days);
-      if (!s.total) return reply('📊 *No messages counted yet.* I count from the moment this version started, so please check again later.');
+      if (!s.total) return reply('📊 *No messages counted yet.*\n▸ Check again once the group has been active.');
       const lines = [`📊 *Group stats* _(last ${days} day${days > 1 ? 's' : ''})_`, '', `💬 *Messages:* ${nf(s.total)} (about ${nf(Math.round(s.total / days))} a day)`, `👥 *Active members:* ${nf(s.top.length)} of ${nf((meta?.participants || []).length)}`];
       lines.push('', '*Most active*', ...s.top.slice(0, 5).map((r, i) => `${medals[i] || '▫️'} @${num(jidFor(meta, r.key))} - ${nf(r.n)}`));
       if (s.peakHour !== null) lines.push('', `🕒 *Busiest hour:* ${hourLabel(s.peakHour)}`);
@@ -147,7 +147,7 @@ module.exports = [
     ...base,
     name: 'catchup',
     aliases: ['missed', 'whatimissed'],
-    description: 'AI summary of what you missed: catchup (admins switch it on with catchup on; the messages stay in memory only)',
+    description: 'AI summary of what you missed: catchup (admins switch it on with catchup on)',
     async run(ctx) {
       const { jid, args, reply, prefix } = ctx;
       const w = (args[0] || '').toLowerCase();
@@ -155,10 +155,10 @@ module.exports = [
         if (!mayAdmin(ctx)) return; // not allowed: stay silent
         stats.setCatchup(jid, w === 'on');
         return reply(w === 'on'
-          ? `✅ *Catchup is ON.* From now on I keep the last ${stats.CATCHUP_MAX} messages of this group *in memory only* (never saved, gone after 12 hours or a restart). Anyone can then send \`${prefix}catchup\`.`
-          : '✅ *Catchup is OFF* and the messages I kept were deleted.');
+          ? `✅ *Catchup is ON.*\n▸ Anyone can now send \`${prefix}catchup\` to see what they missed.`
+          : '✅ *Catchup is OFF.*');
       }
-      if (!stats.catchupOn(jid)) return reply(`ℹ️ *Catchup is off in this group.*\nAn admin can switch it on with \`${prefix}catchup on\`. I then keep the last messages in memory only (never saved to disk).`);
+      if (!stats.catchupOn(jid)) return reply(`ℹ️ *Catchup is off in this group.*\n▸ An admin can switch it on with \`${prefix}catchup on\`.`);
       const n = Math.min(stats.CATCHUP_MAX, Math.max(10, parseInt(args.find((a) => /^\d+$/.test(a)), 10) || 100));
       const list = stats.recent(jid, n);
       if (list.length < 5) return reply('📭 *There is not much to catch up on* (I have fewer than 5 messages in memory).');
@@ -206,7 +206,7 @@ module.exports = [
     description: 'Post a clear announcement and quietly notify everybody: announce <text> (or reply to a message)',
     async run({ sock, jid, msg, rest, reply, prefix, myJid, groupMetadata: meta }) {
       const text = (rest || quotedText(getQuoted(msg))).trim();
-      if (!text) return reply(`*Usage:* \`${prefix}announce Meeting tonight at 8pm\`\n_Everybody gets a notification, without a long list of names._`);
+      if (!text) return reply(`📢 *Announcement*\n▸ *Example:* \`${prefix}announce Meeting tonight at 8pm\`\n_Everyone in the group will be notified._`);
       if (text.length > 1000) return reply(`⚠️ *That is too long* (${text.length} characters, the limit is 1000).`);
       const everyone = (meta?.participants || []).map((p) => p.id);
       await sock.sendMessage(jid, { text: `📢 *ANNOUNCEMENT*\n\n${text}\n\n_- @${num(myJid)}_`, mentions: [...new Set([...everyone, myJid])] });

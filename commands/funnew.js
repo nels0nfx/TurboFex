@@ -137,9 +137,9 @@ module.exports = [
 
       const parts = rest.split('|').map((x) => x.trim()).filter(Boolean);
       if (parts.length !== 3 || parts.some((x) => x.length > 150)) {
-        return reply(`🎭 *Two truths and a lie*\n*Write:* \`${prefix}twotruths I can swim | I have a twin | I have been to Mars\`\n_Two true things, then the lie LAST (max 150 characters each). I mix them up and hide your message, so I must be a group admin._`);
+        return reply(`🎭 *Two truths and a lie*\n*Write:* \`${prefix}twotruths I can swim | I have a twin | I have been to Mars\`\n▸ Two true things, then the lie *last* (max 150 characters each).\n_I will shuffle them and hide your message. I need to be a group admin for that._`);
       }
-      if (!isBotAdmin) return reply('⚠️ *I must be a group admin* to hide your message, or everybody would see which one is the lie. Make me admin and try again.');
+      if (!isBotAdmin) return reply('⚠️ *I need admin rights to hide your message.*\n▸ Make me a group admin and try again.');
       try {
         await sock.sendMessage(jid, { delete: msg.key });
       } catch (err) {

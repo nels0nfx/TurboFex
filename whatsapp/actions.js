@@ -105,7 +105,7 @@ async function setActionMode(ctx, { key, label, trigger }) {
   });
   await reply(`✅ ${label} is now *${choice.toUpperCase()}*.`);
   if (choice !== 'off' && !isBotAdmin) {
-    await reply('⚠️ Note: I must be a group admin to delete messages and remove people.');
+    await reply('⚠️ *I need admin rights for this to work.*\n▸ Make me a group admin so I can delete messages and remove people.');
   }
 }
 

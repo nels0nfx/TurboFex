@@ -1,3 +1,15 @@
+TurboFex v1.0.10 - download fixes, clean replies, response standard
+CHANGED IN 1.0.10
+- FIXED: the reminder confirmation. `amute remind 10` now says "Reminder set successfully. I'll notify the group 10 minutes before the scheduled change." The inner detail about tagging is gone from every reply and from the amute status.
+- FIXED (dl, facebook, twitter, tiktok, ig, pinterest, soundcloud, play, ytsearch): "Failed to extract entry ... _ARC4.abi3.so" and "No space left on device". The downloader unpacked itself into the system temp folder every time, and stopped downloads left their files behind. Now all temporary files live in data/tmp, old leftovers are removed at start and every hour, the free space is checked before each download, and the downloader is never installed again just because the disk was full. A full disk now gives a clear message instead of a wrong one.
+- FIXED: Facebook links that open a login page ("Unsupported URL ... facebook.com/login"). Tracking parts and mobile hosts are removed from the link first, and a private or login-only post gets a clear answer ("It looks private, or the site wants a login") instead of six useless retries.
+- FASTER: the extra YouTube tries are only used for YouTube. Other sites fail or finish at once instead of repeating the same request.
+- CHANGED: every download command now answers errors in the same words, with a next step. People never see raw tool text; the owner gets one `▸ Details:` line only when the cause is unknown.
+- CHANGED: all replies of the newer commands now carry the TurboFex `▸` bullet (data lines and command lines). It is done once in whatsapp/format.js, so every command, old or new, follows it.
+- CLEANED: replies that explained inner workings were rewritten: catchup, announce, groupstats, twotruths, votekick, the "I must be a group admin" notes (antispam, antifake, groupextras, groupextras2, warn, captcha, actions), the QR reader, the update notice, the timer ("I will tag you" is now "I'll remind you", and 10m no longer shows 9m).
+- NEW: tests/v1010.test.js scans every reply string for banned phrases and checks the download errors, temp space and the bullet rule.
+- RULE: the response standard (R1) and the download error rule (R2) are written in the owner's private files (preferences, project guide and the AI instruction files). No separate standards file exists.
+
 TurboFex v1.0.9 - merged commands and a reminder before the group opens or closes
 CHANGED IN 1.0.9
 - MERGED: gpp and setpp are now ONE command, gpp. In a group it changes the GROUP picture (admins). `gpp bot` (or the old name `setpp`) changes the BOT's own picture (owner only; in a private chat plain `gpp` does that too). People who may not use it still get no reply.

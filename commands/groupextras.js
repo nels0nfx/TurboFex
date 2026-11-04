@@ -26,7 +26,7 @@ module.exports = [
         const mode = w === 'on' ? 'warn' : w;
         store.update(jid, (x) => { x.antibotMode = mode; });
         await reply(`✅ *Anti-bot is now ${mode.toUpperCase()}.*${mode === 'off' ? '' : `\n_Messages from other bots are ${mode === 'delete' ? 'deleted' : mode === 'warn' ? `deleted and the bot is warned (removed after ${store.getLimit(jid)} warnings)` : 'deleted and the bot is removed'}. Admins are never affected._`}`);
-        if (mode !== 'off' && !isBotAdmin) await reply('⚠️ *Note:* I must be a group admin to delete messages and remove bots.');
+        if (mode !== 'off' && !isBotAdmin) await reply('⚠️ *I need admin rights for this to work.*\n▸ Make me a group admin so I can delete messages and remove bots.');
         return;
       }
       if (w === 'strict') {

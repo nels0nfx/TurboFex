@@ -8,12 +8,14 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 const { assertPublicUrl } = require('./safefetch');
 const { DATA } = require('./paths');
+const dltemp = require('./dltemp');
 
 const BIN_DIR = path.join(DATA, 'bin');
 const COOKIES = path.join(DATA, 'cookies.txt');
 const MAX_MB = Number(process.env.PLAY_MAX_MB) || 60;
 const MAX_SECONDS = Number(process.env.PLAY_MAX_SECONDS) || 3600;
 const WIN = process.platform === 'win32';
+const SPACE_ERROR = /PYI-\d+|Failed to extract|No space left|ENOSPC|disk quota|Errno 28/i;
 let installing = null;
 let lastUpdate = 0;
 
@@ -25,8 +27,18 @@ function releaseFile() {
 
 const localPath = () => path.join(BIN_DIR, WIN ? 'yt-dlp.exe' : 'yt-dlp');
 
+// true when the program runs. A program that fails only because the disk is full is NOT broken: it must never be downloaded
+// again (every new copy used even more space), so that case is reported as NO_SPACE instead.
 function works(bin) {
-  return new Promise((resolve) => execFile(bin, ['--version'], { timeout: 15000 }, (err) => resolve(!err)));
+  const once = () => new Promise((resolve) => execFile(bin, ['--version'], { timeout: 15000, env: dltemp.env() }, (err, out, errOut) => resolve({ ok: !err, text: `${errOut || ''} ${err ? err.message : ''}` })));
+  return once().then(async (r) => {
+    if (!r.ok && SPACE_ERROR.test(r.text)) {
+      dltemp.cleanStale(0); // leftovers of stopped downloads are the usual reason: clean them and try once more
+      r = await once();
+      if (!r.ok && SPACE_ERROR.test(r.text)) throw Object.assign(new Error('no space for the downloader'), { code: 'NO_SPACE' });
+    }
+    return r.ok;
+  });
 }
 
 let foundBin = null; // the tool that worked last time: asking it again for its version on every download cost 1 to 3 seconds
@@ -44,6 +56,7 @@ async function install() {
   if (installing) return installing;
   installing = (async () => {
     fs.mkdirSync(BIN_DIR, { recursive: true });
+    if (!dltemp.ensureSpace(150)) throw Object.assign(new Error('no space for the downloader'), { code: 'NO_SPACE' });
     const res = await fetch(`https://github.com/yt-dlp/yt-dlp/releases/latest/download/${releaseFile()}`, { redirect: 'follow', signal: AbortSignal.timeout(180000) });
     if (!res.ok) throw new Error(`could not download the downloader (error ${res.status})`);
     const tmp = `${localPath()}.part`;
@@ -55,6 +68,11 @@ async function install() {
     return foundBin;
   })().finally(() => {
     installing = null;
+    try {
+      fs.rmSync(`${localPath()}.part`, { force: true }); // a half-written file would eat disk space
+    } catch (err) {
+      // nothing to remove
+    }
   });
   return installing;
 }
@@ -64,7 +82,7 @@ async function selfUpdate(bin) {
   if (Date.now() - lastUpdate < 6 * 3600 * 1000) return false;
   lastUpdate = Date.now();
   if (bin === 'yt-dlp') return false; // a system install is updated by the system
-  return new Promise((resolve) => execFile(bin, ['-U'], { timeout: 120000 }, (err) => resolve(!err)));
+  return new Promise((resolve) => execFile(bin, ['-U'], { timeout: 120000, env: dltemp.env() }, (err) => resolve(!err)));
 }
 
 function ffmpegLocation() {
@@ -77,11 +95,12 @@ function ffmpegLocation() {
 
 function run(bin, args, timeoutMs) {
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'], env: dltemp.env() });
     let out = '';
     let err = '';
     const timer = setTimeout(() => {
-      child.kill('SIGKILL');
+      child.kill('SIGTERM'); // a gentle stop lets the downloader clean its unpacked files; a hard stop 4 seconds later if it ignores it
+      setTimeout(() => child.kill('SIGKILL'), 4000).unref();
       reject(Object.assign(new Error('The download took too long'), { code: 'TIMEOUT' }));
     }, timeoutMs);
     child.stdout.on('data', (d) => (out += d));
@@ -98,41 +117,126 @@ function run(bin, args, timeoutMs) {
   });
 }
 
+// What went wrong, in one word, from the text the downloader printed (null = unknown)
+function classify(text) {
+  const t = String(text || '');
+  if (/does not pass filter/i.test(t)) return 'TOO_LONG';
+  if (/larger than max-filesize|File is larger/i.test(t)) return 'TOO_BIG';
+  if (SPACE_ERROR.test(t)) return 'NO_SPACE';
+  if (/sign in to confirm|not a bot|confirm you.re not/i.test(t)) return 'BOT_BLOCK';
+  if (/Unsupported URL: https?:\/\/[^\s]*(login|checkpoint)|log ?in (is )?required|login required|you must (log|sign) ?in|cookies.*(required|needed)|This content isn.t available|private (video|account)|Private video|members.only|authenticated|rate-limit reached or login/i.test(t)) return 'LOGIN_REQUIRED';
+  if (/Unsupported URL|is not a valid URL|No video formats found|no video could be found|There is no video in this post/i.test(t)) return 'UNSUPPORTED';
+  if (/Video unavailable|has been removed|no longer available|does not exist|404|Not Found|account (has been )?terminated|deleted/i.test(t)) return 'GONE';
+  if (/HTTP Error 429|Too Many Requests/i.test(t)) return 'RATE_LIMIT';
+  if (/Requested format is not available/i.test(t)) return 'NO_FORMAT';
+  return null;
+}
+
 // Runs the downloader, and when a site changes or blocks us tries other ways: other clients, then a self-update.
+// The YouTube ways are only used for YouTube: on any other site they repeat the same request and just cost time.
 let goodWay = 0; // the number of the way that worked last time
 async function runWithRetries(bin, build, limits = {}) {
   let out;
-  const ways = [
-    [],
-    ['--extractor-args', 'youtube:player_client=android_vr'],
-    ['--extractor-args', 'youtube:player_client=tv,web_safari'],
-    ['--extractor-args', 'youtube:player_client=mweb'],
-    ['--extractor-args', 'youtube:player_client=ios'],
-    ['--js-runtimes', 'node'],
-  ];
+  const youtube = limits.youtube !== false;
+  const ways = youtube
+    ? [
+        [],
+        ['--extractor-args', 'youtube:player_client=android_vr'],
+        ['--extractor-args', 'youtube:player_client=tv,web_safari'],
+        ['--extractor-args', 'youtube:player_client=mweb'],
+        ['--extractor-args', 'youtube:player_client=ios'],
+        ['--js-runtimes', 'node'],
+      ]
+    : [[]];
   // the same ways, but the one that worked last time is first
-  const order = [goodWay, ...ways.map((_, n) => n).filter((n) => n !== goodWay)];
+  const first = youtube && goodWay < ways.length ? goodWay : 0;
+  const order = [first, ...ways.map((_, n) => n).filter((n) => n !== first)];
   const attempts = order.map((n) => ways[n]);
   let lastErr;
+  let cleaned = false;
   for (let i = 0; i < attempts.length && out === undefined; i++) {
     try {
+      if (!dltemp.ensureSpace()) throw Object.assign(new Error('no space'), { code: 'NO_SPACE', stderr: 'No space left on device' });
       out = await run(bin, build(attempts[i]), 180000);
-      goodWay = order[i];
+      if (youtube) goodWay = order[i];
     } catch (err) {
       lastErr = err;
       const text = String(err.stderr || err.message);
-      if (/does not pass filter/i.test(text)) throw Object.assign(new Error(`That is longer than ${limits.minutes || 60} minutes.`), { code: 'TOO_LONG' });
-      if (/larger than max-filesize|File is larger/i.test(text)) throw Object.assign(new Error(`That file is bigger than ${limits.mb || MAX_MB} MB.`), { code: 'TOO_BIG' });
+      const kind = err.code && err.code !== 'TIMEOUT' && !err.stderr ? err.code : classify(text);
+      if (kind === 'TOO_LONG') throw Object.assign(new Error(`That video is longer than ${limits.minutes || 60} minutes.`), { code: 'TOO_LONG' });
+      if (kind === 'TOO_BIG') throw Object.assign(new Error(`That file is bigger than ${limits.mb || MAX_MB} MB.`), { code: 'TOO_BIG' });
       if (err.code === 'TIMEOUT') throw err;
+      if (kind === 'NO_SPACE') {
+        // the disk is full: clean old leftovers and try the same way once more; if that fails it is reported, no other way can help
+        if (cleaned) throw Object.assign(new Error('no space'), { code: 'NO_SPACE' });
+        cleaned = true;
+        dltemp.cleanStale(0);
+        i -= 1;
+        continue;
+      }
+      // these cannot be fixed by trying again another way
+      if (['LOGIN_REQUIRED', 'UNSUPPORTED', 'GONE'].includes(kind)) throw Object.assign(new Error(String(text.trim().split('\n').pop() || kind).slice(0, 200)), { code: kind });
       if (i === 0 && (await selfUpdate(bin))) i = -1; // the site changed: update the tool and try again from the start
     }
   }
   if (out === undefined) {
     const text = String(lastErr?.stderr || lastErr?.message || '');
-    if (/sign in to confirm|not a bot|cookies|confirm you.re not/i.test(text)) throw Object.assign(new Error('YouTube blocked this server (it wants a login).'), { code: 'BOT_BLOCK' });
+    const kind = classify(text);
+    if (kind === 'BOT_BLOCK') throw Object.assign(new Error('YouTube blocked this server (it wants a login).'), { code: 'BOT_BLOCK' });
+    if (kind) throw Object.assign(new Error(text.trim().split('\n').pop().slice(0, 200)), { code: kind });
     throw lastErr;
   }
   return out;
+}
+
+// A link is tidied before it is handed over: other Facebook hosts become www.facebook.com and tracking parts are removed
+// (a mobile or tracking link often sends the downloader to a login page).
+function cleanLink(url) {
+  try {
+    const u = new URL(url);
+    if (/(^|\.)facebook\.com$/i.test(u.hostname) && !/^www\.facebook\.com$/i.test(u.hostname)) u.hostname = 'www.facebook.com';
+    for (const k of [...u.searchParams.keys()]) if (/^(fbclid|mibextid|__cft__.*|__tn__|rdid|share_url|utm_.*|igshid|si|feature|ref|sfnsn|_rdr)$/i.test(k)) u.searchParams.delete(k);
+    return u.toString();
+  } catch (err) {
+    return url;
+  }
+}
+
+const isYoutubeTarget = (target, isLink) => !isLink || /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com)$/i.test((() => { try { return new URL(target).hostname; } catch (e) { return ''; } })());
+
+// The message a person gets when a download fails: what happened and what to do next. Technical detail only for the owner,
+// and only when the cause is unknown. Used by every download command, so they all speak the same way.
+function explain(err, { isOwner = false, prefix = '.', what = 'that' } = {}) {
+  const code = err && err.code;
+  const owner = (text) => (isOwner ? text : '');
+  const detail = isOwner && !code ? `\n▸ *Details:* ${String(err?.message || err).replace(/\s+/g, ' ').slice(0, 120)}` : '';
+  switch (code) {
+    case 'TOO_LONG':
+    case 'TOO_BIG':
+      return `⚠️ *${err.message}*\n▸ Please send a shorter one.`;
+    case 'NO_SPACE':
+      return isOwner
+        ? `⚠️ *The server is out of disk space.*\n▸ I cleaned my temporary files. Free some space on the host, then try again.`
+        : '⚠️ *I cannot download right now.*\n▸ The service is busy. Please try again in a few minutes.';
+    case 'LOGIN_REQUIRED':
+      return `⚠️ *I could not open ${what}.*\n▸ It looks private, or the site wants a login.\n▸ Make sure it is public, then send the link again.${owner(`\n▸ *Owner:* for private posts send a cookies.txt with \`${prefix}ytcookies\`.`)}`;
+    case 'UNSUPPORTED':
+      return `⚠️ *I could not find a video in ${what}.*\n▸ Send the direct link of a video post.`;
+    case 'GONE':
+      return `⚠️ *${what[0].toUpperCase()}${what.slice(1)} is no longer available.*\n▸ It may have been removed or made private. Try another link.`;
+    case 'RATE_LIMIT':
+      return '⚠️ *The site is limiting requests right now.*\n▸ Please try again in a few minutes.';
+    case 'NO_FORMAT':
+      return `⚠️ *I could not get a playable version of ${what}.*\n▸ Try another link.`;
+    case 'TIMEOUT':
+      return '⚠️ *That took too long.*\n▸ Try a shorter video, or try again in a moment.';
+    case 'BOT_BLOCK':
+      return isOwner
+        ? `⚠️ *YouTube blocked this server.*\n▸ Send a cookies.txt with \`${prefix}ytcookies\` to fix it.`
+        : '⚠️ *I could not download that right now.*\n▸ Please try another link or try again later.';
+    default:
+      return `⚠️ *I could not download ${what}.*\n▸ Check the link and try again.${detail}`;
+  }
 }
 
 // faster downloads: 4 pieces at the same time, no waiting for a stuck connection, no touching the file date
@@ -159,8 +263,9 @@ async function downloadAudio(target, { onSetup, source = 'youtube' } = {}) {
     bin = await install();
   }
   const isLink = /^https?:\/\//i.test(target);
+  if (isLink) target = cleanLink(target);
   if (isLink) await assertPublicUrl(target); // never a private or internal address
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tfx-'));
+  const dir = dltemp.makeWorkDir();
   const ff = ffmpegLocation();
   const build = (extra) => [
     '--no-playlist', '--no-simulate', '-q', '--no-warnings',
@@ -177,7 +282,7 @@ async function downloadAudio(target, { onSetup, source = 'youtube' } = {}) {
   ];
 
   try {
-    const out = await runWithRetries(bin, build, { mb: MAX_MB, minutes: Math.round(MAX_SECONDS / 60) });
+    const out = await runWithRetries(bin, build, { mb: MAX_MB, minutes: Math.round(MAX_SECONDS / 60), youtube: source !== 'soundcloud' && isYoutubeTarget(target, isLink) });
 
     const line = out.trim().split('\n').filter(Boolean).pop() || '';
     const [title, uploader, duration, url, file] = line.split('\t');
@@ -188,7 +293,7 @@ async function downloadAudio(target, { onSetup, source = 'youtube' } = {}) {
     const ext = path.extname(filePath).toLowerCase();
     return { buffer, mimetype: MIME[ext] || 'audio/mp4', title: title || '', artist: uploader && uploader !== 'NA' ? uploader : '', duration: duration && duration !== 'NA' ? duration : '', url: url && url !== 'NA' ? url : isLink ? target : '' };
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    dltemp.release(dir);
   }
 }
 
@@ -200,10 +305,11 @@ async function downloadVideo(target, { onSetup, noWatermark = false } = {}) {
     bin = await install();
   }
   const isLink = /^https?:\/\//i.test(target);
+  if (isLink) target = cleanLink(target);
   if (isLink) await assertPublicUrl(target);
   const maxMb = Number(process.env.DL_MAX_MB) || MAX_MB;
   const maxSec = Number(process.env.DL_MAX_SECONDS) || 1800;
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tfx-'));
+  const dir = dltemp.makeWorkDir();
   const ff = ffmpegLocation();
   const build = (extra) => [
     '--no-playlist', '--no-simulate', '-q', '--no-warnings',
@@ -222,7 +328,7 @@ async function downloadVideo(target, { onSetup, noWatermark = false } = {}) {
     isLink ? target : `ytsearch1:${target}`,
   ];
   try {
-    const out = await runWithRetries(bin, build, { mb: maxMb, minutes: Math.round(maxSec / 60) });
+    const out = await runWithRetries(bin, build, { mb: maxMb, minutes: Math.round(maxSec / 60), youtube: isYoutubeTarget(target, isLink) });
     const line = out.trim().split('\n').filter(Boolean).pop() || '';
     const [title, uploader, duration, url, file] = line.split('\t');
     const filePath = file && fs.existsSync(file) ? file : fs.readdirSync(dir).map((f) => path.join(dir, f))[0];
@@ -231,7 +337,7 @@ async function downloadVideo(target, { onSetup, noWatermark = false } = {}) {
     const known = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.mkv': 'video/x-matroska', '.mov': 'video/quicktime' };
     return { buffer: fs.readFileSync(filePath), ext, mimetype: known[ext] || 'application/octet-stream', title: title || '', artist: uploader && uploader !== 'NA' ? uploader : '', duration: duration && duration !== 'NA' ? duration : '', url: url && url !== 'NA' ? url : isLink ? target : '' };
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    dltemp.release(dir);
   }
 }
 
@@ -283,4 +389,4 @@ async function titleOf(url) {
   }
 }
 
-module.exports = { downloadVideo, titleOf, downloadAudio, searchFlat, youtubeId, findBinary, install, MAX_MB, MAX_SECONDS };
+module.exports = { explain, classify, cleanLink, downloadVideo, titleOf, downloadAudio, searchFlat, youtubeId, findBinary, install, MAX_MB, MAX_SECONDS };

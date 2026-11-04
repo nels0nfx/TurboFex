@@ -18,15 +18,13 @@ module.exports = {
     const kind = links.instagramKind(link);
     reply(`⏳ Downloading the Instagram ${kind === 'other' ? 'video' : kind}...`).catch(() => {}); // not awaited: the download starts at once
     try {
-      const v = await ytdlp.downloadVideo(link, { onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
+      const v = await ytdlp.downloadVideo(link, { onSetup: () => reply('⏳ *Getting ready, one moment...*') });
       const caption = [`📸 *${(v.title || 'Instagram').slice(0, 100)}*`, v.artist && `👤 ${v.artist}`].filter(Boolean).join('\n');
       if (v.ext === '.mp4') return await sock.sendMessage(jid, { video: v.buffer, mimetype: 'video/mp4', caption }, { quoted: msg });
       return await sock.sendMessage(jid, { document: v.buffer, mimetype: v.mimetype, fileName: `instagram${v.ext}`, caption }, { quoted: msg });
     } catch (err) {
       console.error('ig failed:', err.message);
-      if (['TOO_LONG', 'TOO_BIG', 'BLOCKED'].includes(err.code)) return reply(`⚠️ ${err.message}`);
-      const storyNote = kind === 'story' ? '\nStories need a logged-in Instagram: the owner can add cookies with the *ytcookies* command.' : '';
-      return reply(`⚠️ I could not download that.${kind === 'story' || kind === 'other' ? ' The account may be private, the story may have expired, or it is a picture-only post.' : ' The account may be private or the post removed.'}${isOwner ? `\nReason: ${String(err.message).slice(0, 120)}${storyNote}` : ''}`);
+      return reply(ytdlp.explain(err, { isOwner, prefix, what: kind === 'story' ? 'that story' : 'that Instagram post' }));
     }
   },
 };

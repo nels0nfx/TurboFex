@@ -157,7 +157,7 @@ test('votekick: a vote, no double votes, no admins, and the removal at the neede
   assert.match(last(m), /Admins cannot be voted out/);
   m = mention(mk({ jid: j2, isBotAdmin: false }), target);
   await cmd('votekick').run(m.ctx);
-  assert.match(last(m), /must be a group admin/);
+  assert.match(last(m), /admin rights/);
   m = mention(mk({ jid: j2, myJid: E1 }), E1);
   await cmd('votekick').run(m.ctx);
   assert.match(last(m), /yourself/);
@@ -264,7 +264,7 @@ test('announce tags everybody quietly, quiettime sets and clears the night times
   assert.match(m.sent[0].c.text, /ANNOUNCEMENT[\s\S]*Meeting tonight at 8pm/);
   assert.strictEqual(m.sent[0].c.mentions.length, 10 + 0, 'all members (the sender is a member)');
   assert.ok(!/@27811110005/.test(m.sent[0].c.text), 'no long list of names');
-  assert.match(last(await run('announce', '')), /Usage/);
+  assert.match(last(await run('announce', '')), /Announcement[\s\S]*Example/);
   assert.match(last(await run('announce', 'x'.repeat(1001))), /too long/);
 
   const jid = newGroup();
@@ -727,7 +727,7 @@ test('twotruths: needs an admin bot, hides the message, mixes the statements, vo
   const jid = newGroup();
   assert.match(last(await run('twotruths', '', { jid })), /Two truths and a lie/);
   assert.match(last(await run('twotruths', 'one | two', { jid })), /Two truths and a lie/);
-  assert.match(last(await run('twotruths', 'a | b | c', { jid, isBotAdmin: false })), /must be a group admin/);
+  assert.match(last(await run('twotruths', 'a | b | c', { jid, isBotAdmin: false })), /admin rights/);
   let m = await run('twotruths', 'I can swim | I have a twin | I have been to Mars', { jid });
   assert.deepStrictEqual(m.sent[0].c.delete.id, 'M1', 'the message with the answer is deleted');
   const board = m.sent[1].c.text;
@@ -1114,7 +1114,7 @@ printf 'Title\tSinger\t3:00\thttps://x/y\t%s\n' "$file"
   delete require.cache[require.resolve('../core/ytdlp')];
   const dl = require('../core/ytdlp');
   try {
-    const a = await dl.downloadAudio('https://8.8.8.8/song');
+    const a = await dl.downloadAudio('some song');
     assert.strictEqual(a.mimetype, 'audio/mp4');
     assert.strictEqual(a.title, 'Title');
     const lines1 = fs.readFileSync(log, 'utf8').trim().split('\n');
@@ -1127,14 +1127,14 @@ printf 'Title\tSinger\t3:00\thttps://x/y\t%s\n' "$file"
     assert.match(args, /--socket-timeout 20/);
     // the second download goes straight to the way that worked
     fs.writeFileSync(log, '');
-    const b = await dl.downloadAudio('https://8.8.8.8/song2');
+    const b = await dl.downloadAudio('some song2');
     assert.ok(b.buffer.length === 3000);
     const lines2 = fs.readFileSync(log, 'utf8').trim().split('\n');
     assert.strictEqual(lines2.length, 1, 'one call only: no version check, no failed tries');
     assert.match(lines2[0], /player_client=android_vr/);
     // video: a ready-made mp4 first, H.264 before anything else
     fs.writeFileSync(log, '');
-    const v = await dl.downloadVideo('https://8.8.8.8/video');
+    const v = await dl.downloadVideo('some video');
     assert.strictEqual(v.ext, '.mp4');
     const vArgs = fs.readFileSync(log, 'utf8').trim().split('\n').pop();
     assert.match(vArgs, /-f b\[height<=720\]\[ext=mp4\]\//);

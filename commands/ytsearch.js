@@ -43,7 +43,7 @@ module.exports = {
       const item = list.items[Number(args[1]) - 1];
       if (!item) return reply(`Pick a number from 1 to ${list.items.length}.`);
       reply(`⏳ Downloading ${kind === 'video' ? 'the video' : 'the audio'}: *${item.title.slice(0, 70)}*`).catch(() => {}); // not awaited: the download starts at once
-      const onSetup = () => reply('⏳ Setting up the downloader (first time only, about a minute)...');
+      const onSetup = () => reply('⏳ *Getting ready, one moment...*');
       try {
         if (kind === 'video') {
           const v = await ytdlp.downloadVideo(item.url, { onSetup });
@@ -55,9 +55,7 @@ module.exports = {
         return await sock.sendMessage(jid, { audio: a.buffer, mimetype: a.mimetype }, { quoted: msg });
       } catch (err) {
         console.error('ytsearch download failed:', err.message);
-        if (['TOO_LONG', 'TOO_BIG', 'BLOCKED'].includes(err.code)) return reply(`⚠️ ${err.message}`);
-        if (err.code === 'BOT_BLOCK') return reply(isOwner ? `⚠️ YouTube blocked this server.\n🍪 Fix: send a cookies.txt with *${prefix}ytcookies*.` : '⚠️ YouTube is not answering right now. Try again later.');
-        return reply(`⚠️ I could not download that.${isOwner ? `\nReason: ${String(err.message).slice(0, 120)}` : ' Try another result.'}`);
+        return reply(ytdlp.explain(err, { isOwner, prefix, what: 'that result' }));
       }
     }
     if (['video', 'audio', 'mp3', 'dl'].includes(first)) return reply(`Say which result: ${prefix}ytsearch ${first} 2`);
@@ -67,7 +65,7 @@ module.exports = {
     await reply('🔎 Searching YouTube...');
     let items = [];
     try {
-      items = await ytdlp.searchFlat(rest, { limit: 5, onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') });
+      items = await ytdlp.searchFlat(rest, { limit: 5, onSetup: () => reply('⏳ *Getting ready, one moment...*') });
     } catch (err) {
       try {
         items = (await require('../core/ytsearch').search(rest, 5)).map((r) => ({ id: r.id, title: r.title, channel: r.channel, duration: 0, durationText: r.duration, url: `https://www.youtube.com/watch?v=${r.id}` }));

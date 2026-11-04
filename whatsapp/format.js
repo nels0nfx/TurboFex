@@ -27,8 +27,27 @@ const applies = (cmd) => !!mode(cmd);
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // isCmd(name) -> true when name is a real command (only those are put in monospace)
+// A reply that is already written with WhatsApp formatting still gets the TurboFex bullet: data lines ("*Label:* value", also
+// after an emoji) and command lines (`.cmd` - hint) start with "▸". The first line (the title), code blocks, numbered lists,
+// tree menus and lines that already have a bullet are never touched. This keeps every command in the same style.
+function bulletize(text, prefix) {
+  const p = esc(prefix);
+  const label = new RegExp(`^(?:${EMOJI}\\s+)?\\*[^*\\n]{1,32}:\\*\\s+\\S`, 'u');
+  const command = new RegExp(`^\`${p}[a-z0-9]{2,20}[\\s\`]`, 'i');
+  let inCode = false;
+  return text
+    .split('\n')
+    .map((line, i) => {
+      if (/^\s*```/.test(line)) inCode = !inCode;
+      if (inCode || i === 0 || /^\s*(▸|[┃┏┗┌└│├]|[•\-]\s)/.test(line) || /^\s*\*?\d+[.)]/.test(line)) return line;
+      return label.test(line) || command.test(line) ? `▸ ${line}` : line;
+    })
+    .join('\n');
+}
+
 function format(text, isCmd, prefix, level = 'full') {
-  if (typeof text !== 'string' || !text.trim() || ALREADY.test(text) || text.length > 3500) return text;
+  if (typeof text !== 'string' || !text.trim() || text.length > 3500) return text;
+  if (ALREADY.test(text)) return level === 'full' ? bulletize(text, prefix) : text;
   if (level === 'system' && !SYSTEM_START.test(text)) return text;
 
   const lines = text.split('\n');

@@ -56,7 +56,7 @@ module.exports = [
       if (w === 'on' || w === 'off') {
         store.update(jid, (x) => { x.captcha = w === 'on'; });
         await reply(`✅ *Verification is now ${state(w === 'on')}.*${w === 'on' ? `\n_Every new member gets a sum to answer within ${g.captchaSeconds} seconds, or is removed._` : ''}`);
-        if (w === 'on' && !isBotAdmin) await reply('⚠️ *Note:* I must be a group admin to remove people who do not answer.');
+        if (w === 'on' && !isBotAdmin) await reply('⚠️ *I need admin rights for this to work.*\n▸ Make me a group admin so I can remove people who do not answer.');
         return;
       }
       if (w === 'time') {
@@ -78,7 +78,7 @@ module.exports = [
       if (['off', 'lock', 'kick'].includes(w)) {
         store.update(jid, (x) => { x.antiraid = w; });
         await reply(`✅ *Raid protection is now ${w.toUpperCase()}.*${w === 'lock' ? '\n_A burst of joins locks the group (only admins can write)._' : w === 'kick' ? '\n_A burst of joins locks the group and removes the new members._' : ''}`);
-        if (w !== 'off' && !isBotAdmin) await reply('⚠️ *Note:* I must be a group admin to lock the group and remove people.');
+        if (w !== 'off' && !isBotAdmin) await reply('⚠️ *I need admin rights for this to work.*\n▸ Make me a group admin so I can lock the group and remove people.');
         return;
       }
       if (w === 'joins' || w === 'seconds') {
@@ -117,7 +117,7 @@ module.exports = [
         await sock.sendMessage(jid, { pin: key, type: 1, time });
         await reply(`📌 *Pinned for ${time === 86400 ? '24 hours' : time === 604800 ? '7 days' : '30 days'}.*`);
       } catch (err) {
-        await reply('⚠️ *I could not pin that message.* I must be a group admin.');
+        await reply('⚠️ *I could not pin that message.*\n▸ Make me a group admin and try again.');
       }
     },
   },

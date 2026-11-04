@@ -55,7 +55,7 @@ const cmpVersion = (a, b) => (isNewer(a, b) ? 1 : isNewer(b, a) ? -1 : 0);
 
 function reasonText(reason) {
   if (reason === 'no-repo') {
-    return 'No update source is set yet. The bot author must put the GitHub repo name in update.json.';
+    return 'Updates are not available right now.';
   }
   return reason;
 }

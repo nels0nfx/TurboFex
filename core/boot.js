@@ -47,6 +47,11 @@ async function start() {
     process.exit(1);
   }
 
+  // Leftover temporary files of old downloads are removed now and every hour, so the disk never fills up
+  const dltemp = require('./dltemp');
+  dltemp.cleanStale(0);
+  setInterval(() => dltemp.cleanStale(), 60 * 60 * 1000).unref();
+
   // Look for a new version BEFORE the bot loads
   const { autoUpdateOnStart } = require('./updater');
   const updated = await autoUpdateOnStart();

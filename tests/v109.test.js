@@ -211,10 +211,12 @@ test('amute remind: the owner/admin picks how many minutes before; wrong numbers
   assert.match(last(await run('amute', 'remind 999', { jid })), /How many minutes/);
   assert.match(last(await run('amute', 'remind abc', { jid })), /How many minutes/);
   const ok = last(await run('amute', 'remind 15', { jid }));
-  assert.match(ok, /Reminder set\.\* 15 minutes before/);
+  assert.match(ok, /Reminder set successfully/);
+  assert.match(ok, /notify the group 15 minutes before the scheduled change/);
+  assert.ok(!/tag|names|everybody/i.test(ok), 'no inner details in the reply');
   assert.strictEqual(am().remind, 15);
   assert.match(last(await run('amute', '', { jid })), /Reminder:\* \*15 minutes\* before/);
-  assert.match(last(await run('amute', 'close 22:00', { jid })), /remind everybody 15 minutes before/);
+  assert.match(last(await run('amute', 'close 22:00', { jid })), /notify the group 15 minutes before/);
   await run('amute', 'remind 1', { jid });
   assert.match(last(await run('amute', '', { jid })), /\*1 minute\* before/);
   await run('amute', 'remind off', { jid });

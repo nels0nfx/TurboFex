@@ -1,5 +1,6 @@
 // play: always sends AUDIO. A song name or a link from almost any site (YouTube, TikTok, SoundCloud, Instagram,
 // Facebook... anything the downloader supports) or a direct link to an audio file.
+const ytdlp = require('../core/ytdlp');
 const { downloadAudio, titleOf, searchFlat, youtubeId, MAX_MB, MAX_SECONDS } = require('../core/ytdlp');
 const ytsearch = require('../core/ytsearch');
 const songmatch = require('../core/songmatch');
@@ -26,7 +27,6 @@ module.exports = {
   description: 'play <artist and song, or a link>: sends the audio (no cookies needed; YouTube, TikTok, SoundCloud and more)',
   async run({ sock, jid, msg, rest, reply, prefix, isOwner }) {
     if (!rest) return reply(`Type a song name or a link.\n${prefix}play calm down\n${prefix}play https://youtu.be/...`);
-    const nice = (err, fallback) => `⚠️ ${fallback}${isOwner ? `\nReason: ${String(err.message).slice(0, 140)}` : ''}`;
 
     // a direct link to an audio file
     if (/^https?:\/\/\S+$/i.test(rest) && DIRECT_AUDIO.test(rest)) {
@@ -44,8 +44,8 @@ module.exports = {
       }
     }
 
-    reply('⏳ Getting your audio, one moment...').catch(() => {}); // not awaited: the download starts at once
-    const setup = { onSetup: () => reply('⏳ Setting up the downloader (first time only, about a minute)...') };
+    reply('⏳ *Getting your audio, one moment...*').catch(() => {}); // not awaited: the download starts at once
+    const setup = { onSetup: () => reply('⏳ *Getting ready, one moment...*') };
     const isLink = /^https?:\/\//i.test(rest);
     const log = (what, err) => console.error(`Play (${what}) failed:`, err.message);
     let problem;
@@ -127,8 +127,9 @@ module.exports = {
     }
 
     if (problem?.code === 'BOT_BLOCK' || (!picks.length && !isLink)) {
-      return reply(isOwner ? `⚠️ I could not get that song. YouTube blocks this server and no other source had it.\n🍪 Optional fix: send a cookies.txt with *${prefix}ytcookies*. (You can also set PIPED_INSTANCES to your own Piped server.)` : '⚠️ I could not find that song right now. Please try another name, add the artist, or try again later.');
+      return reply(isOwner ? `⚠️ *I could not get that song.*\n▸ YouTube blocks this server and no other source had it.\n▸ *Fix:* send a cookies.txt with \`${prefix}ytcookies\`.` : '⚠️ *I could not find that song right now.*\n▸ Try another name, add the artist, or try again later.');
     }
-    return reply(nice(problem || new Error('no match'), 'I could not find that exact song. Try the artist and the title, for example: play rema calm down'));
+    if (problem && ['NO_SPACE', 'TOO_LONG', 'TOO_BIG', 'TIMEOUT'].includes(problem.code)) return reply(ytdlp.explain(problem, { isOwner, prefix, what: 'that song' }));
+    return reply(`⚠️ *I could not find that exact song.*\n▸ Try the artist and the title, for example \`${prefix}play rema calm down\`.`);
   },
 };

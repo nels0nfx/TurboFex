@@ -48,7 +48,7 @@ function dueRemind(g, kind, p) {
   return left;
 }
 
-// the text of that reminder (it tags everybody without listing names: see the job below)
+// the text of that reminder (the group is notified with a hidden tag: see the job below)
 function remindText(kind, at, left) {
   const mins = `${left} minute${left === 1 ? '' : 's'}`;
   return kind === 'mute'

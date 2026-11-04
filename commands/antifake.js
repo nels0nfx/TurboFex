@@ -26,6 +26,6 @@ module.exports = {
       grp.antifake = [...new Set(codes)];
     });
     await reply(`✅ New members must have a number starting with: +${[...new Set(codes)].join(', +')}`);
-    if (!isBotAdmin) await reply('⚠️ Note: I must be a group admin to remove people.');
+    if (!isBotAdmin) await reply('⚠️ *I need admin rights for this to work.*\n▸ Make me a group admin so I can remove people.');
   },
 };

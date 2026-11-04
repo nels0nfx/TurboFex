@@ -34,7 +34,7 @@ module.exports = {
         }
       }
       return reply(
-        `⚠️ ${tag} has ${count}/${max} warnings, but I could not remove them (I must be admin, and they can't be the group owner).`,
+        `⚠️ *${tag} has ${count}/${max} warnings.*\n▸ I could not remove them. I need admin rights, and the group owner cannot be removed.`,
         { mentions: [target] }
       );
     }

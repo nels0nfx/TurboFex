@@ -4,7 +4,7 @@ module.exports = {
   name: 'hidetag',
   category: 'group',
   aliases: ['tag'],
-  description: 'Send a message that notifies everyone without listing names (admins only)',
+  description: 'Send a message that notifies everyone in the group (admins only)',
   groupOnly: true,
   adminOnly: true,
   async run({ sock, jid, msg, rest, reply, groupMetadata, prefix, cmdName }) {

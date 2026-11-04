@@ -169,7 +169,7 @@ module.exports = [
         try {
           jsQR = require('jsqr');
         } catch (err) {
-          return ctx.reply(ctx.isOwner ? '⚠️ *The QR reader is not installed.* Run `npm install` on the server and restart the bot.' : media.NOT_HERE);
+          return ctx.reply(ctx.isOwner ? '⚠️ *The QR reader is not available on this server.*\n▸ Please try again later.' : media.NOT_HERE);
         }
         const { data, info } = await media.loadSharp()(buffer).rotate().resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
         const code = jsQR(new Uint8ClampedArray(data), info.width, info.height);

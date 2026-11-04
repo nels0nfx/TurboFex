@@ -56,7 +56,7 @@ async function kick(sock, group, jid, why) {
     await sock.groupParticipantsUpdate(group, [jid], 'remove');
     await sock.sendMessage(group, { text: `🚪 @${num(jid)} was removed: ${why}`, mentions: [jid] });
   } catch (err) {
-    await sock.sendMessage(group, { text: `⚠️ I could not remove @${num(jid)}. I must be a group admin.`, mentions: [jid] }).catch(() => {});
+    await sock.sendMessage(group, { text: `⚠️ *I could not remove @${num(jid)}.*\n▸ Make me a group admin and try again.`, mentions: [jid] }).catch(() => {});
   }
 }
 
