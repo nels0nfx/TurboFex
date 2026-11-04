@@ -65,6 +65,7 @@ function getGroup(jid) {
   if (!Array.isArray(g.antifake)) g.antifake = [];
   if (!g.filters || typeof g.filters !== 'object' || Array.isArray(g.filters)) g.filters = {};
   if (!g.autoMute || typeof g.autoMute !== 'object') g.autoMute = { mute: null, unmute: null };
+  if (!Number.isInteger(g.autoMute.remind) || g.autoMute.remind < 0) g.autoMute.remind = 0; // minutes before closing/opening to remind everybody (0 = no reminder)
   if (!g.antimedia || typeof g.antimedia !== 'object') g.antimedia = {}; // { sticker, image, video, audio, document }: true = not allowed
   if (!Number.isInteger(g.slowmode) || g.slowmode < 0) g.slowmode = 0; // seconds between two messages of a member
   if (typeof g.rules !== 'string') g.rules = null;

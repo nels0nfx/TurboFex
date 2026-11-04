@@ -1,4 +1,4 @@
-// Group tools 2: disable, enable, captcha, antiraid, autosticker, purge, pin, unpin
+// Group tools 2: disable, enable, captcha, antiraid, autosticker, pin, unpin (purge is now part of inactive)
 const store = require('../whatsapp/store');
 const activity = require('../whatsapp/activity');
 const { getContextInfo, num, participantIds } = require('../whatsapp/utils');
@@ -101,33 +101,6 @@ module.exports = [
       if (w !== 'on' && w !== 'off') return reply(`🖼️ *Autosticker*\n*Status:* ${state(store.getGroup(jid).autosticker)}\n_Every picture or short video sent here is also sent as a sticker._\n\n▸ \`${prefix}autosticker on\` / \`${prefix}autosticker off\``);
       store.update(jid, (x) => { x.autosticker = w === 'on'; });
       await reply(`✅ *Autosticker is now ${state(w === 'on')}.*`);
-    },
-  },
-  {
-    ...base,
-    name: 'purge',
-    botAdminRequired: true,
-    description: 'Remove the members who never wrote a message: purge shows them, purge confirm removes them (admins only)',
-    async run({ sock, jid, args, reply, prefix, groupMetadata, botIds }) {
-      if (activity.total(jid) < 100) return reply('😴 *I have not counted enough messages yet* (at least 100) to know who is silent. Try again later.');
-      const counts = activity.get(jid);
-      const quiet = groupMetadata.participants.filter((p) => !p.admin && !participantIds(p).some((i) => counts[i] || botIds.includes(i)));
-      if (!quiet.length) return reply('✅ *Everybody has written at least once.* Nobody to remove.');
-      if ((args[0] || '').toLowerCase() !== 'confirm') {
-        return reply(`🧹 *Purge*\n${quiet.length} member(s) never wrote a message since I started counting (admins are never listed).\n\n▸ \`${prefix}inactive\` – see who they are\n▸ \`${prefix}purge confirm\` – remove up to 25 of them now`, { mentions: [] });
-      }
-      const batch = quiet.slice(0, 25);
-      let done = 0;
-      for (const p of batch) {
-        try {
-          await sock.groupParticipantsUpdate(jid, [p.id], 'remove');
-          done += 1;
-        } catch (err) {
-          break; // not an admin, or WhatsApp said stop
-        }
-        await sleep(1500); // slowly, so WhatsApp does not mind
-      }
-      await reply(`🧹 *Purge done:* ${done} member(s) removed.${quiet.length > done ? `\n_${quiet.length - done} still to go: run_ \`${prefix}purge confirm\` _again._` : ''}`);
     },
   },
   {

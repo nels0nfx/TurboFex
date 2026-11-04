@@ -24,3 +24,5 @@ tests/market.test.js
 tests/luck.test.js
 tests/engage.test.js
 tests/v043.test.js
+commands/setpp.js
+commands/aunmute.js

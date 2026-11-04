@@ -32,6 +32,30 @@ function dueAuto(g, kind, p) {
   return g.autoMute[kind === 'mute' ? 'ranMute' : 'ranUnmute'] !== slotKey(p, at);
 }
 
+// the reminder BEFORE the group closes or opens ("the group closes in 10 minutes"). It is due from the moment
+// `remind` minutes are left until the event, and it is late-proof like the other jobs (GRACE_MIN), but never sent
+// after the event. The time it was sent is saved, so a restart cannot send it twice.
+const REMIND_KEEP_MS = 20 * 60 * 60 * 1000;
+function dueRemind(g, kind, p) {
+  const am = g.autoMute;
+  const at = am && am[kind];
+  if (!at || !Number.isInteger(am.remind) || am.remind < 1) return 0;
+  const left = (toMin(at) - toMin(p.hhmm) + 1440) % 1440; // minutes until the event
+  const pastReminderTime = am.remind - left; // how long ago the reminder time was
+  if (!(left > 0 && pastReminderTime >= 0 && pastReminderTime <= GRACE_MIN)) return 0;
+  const ran = am[kind === 'mute' ? 'remMute' : 'remUnmute'];
+  if (ran && Date.now() - ran < REMIND_KEEP_MS) return 0;
+  return left;
+}
+
+// the text of that reminder (it tags everybody without listing names: see the job below)
+function remindText(kind, at, left) {
+  const mins = `${left} minute${left === 1 ? '' : 's'}`;
+  return kind === 'mute'
+    ? `⏰ *Heads up!*\n🔒 *The group closes in ${mins}* _(at ${at})_.\n_Please finish what you are saying._`
+    : `⏰ *Heads up!*\n🔓 *The group opens in ${mins}* _(at ${at})_.\n_Get ready to chat!_`;
+}
+
 // sends the text of a scheduled item, or runs its command as the owner
 async function runItem(sock, item) {
   try {
@@ -79,6 +103,15 @@ async function tick(sock) {
     if (dueAuto(g, 'unmute', p)) jobs.push({ jid, g, mark: 'ranUnmute', at: g.autoMute.unmute, mode: 'not_announcement', text: '🔓 Group opened automatically. Everyone can send messages.' });
   });
 
+  // the reminders before closing / opening
+  const reminders = [];
+  store.forEachGroup((jid, g) => {
+    for (const kind of ['mute', 'unmute']) {
+      const left = dueRemind(g, kind, p);
+      if (left) reminders.push({ jid, g, kind, left });
+    }
+  });
+
   // Scheduled messages and commands (!schedule): every day / weekdays / chosen days / monthly / once
   for (const item of [...store.schedules()]) {
     if (!dueNow(item, p)) continue;
@@ -86,6 +119,22 @@ async function tick(sock) {
     store.touchSchedules();
     await runItem(sock, item);
     if (item.once || item.repeat?.kind === 'once') store.removeSchedule(item.id);
+  }
+
+  for (const r of reminders) {
+    const mark = r.kind === 'mute' ? 'remMute' : 'remUnmute';
+    try {
+      r.g.autoMute[mark] = Date.now(); // remembered before it is sent
+      store.update(r.jid, () => {});
+      const info = await require('../whatsapp/metadata').getMeta(sock, r.jid); // loaded late: no circular import
+      const everyone = (info?.participants || []).map((m) => m.id);
+      if (!everyone.length) throw new Error('no member list');
+      await sock.sendMessage(r.jid, { text: remindText(r.kind, r.g.autoMute[r.kind], r.left), mentions: everyone }); // everybody is notified, no numbers are shown
+    } catch (err) {
+      r.g.autoMute[mark] = null; // it did not work: tried again in the next minute (within the grace time)
+      store.update(r.jid, () => {});
+      console.log(`Reminder before closing/opening failed for ${r.jid}: ${err.message}`);
+    }
   }
 
   for (const job of jobs) {
@@ -159,4 +208,4 @@ function stop() {
   timer = null;
 }
 
-module.exports = { start, stop, tick, checkReminders, checkIntervals, checkRealms };
+module.exports = { start, stop, tick, checkReminders, checkIntervals, checkRealms, dueRemind, remindText };

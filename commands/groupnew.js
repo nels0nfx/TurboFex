@@ -1,4 +1,4 @@
-// New group commands (v1.0.7): lockdown, votekick, groupstats, catchup, topwarned, swearjar, announce, quiettime, welcomedm, weeklyrecap
+// New group commands (v1.0.7): lockdown, votekick, groupstats, catchup, swearjar, announce, welcomedm, weeklyrecap (topwarned is now part of warnings, quiettime part of amute)
 const store = require('../whatsapp/store');
 const stats = require('../whatsapp/groupstats');
 const welcomedm = require('../whatsapp/welcomedm');
@@ -176,19 +176,6 @@ module.exports = [
   },
 
   {
-    ...adminBase,
-    name: 'topwarned',
-    aliases: ['warnboard'],
-    description: 'The members with the most warnings (admins only)',
-    async run({ jid, reply, groupMetadata: meta }) {
-      const list = store.allWarnings(jid).sort((a, b) => b.count - a.count).slice(0, 10);
-      if (!list.length) return reply('✨ *Nobody has a warning.* A clean group!');
-      const max = store.getLimit ? store.getLimit(jid) : 3;
-      return reply(`⚠️ *Most warnings*\n\n${list.map((w, i) => `${medals[i] || '▫️'} @${num(w.jid)} - ${w.count}/${max}`).join('\n')}`, { mentions: list.map((w) => jidFor(meta, num(w.jid))) });
-    },
-  },
-
-  {
     ...base,
     name: 'swearjar',
     aliases: ['jar'],
@@ -223,36 +210,6 @@ module.exports = [
       if (text.length > 1000) return reply(`⚠️ *That is too long* (${text.length} characters, the limit is 1000).`);
       const everyone = (meta?.participants || []).map((p) => p.id);
       await sock.sendMessage(jid, { text: `📢 *ANNOUNCEMENT*\n\n${text}\n\n_- @${num(myJid)}_`, mentions: [...new Set([...everyone, myJid])] });
-    },
-  },
-
-  {
-    ...adminBase,
-    name: 'quiettime',
-    aliases: ['nightmode'],
-    botAdminRequired: true,
-    description: 'Close the group every night and open it again in the morning: quiettime 22:00 06:00 (quiettime off)',
-    async run({ jid, args, reply, prefix }) {
-      const w = (args[0] || '').toLowerCase();
-      const g = store.getGroup(jid);
-      if (w === 'off') {
-        store.update(jid, (grp) => {
-          grp.autoMute.mute = null;
-          grp.autoMute.unmute = null;
-        });
-        return reply('✅ *Quiet time is OFF.* The group no longer closes by itself.');
-      }
-      const from = clock.parseHHMM(args[0]);
-      const to = clock.parseHHMM(args[1]);
-      if (!from || !to || from === to) {
-        const now = g.autoMute.mute && g.autoMute.unmute ? `*ON:* closed from *${g.autoMute.mute}* to *${g.autoMute.unmute}*` : '*OFF*';
-        return reply(`🌙 *Quiet time* is ${now} _(${clock.zone()} time)_\n*Set it:* \`${prefix}quiettime 22:00 06:00\`\n*Stop it:* \`${prefix}quiettime off\``);
-      }
-      store.update(jid, (grp) => {
-        grp.autoMute.mute = from;
-        grp.autoMute.unmute = to;
-      });
-      return reply(`🌙 *Quiet time is ON.* The group closes at *${from}* and opens at *${to}* every day _(${clock.zone()} time)_.`);
     },
   },
 

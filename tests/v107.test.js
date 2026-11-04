@@ -25,7 +25,8 @@ const A = require('../core/realm/aurum');
 const sharp = require('sharp');
 
 const all = [].concat(...fs.readdirSync(path.join(__dirname, '..', 'commands')).filter((f) => f.endsWith('.js')).map((f) => require(`../commands/${f}`)));
-const cmd = (n) => all.find((c) => c.name === n);
+// a name or an alias (v1.0.9 merged topwarned into warnings, quiettime into amute and spinwheel into choose)
+const cmd = (n) => all.find((c) => c.name === n || (c.aliases || []).includes(n));
 
 const NEW = {
   group: ['lockdown', 'votekick', 'groupstats', 'catchup', 'topwarned', 'swearjar', 'announce', 'quiettime', 'welcomedm', 'weeklyrecap'],
@@ -70,6 +71,7 @@ async function run(name, text = '', over = {}) {
   const m = mk(over);
   m.ctx.rest = text;
   m.ctx.args = text.split(/\s+/).filter(Boolean);
+  m.ctx.cmdName = over.cmdName || name; // the handler gives the typed name (an alias too)
   await cmd(name).run(m.ctx);
   return m;
 }
@@ -269,8 +271,8 @@ test('announce tags everybody quietly, quiettime sets and clears the night times
   assert.match(last(await run('quiettime', '', { jid })), /OFF/);
   assert.match(last(await run('quiettime', '22:00 06:00', { jid })), /closes at \*22:00\* and opens at \*06:00\*/);
   assert.deepStrictEqual([store.getGroup(jid).autoMute.mute, store.getGroup(jid).autoMute.unmute], ['22:00', '06:00']);
-  assert.match(last(await run('quiettime', '', { jid })), /closed from \*22:00\* to \*06:00\*/);
-  assert.match(last(await run('quiettime', '25:00 06:00', { jid })), /Usage|Set it/);
+  assert.match(last(await run('quiettime', '', { jid })), /Closes at:\* \*22:00\*[\s\S]*Opens at:\* \*06:00\*/);
+  assert.match(last(await run('quiettime', '25:00 06:00', { jid })), /not a time/);
   await run('quiettime', 'off', { jid });
   assert.deepStrictEqual([store.getGroup(jid).autoMute.mute, store.getGroup(jid).autoMute.unmute], [null, null]);
 });

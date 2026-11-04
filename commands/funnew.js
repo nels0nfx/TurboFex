@@ -1,4 +1,4 @@
-// New fun and games (v1.0.7): neverhaveiever, twotruths, hotseat, wordchain, storychain, spinwheel, memorygame, pet, fish, battleship
+// New fun and games (v1.0.7): neverhaveiever, twotruths, hotseat, wordchain, storychain, memorygame, pet, fish, battleship (spinwheel is now part of choose)
 const games = require('../whatsapp/play');
 const jsonstore = require('../core/jsonstore');
 const levels = require('../whatsapp/levels');
@@ -211,34 +211,6 @@ module.exports = [
       s.lines.push({ who: me, text });
       s.at = now;
       return reply(`✅ *Added* (sentence ${s.lines.length}).\n_...${text}_`);
-    },
-  },
-
-  {
-    ...fun,
-    name: 'spinwheel',
-    aliases: ['wheel', 'spinthewheel'],
-    description: 'Spin a wheel to choose: spinwheel pizza, burgers, sushi',
-    async run({ sock, jid, msg, rest, reply, prefix }) {
-      const items = rest.split(/[,\n]+/).map((x) => x.trim()).filter(Boolean);
-      if (items.length < 2) return reply(`🎡 *Usage:* \`${prefix}spinwheel pizza, burgers, sushi\`\n_Separate the choices with commas._`);
-      if (items.length > 20) return reply('⚠️ *The wheel can hold 20 choices.*');
-      const winner = pickOne(items);
-      const first = await sock.sendMessage(jid, { text: '🎡 *Spinning...*' }, { quoted: msg });
-      for (const frame of [pickOne(items), pickOne(items), pickOne(items)]) {
-        await pause(700);
-        try {
-          await sock.sendMessage(jid, { text: `🎡 *Spinning...*\n➡️ ${frame}`, edit: first?.key });
-        } catch (err) {
-          break; // the message cannot be edited: only the result is sent
-        }
-      }
-      await pause(700);
-      try {
-        return await sock.sendMessage(jid, { text: `🎡 *The wheel stopped!*\n\n🎉 *${winner}*`, edit: first?.key });
-      } catch (err) {
-        return reply(`🎡 *The wheel stopped!*\n\n🎉 *${winner}*`);
-      }
     },
   },
 

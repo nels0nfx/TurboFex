@@ -1,4 +1,4 @@
-// More group tools: antibot, antitag, tagadmins, exportrank, silence, unsilence, mutelist
+// More group tools: antibot, antitag, exportrank, silence, unsilence, mutelist (tagadmins is now part of admins)
 const store = require('../whatsapp/store');
 const levels = require('../whatsapp/levels');
 const names = require('../whatsapp/names');
@@ -78,18 +78,6 @@ module.exports = [
         return reply(`✅ *Anti-tag limit set to ${n}.* _A message that tags ${n} or more people counts as mass tagging._`);
       }
       await setActionMode(ctx, { key: 'antitagMode', label: `Anti-tag (limit ${store.getGroup(jid).antitagLimit} people)`, trigger: 'tags too many people in one message' });
-    },
-  },
-  {
-    ...base,
-    name: 'tagadmins',
-    aliases: ['admintag', 'calladmins'],
-    description: 'Tag all the admins of the group (add a message if you like)',
-    async run({ sock, jid, rest, reply }) {
-      const info = await meta.getMeta(sock, jid);
-      const admins = (info?.participants || []).filter((p) => p.admin).map((p) => p.id);
-      if (!admins.length) return reply('⚠️ I could not find the admins of this group.');
-      await sock.sendMessage(jid, { text: `📢 *Admins*${rest ? `\n_${rest.slice(0, 500)}_` : ''}\n\n${admins.map((a) => `@${num(a)}`).join(' ')}`, mentions: admins });
     },
   },
   {
