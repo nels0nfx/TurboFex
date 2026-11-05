@@ -1,6 +1,7 @@
 const store = require('../whatsapp/store');
 const { setActionMode } = require('../whatsapp/actions');
 const { libraryKnows } = require('../whatsapp/groupstatus');
+const protect = require('../whatsapp/protect');
 
 module.exports = [
   {
@@ -10,7 +11,13 @@ module.exports = [
     groupOnly: true,
     adminOnly: true,
     async run(ctx) {
+      if ((ctx.args[0] || '').toLowerCase() === 'debug') {
+        if (!ctx.isOwner) return ctx.reply('⚠️ *Only the bot owner can use that.*');
+        protect.startDebug();
+        return ctx.reply('🔎 *Anti group status check is on for 10 minutes.*\n▸ Ask a member who is not an admin to post a group status. I will send you a short report in your own chat.');
+      }
       await setActionMode(ctx, { key: 'antigstatusMode', label: 'Anti group status', trigger: 'posts a group status' });
+      if (store.getGroup(ctx.jid).antigstatusMode !== 'off' && libraryKnows('groupStatusMessageV2')) await ctx.reply('▸ *Detection:* ready. Admins and the owner are never affected.');
       if (store.getGroup(ctx.jid).antigstatusMode !== 'off' && !libraryKnows('groupStatusMessageV2')) {
         await ctx.reply(ctx.isOwner ? '⚠️ *Anti group status cannot work on this server yet.*\n▸ The WhatsApp library is too old to see group statuses. Update the bot packages, then restart.' : '⚠️ *This protection is saved, but it is not active right now.*\n▸ The bot owner has been asked to fix it.');
       }

@@ -119,6 +119,31 @@ function findBadWord(text, words) {
   );
 }
 
+// "antigstatus debug" (owner): for 10 minutes the owner gets the SHAPE (only the names of the parts, never the content) of the
+// messages that look unusual, so a group status that is not recognised can be seen and fixed.
+const debug = { until: 0, left: 0 };
+const COMMON = new Set(['conversation', 'extendedTextMessage', 'imageMessage', 'videoMessage', 'audioMessage', 'stickerMessage', 'documentMessage', 'reactionMessage', 'contactMessage', 'locationMessage', 'messageContextInfo', 'senderKeyDistributionMessage', 'protocolMessage', 'pollCreationMessage', 'pollUpdateMessage', 'ephemeralMessage', 'viewOnceMessage', 'viewOnceMessageV2']);
+function startDebug() {
+  debug.until = Date.now() + 10 * 60 * 1000;
+  debug.left = 8;
+}
+function shapeOf(obj, depth = 4, pre = '') {
+  if (!obj || typeof obj !== 'object' || depth < 0) return [];
+  return Object.keys(obj).flatMap((k) => [pre + k, ...shapeOf(obj[k], depth - 1, `${pre}${k}.`)]).slice(0, 40);
+}
+async function debugReport(sock, jid, msg, sender, roles, outcome) {
+  const keys = Object.keys(msg.message || {});
+  const unusual = !keys.length || keys.some((k) => !COMMON.has(k));
+  if (!unusual && !outcome) return;
+  debug.left -= 1;
+  const me = String(sock.user?.id || '').replace(/:\d+@/, '@');
+  try {
+    await sock.sendMessage(me, { text: `🔎 *Anti group status check*\n▸ *Parts:* ${shapeOf(msg.message).join(', ') || 'none (empty message)'}\n▸ *Sender is admin:* ${roles.isAdmin ? 'yes' : 'no'}\n▸ *Bot is admin:* ${roles.isBotAdmin ? 'yes' : 'no'}\n▸ *Recognised as group status:* ${outcome ? 'yes' : 'no'}${outcome === 'deleted' ? '\n▸ *Delete:* sent' : outcome ? '\n▸ *Delete:* failed' : ''}` });
+  } catch (err) {
+    // nothing more we can do
+  }
+}
+
 // Returns true if the message broke a rule and was dealt with
 async function runProtections({ sock, msg, jid, text, getRoles }) {
   const sender = msg.key.participant || msg.key.participantAlt || msg.participant; // newer WhatsApp can hide the first one
@@ -139,9 +164,20 @@ async function runProtections({ sock, msg, jid, text, getRoles }) {
   if (!hasLink && !badWord && !spam && !groupMention && !groupPost && !blockedMedia && !slow && !silenced && !otherBot && !massTag) return false;
 
   const roles = await getRoles();
+  const watching = debug.left > 0 && Date.now() < debug.until && g.antigstatusMode !== 'off';
+  if (watching && !groupPost) await debugReport(sock, jid, msg, sender, roles, null);
   if (!roles.isBotAdmin || roles.isAdmin || roles.isOwner) {
+    if (watching && groupPost) await debugReport(sock, jid, msg, sender, roles, 'not handled (admin rules)');
     if ((groupPost || groupMention) && !roles.isBotAdmin) console.log(`Anti group status: a group status was posted in ${jid}, but the bot is not an admin there, so it cannot be deleted.`);
     return false;
+  }
+
+  // a group status is dealt with FIRST: the other rules (slow mode, media, mentions) must never get in its way
+  if (groupPost) {
+    const deleted = await enforce({ sock, jid, sender, msg, mode: g.antigstatusMode, reason: 'posting a group status', rule: 'group status posts are not allowed here' });
+    console.log(`Anti group status: a group status from ${String(sender).split('@')[0]} in ${jid} was ${deleted === false ? 'NOT deleted (WhatsApp refused)' : 'deleted'}.`);
+    if (watching) await debugReport(sock, jid, msg, sender, roles, deleted === false ? 'failed' : 'deleted');
+    return true;
   }
 
   if (silenced) {
@@ -180,10 +216,6 @@ async function runProtections({ sock, msg, jid, text, getRoles }) {
     await enforce({ sock, jid, sender, msg, mode: g.antigmMode, reason: 'mentioning the group in a status', rule: 'mentioning this group in a status is not allowed here' });
     return true;
   }
-  if (groupPost) {
-    await enforce({ sock, jid, sender, msg, mode: g.antigstatusMode, reason: 'posting a group status', rule: 'group status posts are not allowed here' });
-    return true;
-  }
   if (hasLink) {
     await enforce({ sock, jid, sender, msg, mode: g.antilinkMode, reason: 'sending a link', rule: 'links are not allowed here' });
     return true;
@@ -196,4 +228,4 @@ async function runProtections({ sock, msg, jid, text, getRoles }) {
   return true;
 }
 
-module.exports = { mediaKindOf, looksLikeBot, botVerdict, mentionCount, runProtections, LINK_REGEX, findBadWord, hasType, GROUP_MENTION, GROUP_POST, isGroupStatusPost };
+module.exports = { mediaKindOf, looksLikeBot, botVerdict, mentionCount, runProtections, LINK_REGEX, findBadWord, hasType, GROUP_MENTION, GROUP_POST, isGroupStatusPost, startDebug };

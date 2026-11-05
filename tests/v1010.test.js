@@ -215,3 +215,80 @@ test('antigstatus: a group status (any version of the message name) is deleted; 
   await runProtections({ sock: flaky, msg: { key: { remoteJid: jid, id: 'S3', participant: sender }, message: { groupStatusMessageV2: {} } }, jid, text: '', getRoles: roles });
   assert.strictEqual(relayed, 1);
 });
+
+// ------------------------------------------------------------ v1.1.1: reactions fade, menu video with fallbacks, antigstatus first
+test('cmdreact: the reaction is removed a few seconds after the command is done', async () => {
+  process.env.CMDREACT_CLEAR_SECONDS = '0.05';
+  delete require.cache[require.resolve('../whatsapp/cmdreact')];
+  const cmdreact = require('../whatsapp/cmdreact');
+  const store = require('../whatsapp/store');
+  store.setCmdReact('on');
+  const sent = [];
+  const sock = { sendMessage: async (j, c) => { sent.push(c.react.text); return {}; } };
+  cmdreact.begin(sock, { key: { remoteJid: 'a@s.whatsapp.net', id: '1' } }).finish('ok');
+  await new Promise((r) => setTimeout(r, 200));
+  assert.deepStrictEqual(sent, ['✅', '']);
+  sent.length = 0;
+  cmdreact.begin(sock, { key: { remoteJid: 'a@s.whatsapp.net', id: '2' } }).finish('fail');
+  await new Promise((r) => setTimeout(r, 4300));
+  assert.deepStrictEqual(sent, ['❌', '']);
+  delete process.env.CMDREACT_CLEAR_SECONDS;
+  delete require.cache[require.resolve('../whatsapp/cmdreact')];
+});
+
+test('menu media: the video first, the picture when the video fails, nothing when both fail', async () => {
+  const mm = require('../whatsapp/menumedia');
+  delete process.env.MENU_MEDIA;
+  assert.ok(fs.statSync(mm.FILES.video).size > 10000 && fs.statSync(mm.FILES.video).size < 2 * 1024 * 1024, 'the video is small enough');
+  assert.ok(fs.statSync(mm.FILES.image).size > 10000);
+  const sent = [];
+  assert.strictEqual(await mm.send({ sendMessage: async (j, c) => sent.push(Object.keys(c)[0]) }, 'a@g.us', 'cap'), true);
+  assert.deepStrictEqual(sent, ['video']);
+  sent.length = 0;
+  assert.strictEqual(await mm.send({ sendMessage: async (j, c) => { if (c.video) throw new Error('no'); sent.push('image'); } }, 'a@g.us', 'cap'), true);
+  assert.deepStrictEqual(sent, ['image']);
+  assert.strictEqual(await mm.send({ sendMessage: async () => { throw new Error('no'); } }, 'a@g.us', 'cap'), false);
+  process.env.MENU_MEDIA = 'off';
+  assert.strictEqual(await mm.send({ sendMessage: async () => sent.push('x') }, 'a@g.us', 'cap'), false);
+  process.env.MENU_MEDIA = 'off';
+});
+
+test('the menu sends the header with the video and the commands as text; plain text when no media can be sent', async () => {
+  const menu = require('../commands/menu');
+  delete process.env.MENU_MEDIA;
+  const commandList = [].concat(...fs.readdirSync(path.join(root, 'commands')).filter((f) => f.endsWith('.js')).map((f) => require(path.join(root, 'commands', f))));
+  const media = [];
+  const texts = [];
+  const sock = { sendMessage: async (j, c) => { media.push(c); } };
+  await menu.run({ reply: async (t) => texts.push(t), commandList, prefix: '.', args: [], isOwner: false, isAdmin: false, sock, jid: 'a@s.whatsapp.net', msg: { key: {} } });
+  assert.ok(media[0].video && media[0].caption.includes('┏✦'));
+  assert.ok(!texts[0].includes('┏✦ ◈'), 'the header is in the caption, not repeated');
+  assert.match(texts[0], /┏ ❏/);
+  texts.length = 0;
+  const broken = { sendMessage: async () => { throw new Error('no'); } };
+  await menu.run({ reply: async (t) => texts.push(t), commandList, prefix: '.', args: [], isOwner: false, isAdmin: false, sock: broken, jid: 'a@s.whatsapp.net', msg: { key: {} } });
+  assert.match(texts[0], /┏✦ ◈/);
+  assert.match(texts[0], /┏ ❏/);
+  process.env.MENU_MEDIA = 'off';
+});
+
+test('antigstatus: handled before slow mode and the debug report reaches the owner', async () => {
+  const store = require('../whatsapp/store');
+  const protect = require('../whatsapp/protect');
+  const jid = '120369000000300002@g.us';
+  store.getGroup(jid);
+  store.update(jid, (g) => { g.antigstatusMode = 'delete'; g.slowmode = 30; });
+  const sender = '27811110010@s.whatsapp.net';
+  const sent = [];
+  const sock = { user: { id: '27899999999:3@s.whatsapp.net' }, sendMessage: async (j, c) => { sent.push([j, c]); }, relayMessage: async () => {} };
+  const roles = async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false });
+  protect.startDebug();
+  const post = (id) => ({ key: { remoteJid: jid, id, participant: sender }, message: { groupStatusMessageV2: { message: { videoMessage: {} } } } });
+  await protect.runProtections({ sock, msg: { key: { remoteJid: jid, id: 'W0', participant: sender }, message: { conversation: 'warm' } }, jid, text: 'warm', getRoles: roles }); // starts the slow-mode clock
+  assert.strictEqual(await protect.runProtections({ sock, msg: post('W1'), jid, text: '', getRoles: roles }), true);
+  assert.ok(sent.some(([j, c]) => c.delete && c.delete.id === 'W1'), 'deleted although slow mode was also triggered');
+  const report = sent.find(([j, c]) => j === '27899999999@s.whatsapp.net' && c.text);
+  assert.ok(report, 'the owner gets a report');
+  assert.match(report[1].text, /Recognised as group status:\* yes/);
+  assert.ok(!/video/.test(report[1].text.split('Parts:')[0]), 'only names, in the Parts line');
+});

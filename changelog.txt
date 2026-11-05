@@ -1,3 +1,9 @@
+TurboFex v1.1.1 - menu video, reactions fade, antigstatus first
+CHANGED IN 1.1.1
+- NEW: the menu opens with the TurboFex intro video (assets/menu.mp4) with the menu header as its caption, and the commands follow as text. When the video cannot be sent, the TurboFex picture (assets/menu.jpg) is sent instead; when that fails too, the menu is sent as plain text like before. Set MENU_MEDIA=off to switch it off.
+- CHANGED: the command reaction (the tick, warning or cross) is taken off again 5 seconds after the command is done (9 seconds for a warning or a failure). CMDREACT_CLEAR_SECONDS changes the time.
+- FIXED: antigstatus is now checked before every other rule (slow mode, media, mentions, silence), so nothing can stop a group status from being handled. The console and the new `antigstatus debug` report say if the delete was refused by WhatsApp. `antigstatus debug` (owner) sends a short report of the shape of unusual messages for 10 minutes, so an unrecognised group status can be seen. `antigstatus` now also shows whether detection is ready.
+
 TurboFex v1.1.0 - antigstatus fix, download fixes, clean replies, response standard
 CHANGED IN 1.1.0
 - FIXED: antigstatus (and the delete step of every protection) did not remove group statuses. WhatsApp names this message type differently between versions, so any "group status" message is now recognised, the sender is found even when WhatsApp hides it in the message key, and when the first delete fails a second one is made after a moment. If the bot is not an admin, the console now says so. antigm (group mention in a status) got the same sender fix.

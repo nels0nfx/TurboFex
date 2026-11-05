@@ -5,6 +5,7 @@ const { smallcaps: sc } = require('../core/fonts');
 const store = require('../whatsapp/store');
 const capacity = require('../core/capacity');
 const { groupByCategory } = require('../whatsapp/categories');
+const menumedia = require('../whatsapp/menumedia');
 
 const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
 const RULE = '────────────────'; // short on purpose: long lines wrap on phones
@@ -34,7 +35,7 @@ module.exports = {
   name: 'menu',
   category: 'general',
   description: 'Show the command menu (try: menu group, or menu kick for help with one command)',
-  async run({ reply, commandList, prefix, args, isOwner, isAdmin, timing }) {
+  async run({ reply, commandList, prefix, args, isOwner, isAdmin, timing, sock, jid, msg }) {
     const sections = groupByCategory(commandList, isOwner);
     const all = sections.flatMap((s) => s.cmds);
     const query = (args[0] || '').toLowerCase().replace(/^[^a-z0-9]+/, '');
@@ -89,6 +90,8 @@ module.exports = {
       `${chunk(sections.map((s) => s.key), 5).map((r) => `_${r.join(' · ')}_`).join('\n')}\n` +
       `_${brand.botName} • v${pkg.version}_`;
 
+    // the header goes with the intro video (or the picture); the commands follow as text. If neither can be sent, one text menu.
+    if (sock && jid && (await menumedia.send(sock, jid, head, msg))) return reply(`${body}\n\n${tips}`);
     return reply(`${head}\n\n${body}\n\n${tips}`);
   },
 };

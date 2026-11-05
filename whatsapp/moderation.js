@@ -32,8 +32,9 @@ async function deleteOffending(sock, jid, msg, sender) {
 
 // Applies delete / warn / kick to a member who broke a rule
 async function enforce({ sock, jid, sender, mode, msg, reason, rule, deleteMessage = true }) {
-  if (deleteMessage && msg) await deleteOffending(sock, jid, msg, sender);
-  if (mode === 'delete') return;
+  let deleted;
+  if (deleteMessage && msg) deleted = await deleteOffending(sock, jid, msg, sender);
+  if (mode === 'delete') return deleted;
 
   const tag = `@${num(sender)}`;
 
@@ -45,7 +46,7 @@ async function enforce({ sock, jid, sender, mode, msg, reason, rule, deleteMessa
         : `⚠️ ${tag} was caught ${reason} but I could not remove them.`,
       mentions: [sender],
     });
-    return;
+    return deleted;
   }
 
   // mode === 'warn'
@@ -65,6 +66,7 @@ async function enforce({ sock, jid, sender, mode, msg, reason, rule, deleteMessa
       mentions: [sender],
     });
   }
+  return deleted;
 }
 
 module.exports = { enforce };
