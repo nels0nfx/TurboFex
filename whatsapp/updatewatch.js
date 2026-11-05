@@ -10,7 +10,31 @@ const brand = require('../core/brand');
 const js = jsonstore.open('update-notice', () => ({ told: '' }), { delay: 500 }); // the last version the owner was told about
 const EVERY_MS = 60 * 60 * 1000; // once an hour
 
-// the changelog blocks of every version newer than the one running, newest first (max 3 blocks), as short bullet lines
+// A long text is sent in several messages (WhatsApp keeps about 4000 characters per message), cut at line breaks, never in the
+// middle of a line. Nothing is dropped. A single message when it fits.
+function splitText(text, limit = 3500) {
+  const lines = String(text).split('\n');
+  const out = [];
+  let cur = '';
+  for (let line of lines) {
+    while (line.length > limit) { // a single huge line: cut at a space
+      const at = line.lastIndexOf(' ', limit) > limit / 2 ? line.lastIndexOf(' ', limit) : limit;
+      if (cur) { out.push(cur); cur = ''; }
+      out.push(line.slice(0, at));
+      line = line.slice(at).trimStart();
+    }
+    if (cur && cur.length + line.length + 1 > limit) { out.push(cur); cur = line; } else cur = cur ? `${cur}\n${line}` : line;
+  }
+  if (cur) out.push(cur);
+  return out.length ? out : [''];
+}
+
+// sends a long text as one or more messages, in order
+async function sendLong(sock, to, text) {
+  for (const part of splitText(text)) await sock.sendMessage(to, { text: part });
+}
+
+// the changelog blocks of every version newer than the one running, newest first, ALL their lines (nothing is cut)
 function whatChanged(raw, current) {
   const blocks = String(raw || '').split(/\r?\n\s*\r?\n/).map((b) => b.trim()).filter(Boolean);
   const out = [];
@@ -18,11 +42,11 @@ function whatChanged(raw, current) {
     const head = /^TurboFex v(\d+\.\d+\.\d+)\b\s*-?\s*(.*)$/im.exec(b.split(/\r?\n/)[0]);
     if (!head || !isNewer(head[1], current)) continue;
     const bullets = b.split(/\r?\n/).slice(1).map((l) => l.trim()).filter((l) => /^[-*]\s+/.test(l))
-      .slice(0, 8).map((l) => `• ${l.replace(/^[-*]\s+/, '').replace(/^(FIXED|NEW|CHANGED|TESTS?|NOTE)\s*:?\s*/i, (m) => `${m.trim().replace(/:$/, '')}: `).slice(0, 170)}`);
+      .map((l) => `• ${l.replace(/^[-*]\s+/, '').replace(/^(FIXED|NEW|CHANGED|TESTS?|NOTE|CLEANED|FASTER|RULE)\s*:?\s*/i, (m) => `${m.trim().replace(/:$/, '')}: `)}`);
     out.push(`*v${head[1]}*${head[2] ? ` - ${head[2]}` : ''}\n${bullets.join('\n')}`);
-    if (out.length >= 3) break;
+    if (out.length >= 12) break; // twelve versions at most: a bot that skipped a year of updates still gets a readable list
   }
-  return out.join('\n\n').slice(0, 1500);
+  return out.join('\n\n');
 }
 
 function compose(info, prefix) {
@@ -56,7 +80,7 @@ async function check(sock) {
       return false;
     }
     if (js.data.told === info.latest) return false;
-    await sock.sendMessage(ownerChat(sock), { text: compose(info, store.effectivePrefix()) });
+    await sendLong(sock, ownerChat(sock), compose(info, store.effectivePrefix()));
     console.log(`🔄 Update check: told the owner about v${info.latest}.`);
     js.data.told = info.latest; // only remembered once it was really sent
     js.touch();
@@ -81,4 +105,4 @@ function stop() {
   timer = null;
 }
 
-module.exports = { check, start, stop, whatChanged, compose, store: js };
+module.exports = { check, start, stop, whatChanged, compose, splitText, sendLong, store: js };

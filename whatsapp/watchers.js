@@ -167,6 +167,27 @@ async function askPhoneAgain(sock, msg) {
   }
 }
 
+// "autoviewonce debug" (owner): for 10 minutes the owner gets the SHAPE (names of the parts, never the content) of every message
+// with media or without content, so it is clear what WhatsApp really sends for a view-once.
+const debug = { until: 0, left: 0 };
+function startDebug() {
+  debug.until = Date.now() + 10 * 60 * 1000;
+  debug.left = 10;
+}
+function shapeOf(obj, depth = 4, pre = '') {
+  if (!obj || typeof obj !== 'object' || depth < 0) return [];
+  return Object.keys(obj).flatMap((k) => [pre + k, ...shapeOf(obj[k], depth - 1, `${pre}${k}.`)]).slice(0, 40);
+}
+async function debugReport(sock, msg, jid, vo) {
+  const content = peel(msg.message).content || {};
+  const media = ['imageMessage', 'videoMessage', 'audioMessage'].find((k) => content[k]);
+  if (!media && msg.message) return; // plain text and the like: not interesting
+  debug.left -= 1;
+  const node = media ? content[media] : null;
+  const where = jid.endsWith('@g.us') ? 'group' : 'private chat';
+  await sock.sendMessage(ownerChat(sock), { text: `🔎 *Auto view-once check*\n▸ *Chat:* ${where}\n▸ *Parts:* ${shapeOf(msg.message).join(', ') || 'none (empty message)'}\n▸ *View-once flag:* ${vo ? 'yes' : 'no'}\n▸ *File included:* ${node ? (node.mediaKey || node.url || node.directPath ? 'yes' : 'no') : 'no media'}\n▸ *Stub type:* ${msg.messageStubType ?? 'none'}` });
+}
+
 // copies one view-once file to the owner (see early() below); throws a clear problem when something unexpected breaks
 async function viewOnce(sock, msg, isGroup, assume = false) {
   const cfg = store.watchCfg('viewonce');
@@ -289,9 +310,18 @@ function early(sock, msg) {
       return;
     }
     const id = msg.key.id;
-    const assume = !!(id && voAsked.has(id)); // the answer to our own request: its view-once flag may be missing, open it anyway
+    // Only a message that really carries the view-once flag is opened. (The phone's answer to our request used to be opened
+    // even without the flag, so an ordinary picture that had arrived late was reported as a view-once.)
+    const assume = false;
     const vo = findViewOnce(msg.message, assume);
+    if (debug.left > 0 && Date.now() < debug.until) debugReport(sock, msg, jid, vo).catch(() => {});
     if (!vo) {
+      if (id && voAsked.has(id) && peel(msg.message).content && Object.keys(peel(msg.message).content).some((k) => /^(image|video|audio)Message$/.test(k))) {
+        clearTimeout(voAsked.get(id));
+        voAsked.delete(id);
+        console.log(`👁️ The phone sent message ${id.slice(0, 8)}. It is an ordinary picture, video or voice note (no view-once flag), so it is ignored.`);
+        return;
+      }
       // a message that holds nothing at all (only envelope details) can be a view-once whose content was held back: ask the phone for it
       const content = peel(msg.message).content;
       const bare = Object.keys(content).every((k) => k === 'messageContextInfo' || k === 'senderKeyDistributionMessage');
@@ -491,4 +521,4 @@ async function onUpdate(sock, updates) {
 
 const resetWarnings = () => lastWarn.clear(); // for tests
 
-module.exports = { timing, resetWarnings, run, early, noContent, onUpdate, findViewOnce, recentViewOnce, inScope, stats, fetchMedia, OPEN_ON_PHONE };
+module.exports = { startDebug, timing, resetWarnings, run, early, noContent, onUpdate, findViewOnce, recentViewOnce, inScope, stats, fetchMedia, OPEN_ON_PHONE };

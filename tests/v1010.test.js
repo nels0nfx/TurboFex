@@ -236,11 +236,12 @@ test('cmdreact: the reaction is removed a few seconds after the command is done'
   delete require.cache[require.resolve('../whatsapp/cmdreact')];
 });
 
-test('menu media: the video first, the picture when the video fails, nothing when both fail', async () => {
+test('menu media: video mode sends the video, then the picture, then nothing; off sends nothing', async () => {
   const mm = require('../whatsapp/menumedia');
-  delete process.env.MENU_MEDIA;
+  process.env.MENU_MEDIA = 'video';
   assert.ok(fs.statSync(mm.FILES.video).size > 10000 && fs.statSync(mm.FILES.video).size < 2 * 1024 * 1024, 'the video is small enough');
   assert.ok(fs.statSync(mm.FILES.image).size > 10000);
+  assert.ok(fs.statSync(mm.FILES.thumb).size > 5000 && fs.statSync(mm.FILES.thumb).size < 120 * 1024, 'the card picture is small');
   const sent = [];
   assert.strictEqual(await mm.send({ sendMessage: async (j, c) => sent.push(Object.keys(c)[0]) }, 'a@g.us', 'cap'), true);
   assert.deepStrictEqual(sent, ['video']);
@@ -249,26 +250,58 @@ test('menu media: the video first, the picture when the video fails, nothing whe
   assert.deepStrictEqual(sent, ['image']);
   assert.strictEqual(await mm.send({ sendMessage: async () => { throw new Error('no'); } }, 'a@g.us', 'cap'), false);
   process.env.MENU_MEDIA = 'off';
+  assert.strictEqual(mm.mode(), 'off');
   assert.strictEqual(await mm.send({ sendMessage: async () => sent.push('x') }, 'a@g.us', 'cap'), false);
+  assert.strictEqual(await mm.sendCard({ sendMessage: async () => sent.push('x') }, 'a@g.us', 'cap'), false);
+});
+
+test('the menu: header and commands are ONE message (card), video mode keeps the header in the caption, plain text when nothing can be sent', async () => {
+  const menu = require('../commands/menu');
+  const commandList = [].concat(...fs.readdirSync(path.join(root, 'commands')).filter((f) => f.endsWith('.js')).map((f) => require(path.join(root, 'commands', f))));
+  const run = async (sock) => {
+    const texts = [];
+    await menu.run({ reply: async (t) => texts.push(t), commandList, prefix: '.', args: [], isOwner: false, isAdmin: false, sock, jid: 'a@s.whatsapp.net', msg: { key: {} } });
+    return texts;
+  };
+  // card (the default): one message with the picture on top and the whole menu in it
+  delete process.env.MENU_MEDIA;
+  const sent = [];
+  let texts = await run({ sendMessage: async (j, c) => { sent.push(c); } });
+  assert.strictEqual(sent.length, 1, 'one message');
+  assert.strictEqual(texts.length, 0, 'nothing sent apart from the card');
+  assert.ok(sent[0].text.includes('┏✦ ◈') && sent[0].text.includes('┏ ❏'), 'header and commands in the same message');
+  assert.ok(sent[0].contextInfo.externalAdReply.thumbnail.length > 5000 && sent[0].contextInfo.externalAdReply.renderLargerThumbnail);
+  // video mode: the header is the caption, the commands follow
+  process.env.MENU_MEDIA = 'video';
+  const vsent = [];
+  texts = await run({ sendMessage: async (j, c) => { vsent.push(c); } });
+  assert.ok(vsent[0].video && vsent[0].caption.includes('┏✦'));
+  assert.match(texts[0], /┏ ❏/);
+  assert.ok(!texts[0].includes('┏✦ ◈'));
+  // nothing can be sent: one plain text menu
+  delete process.env.MENU_MEDIA;
+  texts = await run({ sendMessage: async () => { throw new Error('no'); } });
+  assert.strictEqual(texts.length, 1);
+  assert.match(texts[0], /┏✦ ◈/);
+  assert.match(texts[0], /┏ ❏/);
   process.env.MENU_MEDIA = 'off';
 });
 
-test('the menu sends the header with the video and the commands as text; plain text when no media can be sent', async () => {
-  const menu = require('../commands/menu');
+test('setmenu media: the owner picks card, video or off', async () => {
+  const store = require('../whatsapp/store');
+  const mm = require('../whatsapp/menumedia');
+  const setmenu = require('../commands/owner2').find((c) => c.name === 'setmenu');
+  const out = [];
   delete process.env.MENU_MEDIA;
-  const commandList = [].concat(...fs.readdirSync(path.join(root, 'commands')).filter((f) => f.endsWith('.js')).map((f) => require(path.join(root, 'commands', f))));
-  const media = [];
-  const texts = [];
-  const sock = { sendMessage: async (j, c) => { media.push(c); } };
-  await menu.run({ reply: async (t) => texts.push(t), commandList, prefix: '.', args: [], isOwner: false, isAdmin: false, sock, jid: 'a@s.whatsapp.net', msg: { key: {} } });
-  assert.ok(media[0].video && media[0].caption.includes('┏✦'));
-  assert.ok(!texts[0].includes('┏✦ ◈'), 'the header is in the caption, not repeated');
-  assert.match(texts[0], /┏ ❏/);
-  texts.length = 0;
-  const broken = { sendMessage: async () => { throw new Error('no'); } };
-  await menu.run({ reply: async (t) => texts.push(t), commandList, prefix: '.', args: [], isOwner: false, isAdmin: false, sock: broken, jid: 'a@s.whatsapp.net', msg: { key: {} } });
-  assert.match(texts[0], /┏✦ ◈/);
-  assert.match(texts[0], /┏ ❏/);
+  await setmenu.run({ args: ['media', 'video'], rest: 'media video', reply: async (t) => out.push(t), prefix: '.' });
+  assert.strictEqual(mm.mode(), 'video');
+  await setmenu.run({ args: ['media', 'off'], rest: 'media off', reply: async (t) => out.push(t), prefix: '.' });
+  assert.strictEqual(mm.mode(), 'off');
+  await setmenu.run({ args: ['media', 'card'], rest: 'media card', reply: async (t) => out.push(t), prefix: '.' });
+  assert.strictEqual(mm.mode(), 'card');
+  await setmenu.run({ args: ['media', 'zzz'], rest: 'media zzz', reply: async (t) => out.push(t), prefix: '.' });
+  assert.match(out.at(-1), /Menu picture/);
+  store.setAuto('menu', {});
   process.env.MENU_MEDIA = 'off';
 });
 
@@ -291,4 +324,43 @@ test('antigstatus: handled before slow mode and the debug report reaches the own
   assert.ok(report, 'the owner gets a report');
   assert.match(report[1].text, /Recognised as group status:\* yes/);
   assert.ok(!/video/.test(report[1].text.split('Parts:')[0]), 'only names, in the Parts line');
+});
+
+// ------------------------------------------------------------ update notices are never cut
+test('what changed: every line of every newer version, long ones split into several messages', () => {
+  const uw = require('../whatsapp/updatewatch');
+  const long = (n) => `TurboFex v1.5.${n} - big one\n${Array.from({ length: 30 }, (_, i) => `- FIXED: line ${i} ${'word '.repeat(40)}`).join('\n')}`;
+  const raw = [long(3), long(2), long(1)].join('\n\n');
+  const txt = uw.whatChanged(raw, '1.5.0');
+  for (const v of ['1.5.3', '1.5.2', '1.5.1']) assert.ok(txt.includes(`*v${v}*`), v);
+  assert.strictEqual((txt.match(/line \d+ /g) || []).length, 90, 'nothing dropped');
+  assert.ok(!/…/.test(txt));
+  const parts = uw.splitText(`header\n${txt}\nfooter`);
+  assert.ok(parts.length > 1 && parts.every((p) => p.length <= 3500));
+  assert.strictEqual(parts.join('\n'), `header\n${txt}\nfooter`, 'the parts together are the whole text');
+  assert.deepStrictEqual(uw.splitText('short'), ['short']);
+});
+
+test('the update-complete message after a restart carries the whole what is new', async () => {
+  const startup = require('../whatsapp/startup');
+  const raw = `TurboFex v9.9.9 - x\n${Array.from({ length: 20 }, (_, i) => `- NEW: item ${i} ${'text '.repeat(30)}`).join('\n')}\n\nTurboFex v1.0.0 - old\n- NEW: ancient`;
+  const text = startup.compose({ type: 'update', from: '1.0.0', to: '9.9.9', notes: raw }, '.');
+  assert.strictEqual((text.match(/item \d+ /g) || []).length, 20);
+  assert.ok(!/ancient/.test(text), 'only versions newer than the old one');
+});
+
+// ------------------------------------------------------------ view-once: no more guessing
+test('a picture the phone sent late is not reported as view-once; one with the flag still is', async () => {
+  const watchers = require('../whatsapp/watchers');
+  const store = require('../whatsapp/store');
+  store.updateWatch('viewonce', (w) => { w.mode = 'all'; });
+  const sent = [];
+  const sock = { user: { id: '27899999999:1@s.whatsapp.net' }, sendMessage: async (j, c) => { sent.push(c); }, requestPlaceholderResend: async () => {}, updateMediaMessage: async (m) => m };
+  const key = { remoteJid: '120369000000400001@g.us', id: 'LATE1', participant: '27811110020@s.whatsapp.net' };
+  watchers.early(sock, { key, message: null });
+  await new Promise((r) => setTimeout(r, 20));
+  watchers.early(sock, { key, message: { imageMessage: { mediaKey: Buffer.from('k'), url: 'https://x', mimetype: 'image/jpeg' } } });
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(!sent.some((c) => c.image || /View-once/.test(c.caption || c.text || '')), 'nothing is reported');
+  store.updateWatch('viewonce', (w) => { w.mode = 'off'; });
 });

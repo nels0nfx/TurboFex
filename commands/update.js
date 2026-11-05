@@ -27,9 +27,8 @@ module.exports = {
     if (!install) {
       const changes = whatChanged(info.notes, info.current);
       const notes = changes ? `\n\n📝 What's new:\n${changes}` : '';
-      return reply(
-        `🆕 Update available: v${info.current} → v${info.latest}${notes}\n\nTo install it, send: ${prefix}update now`
-      );
+      const text = `🆕 *Update available:* v${info.current} → v${info.latest}${notes}\n\n▸ To install it, send: \`${prefix}update now\``;
+      return require('../whatsapp/updatewatch').splitText(text).reduce((p, part) => p.then(() => reply(part)), Promise.resolve());
     }
 
     await reply(`⬇️ Installing v${info.latest}... please wait.`);

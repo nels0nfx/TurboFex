@@ -49,16 +49,26 @@ test('view-once: group events (a stub type) are not chased, and nothing is asked
   store.updateWatch('viewonce', (w) => { w.mode = 'all'; });
 });
 
-test('view-once: the answer to our request is opened even when it comes without the view-once flag (picture)', async () => {
+test('view-once: the phone answers our request with an ORDINARY picture (no flag): it is NOT reported as a view-once', async () => {
   const sock = mkSock({ requestPlaceholderResend: async () => {} });
   watchers.early(sock, empty('E4'));
   await settle();
   await handler.handleMessage(sock, withMedia('E4', { imageMessage: IMG })); // plain picture, same id
   await settle();
+  assert.strictEqual(sent.filter((s) => s.c.image).length, 0, 'an ordinary picture is never copied or labelled view-once');
+});
+
+test('view-once: the phone answers our request with the real view-once (flag present): it is opened', async () => {
+  const sock = mkSock({ requestPlaceholderResend: async () => {} });
+  watchers.early(sock, empty('E4b'));
+  await settle();
+  await handler.handleMessage(sock, withMedia('E4b', { imageMessage: { ...IMG, viewOnce: true } }));
+  await settle();
   const img = sent.find((s) => s.c.image);
   assert.ok(img, 'the picture was copied');
   assert.strictEqual(img.j, OWNER_CHAT);
-  assert.strictEqual(img.c.image.toString(), 'FILE-E4');
+  assert.strictEqual(img.c.image.toString(), 'FILE-E4b');
+  assert.match(img.c.caption, /View-once picture/);
 });
 
 test('view-once: videos are opened too, both wrapped and flagged', async () => {

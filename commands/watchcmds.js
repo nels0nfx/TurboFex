@@ -9,6 +9,10 @@ function modeCommand(name, aliases, key, label, description, note) {
     name, aliases, category: 'watch', ownerOnly: true, description,
     async run({ args, reply, prefix }) {
       let c = (args[0] || '').toLowerCase();
+      if (key === 'viewonce' && c === 'debug') {
+        require('../whatsapp/watchers').startDebug();
+        return reply('🔎 *Auto view-once check is on for 10 minutes.*\n▸ Ask someone to send you a view-once picture. I will send you a short report in your own chat about what WhatsApp delivered.');
+      }
       if (c === 'on') c = 'all';
       const cfg = store.watchCfg(key);
       if (!['off', ...Object.keys(MODES)].includes(c)) {

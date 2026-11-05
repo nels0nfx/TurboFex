@@ -1,3 +1,11 @@
+TurboFex v1.1.2 - one-message menu, complete update notes, no false view-once
+CHANGED IN 1.1.2
+- FIXED: the menu header and the commands are now ONE message again: the TurboFex picture on top and the whole menu under it. (A video caption can only hold about 1000 characters, so the long menu cannot sit inside a video caption.) `setmenu media video` keeps the intro video with the header as its caption and the commands after it; `setmenu media off` is plain text. If the picture cannot be sent, the video, then plain text, is used.
+- FIXED: an ordinary picture was reported as "View-once picture". A message that arrives late and empty is asked from the phone; the answer used to be opened as a view-once even without the view-once flag. Now only a message that really carries the view-once flag is opened and labelled.
+- NEW: `autoviewonce debug` (owner): for 10 minutes the bot sends you a short report on what WhatsApp delivered for every picture, video or voice note (the names of the parts, the view-once flag, whether the file is included), so a view-once that is not caught can be seen and fixed.
+- FIXED: "What's new" after an update, and the update notice, were cut off (only 8 lines per version, 3 versions, 900 to 1500 characters). They now list every line of every newer version, and a long list is sent as several messages, cut at line ends.
+- FIXED: the update-complete message now shows only the versions newer than the one you had.
+
 TurboFex v1.1.1 - menu video, reactions fade, antigstatus first
 CHANGED IN 1.1.1
 - NEW: the menu opens with the TurboFex intro video (assets/menu.mp4) with the menu header as its caption, and the commands follow as text. When the video cannot be sent, the TurboFex picture (assets/menu.jpg) is sent instead; when that fails too, the menu is sent as plain text like before. Set MENU_MEDIA=off to switch it off.

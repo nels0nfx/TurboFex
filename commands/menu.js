@@ -90,8 +90,11 @@ module.exports = {
       `${chunk(sections.map((s) => s.key), 5).map((r) => `_${r.join(' · ')}_`).join('\n')}\n` +
       `_${brand.botName} • v${pkg.version}_`;
 
-    // the header goes with the intro video (or the picture); the commands follow as text. If neither can be sent, one text menu.
+    // normally ONE message: the picture with the whole menu under it. Video mode: the header is the video caption and the commands
+    // follow. If nothing with a picture can be sent, one text menu.
+    const whole = `${head}\n\n${body}\n\n${tips}`;
+    if (sock && jid && (await menumedia.sendCard(sock, jid, whole, msg))) return; // header and commands in ONE message
     if (sock && jid && (await menumedia.send(sock, jid, head, msg))) return reply(`${body}\n\n${tips}`);
-    return reply(`${head}\n\n${body}\n\n${tips}`);
+    return reply(whole);
   },
 };

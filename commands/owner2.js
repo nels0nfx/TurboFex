@@ -44,7 +44,7 @@ module.exports = [
   {
     ...base,
     name: 'setmenu',
-    description: 'Change the heading of the menu: setmenu title MY BOT / setmenu subtitle text / setmenu reset (owner only)',
+    description: 'Change the menu: setmenu title MY BOT / subtitle text / media card, video or off / reset (owner only)',
     async run({ args, rest, reply, prefix }) {
       const cur = store.getAuto('menu') || {};
       const w = (args[0] || '').toLowerCase();
@@ -53,11 +53,17 @@ module.exports = [
         store.setAuto('menu', {});
         return reply('✅ *The menu heading is back to the default.*');
       }
+      if (w === 'media') {
+        const m = (args[1] || '').toLowerCase();
+        if (!['card', 'video', 'off'].includes(m)) return reply(`🎬 *Menu picture*\n*Now:* ${cur.media || 'card'}\n\n▸ \`${prefix}setmenu media card\` - picture and menu in one message\n▸ \`${prefix}setmenu media video\` - intro video, then the menu\n▸ \`${prefix}setmenu media off\` - text only`);
+        store.setAuto('menu', { ...cur, media: m });
+        return reply(`✅ *Menu picture: ${m}.*\n_Open the menu to see it._`);
+      }
       if ((w === 'title' || w === 'subtitle') && text) {
         store.setAuto('menu', { ...cur, [w]: text });
         return reply(`✅ *Menu ${w} saved:* ${text}\n_Open the menu to see it._`);
       }
-      await reply(`🎨 *Menu heading*\n*Title:* ${cur.title || 'default'}\n*Subtitle:* ${cur.subtitle || 'none'}\n\n▸ \`${prefix}setmenu title NELSONFX BOT\`\n▸ \`${prefix}setmenu subtitle Your friendly assistant\`\n▸ \`${prefix}setmenu reset\``);
+      await reply(`🎨 *Menu heading*\n*Title:* ${cur.title || 'default'}\n*Subtitle:* ${cur.subtitle || 'none'}\n\n▸ \`${prefix}setmenu title NELSONFX BOT\`\n▸ \`${prefix}setmenu subtitle Your friendly assistant\`\n▸ \`${prefix}setmenu media card\` / \`video\` / \`off\`\n▸ \`${prefix}setmenu reset\``);
     },
   },
   {

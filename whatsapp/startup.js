@@ -8,16 +8,17 @@ const bootnote = require('../core/bootnote');
 const store = require('./store');
 const { ownerChat } = require('./owner');
 const { DATA } = require('../core/paths');
+const { whatChanged, sendLong } = require('./updatewatch');
 
 function notesText(raw) {
   const lines = String(raw || '')
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l && !/^TurboFex v\d/i.test(l))
-    .slice(0, 12)
+    .slice(0, 40)
     .map((l) => (/^[-*]\s+/.test(l) ? `• ${l.replace(/^[-*]\s+/, '')}` : l));
   const text = lines.join('\n');
-  return text.length > 900 ? `${text.slice(0, 900).trimEnd()}…` : text;
+  return text;
 }
 
 function linksBlock() {
@@ -44,7 +45,7 @@ function compose(note, prefix) {
     `Time     ${now}`,
     '```',
   ];
-  if (note.type === 'update' && note.notes) parts.push('', '*What\'s new*', notesText(note.notes));
+  if (note.type === 'update' && note.notes) parts.push('', '*What\'s new*', whatChanged(note.notes, note.from) || notesText(note.notes));
   parts.push(
     '',
     '*Quick menu*',
@@ -88,7 +89,7 @@ async function announce(sock) {
   }
   const to = note.chat || ownerChat(sock);
   try {
-    await sock.sendMessage(to, { text: compose(note, store.effectivePrefix()) });
+    await sendLong(sock, to, compose(note, store.effectivePrefix()));
     bootnote.clear(); // only forgotten once it was really sent
     return true;
   } catch (err) {
