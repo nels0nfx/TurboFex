@@ -13,6 +13,7 @@ const replay = require('./replay');
 const idmap = require('./idmap');
 const watchers = require('./watchers');
 const cmdreact = require('./cmdreact');
+const { withTimeout } = require('./timeout');
 const watermark = require('./watermark');
 const fmt = require('./format');
 const ratelimit = require('./ratelimit');
@@ -187,6 +188,9 @@ async function handleMessageInner(sock, msg) {
     if (!r.isOwner) return presence.pmGuard(sock, jid, store.getAuto('pm'));
   }
 
+  // a group status posted from the bot's own account is never touched: it is only counted, so the antigstatus report can say so
+  if (isGroup && msg.key.fromMe && require('./protect').isGroupStatusPost(msg.message)) require('./protect').gstats.ownPosts += 1;
+
   // Passive protections (anti-link, anti-word, anti-spam) and message counting
   if (isGroup && !msg.key.fromMe) {
     activity.count(jid, msg.key.participant);
@@ -312,12 +316,13 @@ async function handleMessageInner(sock, msg) {
     }
 
     // 2) ⏳ on the command while it works, ✅ when it is done
-    const react = cmd.noReact || synthetic ? { finish() {} } : cmdreact.begin(sock, msg);
+    const react = cmd.noReact || synthetic ? { finish() {} } : cmdreact.begin(sock, msg, { since: t0 });
 
     // 3) the command gets its own copy of "sock": results of some commands get a watermark, and we notice warnings
     const mark = watermark.applies(cmd) ? watermark.text() : null;
     const styled = fmt.mode(cmd);
     let warned = false;
+    const pending = new Set(); // everything the command is still sending: the ✅ waits for it, so it never comes before the answer
     const csock = Object.create(sock);
     csock.sendMessage = (to, content, opts) => {
       if (synthetic && opts?.quoted) opts = { ...opts, quoted: undefined }; // there is no real message to reply to
@@ -328,7 +333,10 @@ async function handleMessageInner(sock, msg) {
         if (sc.on) content = { ...content, sticker: addExif(content.sticker, { pack: sc.pack || brand.botName, author: sc.author || brand.creator }) };
       }
       if (styled && typeof content?.text === 'string' && !content.edit) content = { ...content, text: fmt.format(content.text, (n) => !!prefix && commands.has(n), prefix, styled) };
-      return sock.sendMessage(to, mark ? watermark.mark(content, mark) : content, opts);
+      const sent = sock.sendMessage(to, mark ? watermark.mark(content, mark) : content, opts);
+      pending.add(sent);
+      Promise.resolve(sent).catch(() => {}).finally(() => pending.delete(sent));
+      return sent;
     };
     const reply = (t, extra = {}) => csock.sendMessage(jid, { text: t, ...extra }, synthetic ? undefined : { quoted: msg });
 
@@ -349,6 +357,7 @@ async function handleMessageInner(sock, msg) {
       await rawReply(`❌ Something went wrong running that command.${detail}`).catch(() => {});
     } finally {
       gate.release();
+      if (pending.size) await withTimeout(Promise.allSettled([...pending]), 8000, 'the answer is still being sent').catch(() => {}); // the ✅ comes after the answer
       react.finish(outcome);
       stats.record({ name: cmd.name, jid, outcome });
       const total = Date.now() - t0;

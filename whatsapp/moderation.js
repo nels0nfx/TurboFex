@@ -12,8 +12,33 @@ async function tryRemove(sock, jid, id) {
 
 // Deletes a member's message as an admin. A group status needs the sender in the key, so it is filled in when WhatsApp left it
 // out; if the first try fails, a second one is made with a plain revoke message after a short wait.
+const { isGroupStatusPost } = require('./shape');
+
+// A group status is NOT removed by a normal delete (WhatsApp ignores it). It needs the delete wrapped the same way the status was
+// posted: a revoke inside the group-status envelope, sent as an admin delete (edit 8).
+async function revokeGroupStatus(sock, jid, key) {
+  if (typeof sock.relayMessage !== 'function') throw new Error('this WhatsApp library cannot send a wrapped revoke');
+  await sock.relayMessage(jid, { groupStatusMessageV2: { message: { protocolMessage: { key, type: 0 } } } }, { additionalAttributes: { edit: '8' } });
+}
+
 async function deleteOffending(sock, jid, msg, sender) {
   const key = { ...msg.key, remoteJid: jid, fromMe: false, participant: msg.key.participant || sender };
+  if (isGroupStatusPost(msg.message)) {
+    let ok = false;
+    try {
+      await revokeGroupStatus(sock, jid, key);
+      ok = true;
+    } catch (err) {
+      console.log('Could not delete the group status (wrapped revoke):', err.message);
+    }
+    try { // the plain delete as well: harmless when the first one worked, and the only way on a library without relayMessage
+      await sock.sendMessage(jid, { delete: key });
+      ok = true;
+    } catch (err) {
+      if (!ok) console.log('Could not delete the group status (plain delete):', err.message);
+    }
+    return ok;
+  }
   try {
     await sock.sendMessage(jid, { delete: key });
     return true;

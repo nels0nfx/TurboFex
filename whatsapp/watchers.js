@@ -174,10 +174,7 @@ function startDebug() {
   debug.until = Date.now() + 10 * 60 * 1000;
   debug.left = 10;
 }
-function shapeOf(obj, depth = 4, pre = '') {
-  if (!obj || typeof obj !== 'object' || depth < 0) return [];
-  return Object.keys(obj).flatMap((k) => [pre + k, ...shapeOf(obj[k], depth - 1, `${pre}${k}.`)]).slice(0, 40);
-}
+const { shapeOf } = require('./shape');
 async function debugReport(sock, msg, jid, vo) {
   const content = peel(msg.message).content || {};
   const media = ['imageMessage', 'videoMessage', 'audioMessage'].find((k) => content[k]);
@@ -304,6 +301,7 @@ function early(sock, msg) {
     if (!msg || msg.key?.fromMe) return;
     const jid = msg.key?.remoteJid;
     if (!jid || jid.endsWith('@broadcast') || jid.endsWith('@newsletter')) return;
+    if (debug.left > 0 && Date.now() < debug.until) debugReport(sock, msg, jid, msg.message ? findViewOnce(msg.message, false) : null).catch((e) => console.log('Auto view-once check failed:', e.message));
     if (!msg.message) {
       // announced but empty (this is how a hidden view-once looks): ask the phone for it
       if (hiddenStub(msg.messageStubType)) chaseHidden(sock, msg, jid);
@@ -314,7 +312,6 @@ function early(sock, msg) {
     // even without the flag, so an ordinary picture that had arrived late was reported as a view-once.)
     const assume = false;
     const vo = findViewOnce(msg.message, assume);
-    if (debug.left > 0 && Date.now() < debug.until) debugReport(sock, msg, jid, vo).catch(() => {});
     if (!vo) {
       if (id && voAsked.has(id) && peel(msg.message).content && Object.keys(peel(msg.message).content).some((k) => /^(image|video|audio)Message$/.test(k))) {
         clearTimeout(voAsked.get(id));

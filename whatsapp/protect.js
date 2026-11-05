@@ -95,17 +95,7 @@ async function notice(sock, jid, sender, text) {
 
 const GROUP_MENTION = ['groupStatusMentionMessage']; // "X mentioned this group in a status"
 const GROUP_POST = ['groupStatusMessage', 'groupStatusMessageV2']; // a status posted inside the group
-// WhatsApp changes the name of this message type between versions (V1, V2, ...): any key that says "group status" counts,
-// at any depth, except the "mentioned this group" kind, which has its own switch (antigm).
-const GROUP_POST_NAME = /^groupStatus(?!Mention)/i;
-function isGroupStatusPost(obj, depth = 6) {
-  if (!obj || typeof obj !== 'object' || depth < 0) return false;
-  for (const k of Object.keys(obj)) {
-    if (GROUP_POST_NAME.test(k) && obj[k]) return true;
-    if (obj[k] && typeof obj[k] === 'object' && isGroupStatusPost(obj[k], depth - 1)) return true;
-  }
-  return false;
-}
+const { isGroupStatusPost, shapeOf } = require('./shape');
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -121,15 +111,13 @@ function findBadWord(text, words) {
 
 // "antigstatus debug" (owner): for 10 minutes the owner gets the SHAPE (only the names of the parts, never the content) of the
 // messages that look unusual, so a group status that is not recognised can be seen and fixed.
+// What happened to group statuses since the bot started (shown by the antigstatus command, so nobody needs the console)
+const gstats = { seen: 0, deleted: 0, refused: 0, adminPosted: 0, botNotAdmin: 0, ownPosts: 0 };
 const debug = { until: 0, left: 0 };
 const COMMON = new Set(['conversation', 'extendedTextMessage', 'imageMessage', 'videoMessage', 'audioMessage', 'stickerMessage', 'documentMessage', 'reactionMessage', 'contactMessage', 'locationMessage', 'messageContextInfo', 'senderKeyDistributionMessage', 'protocolMessage', 'pollCreationMessage', 'pollUpdateMessage', 'ephemeralMessage', 'viewOnceMessage', 'viewOnceMessageV2']);
 function startDebug() {
   debug.until = Date.now() + 10 * 60 * 1000;
   debug.left = 8;
-}
-function shapeOf(obj, depth = 4, pre = '') {
-  if (!obj || typeof obj !== 'object' || depth < 0) return [];
-  return Object.keys(obj).flatMap((k) => [pre + k, ...shapeOf(obj[k], depth - 1, `${pre}${k}.`)]).slice(0, 40);
 }
 async function debugReport(sock, jid, msg, sender, roles, outcome) {
   const keys = Object.keys(msg.message || {});
@@ -166,7 +154,12 @@ async function runProtections({ sock, msg, jid, text, getRoles }) {
   const roles = await getRoles();
   const watching = debug.left > 0 && Date.now() < debug.until && g.antigstatusMode !== 'off';
   if (watching && !groupPost) await debugReport(sock, jid, msg, sender, roles, null);
+  if (groupPost) gstats.seen += 1;
   if (!roles.isBotAdmin || roles.isAdmin || roles.isOwner) {
+    if (groupPost) {
+      if (!roles.isBotAdmin) gstats.botNotAdmin += 1;
+      else gstats.adminPosted += 1;
+    }
     if (watching && groupPost) await debugReport(sock, jid, msg, sender, roles, 'not handled (admin rules)');
     if ((groupPost || groupMention) && !roles.isBotAdmin) console.log(`Anti group status: a group status was posted in ${jid}, but the bot is not an admin there, so it cannot be deleted.`);
     return false;
@@ -175,6 +168,8 @@ async function runProtections({ sock, msg, jid, text, getRoles }) {
   // a group status is dealt with FIRST: the other rules (slow mode, media, mentions) must never get in its way
   if (groupPost) {
     const deleted = await enforce({ sock, jid, sender, msg, mode: g.antigstatusMode, reason: 'posting a group status', rule: 'group status posts are not allowed here' });
+    if (deleted === false) gstats.refused += 1;
+    else gstats.deleted += 1;
     console.log(`Anti group status: a group status from ${String(sender).split('@')[0]} in ${jid} was ${deleted === false ? 'NOT deleted (WhatsApp refused)' : 'deleted'}.`);
     if (watching) await debugReport(sock, jid, msg, sender, roles, deleted === false ? 'failed' : 'deleted');
     return true;
@@ -228,4 +223,4 @@ async function runProtections({ sock, msg, jid, text, getRoles }) {
   return true;
 }
 
-module.exports = { mediaKindOf, looksLikeBot, botVerdict, mentionCount, runProtections, LINK_REGEX, findBadWord, hasType, GROUP_MENTION, GROUP_POST, isGroupStatusPost, startDebug };
+module.exports = { mediaKindOf, looksLikeBot, botVerdict, mentionCount, runProtections, LINK_REGEX, findBadWord, hasType, GROUP_MENTION, GROUP_POST, isGroupStatusPost, startDebug, gstats };

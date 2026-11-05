@@ -241,7 +241,7 @@ test('menu media: video mode sends the video, then the picture, then nothing; of
   process.env.MENU_MEDIA = 'video';
   assert.ok(fs.statSync(mm.FILES.video).size > 10000 && fs.statSync(mm.FILES.video).size < 2 * 1024 * 1024, 'the video is small enough');
   assert.ok(fs.statSync(mm.FILES.image).size > 10000);
-  assert.ok(fs.statSync(mm.FILES.thumb).size > 5000 && fs.statSync(mm.FILES.thumb).size < 120 * 1024, 'the card picture is small');
+  assert.ok(fs.statSync(mm.FILES.thumb).size > 5000 && fs.statSync(mm.FILES.thumb).size < 30 * 1024, 'the card picture is small (the whole message must stay far below the size limit)');
   const sent = [];
   assert.strictEqual(await mm.send({ sendMessage: async (j, c) => sent.push(Object.keys(c)[0]) }, 'a@g.us', 'cap'), true);
   assert.deepStrictEqual(sent, ['video']);
@@ -363,4 +363,149 @@ test('a picture the phone sent late is not reported as view-once; one with the f
   await new Promise((r) => setTimeout(r, 50));
   assert.ok(!sent.some((c) => c.image || /View-once/.test(c.caption || c.text || '')), 'nothing is reported');
   store.updateWatch('viewonce', (w) => { w.mode = 'off'; });
+});
+
+// ------------------------------------------------------------ v1.1.3: own menu picture and video, group status report
+test('menu: the owner can add a picture and a video of their own, and go back to the default', async () => {
+  const mm = require('../whatsapp/menumedia');
+  const store = require('../whatsapp/store');
+  mm.resetCustom();
+  assert.deepStrictEqual(mm.custom(), { image: false, video: false });
+  // a fake picture tool: every size gives a different buffer
+  const fakeSharp = () => { const chain = { rotate: () => chain, resize: (w) => { chain.w = w; return chain; }, jpeg: () => chain, toBuffer: async () => Buffer.from(`pic-${chain.w}`) }; return chain; };
+  await mm.setImage(Buffer.from('original'), fakeSharp);
+  assert.deepStrictEqual(mm.custom(), { image: true, video: false });
+  const sent = [];
+  process.env.MENU_MEDIA = 'video';
+  await mm.send({ sendMessage: async (j, c) => sent.push(c) }, 'a@g.us', 'cap');
+  process.env.MENU_MEDIA = 'off';
+  // the card uses the owner's small picture
+  delete process.env.MENU_MEDIA;
+  const cards = [];
+  await mm.sendCard({ sendMessage: async (j, c) => cards.push(c) }, 'a@g.us', 'text');
+  process.env.MENU_MEDIA = 'off';
+  assert.strictEqual(cards[0].contextInfo.externalAdReply.thumbnail.toString(), 'pic-320');
+  // a video: made small by ffmpeg
+  await mm.setVideo(Buffer.from('bigvideo'), async (buf, ext) => { assert.strictEqual(ext, 'mp4'); return Buffer.from('small'); });
+  assert.deepStrictEqual(mm.custom(), { image: true, video: true });
+  process.env.MENU_MEDIA = 'video';
+  const vids = [];
+  await mm.send({ sendMessage: async (j, c) => vids.push(c) }, 'a@g.us', 'cap');
+  process.env.MENU_MEDIA = 'off';
+  assert.strictEqual(vids[0].video.toString(), 'small', 'the owner video is used');
+  // too big
+  await assert.rejects(mm.setVideo(Buffer.from('x'), async () => Buffer.alloc(7 * 1024 * 1024)), (e) => e.code === 'TOO_BIG');
+  // no ffmpeg: a small file is kept as it is, a big one is refused
+  await mm.setVideo(Buffer.from('tiny'), async () => { throw Object.assign(new Error('x'), { code: 'NEED_FFMPEG' }); });
+  await assert.rejects(mm.setVideo(Buffer.alloc(7 * 1024 * 1024), async () => { throw Object.assign(new Error('x'), { code: 'NEED_FFMPEG' }); }));
+  // back to the default
+  mm.resetCustom();
+  assert.deepStrictEqual(mm.custom(), { image: false, video: false });
+  process.env.MENU_MEDIA = 'video';
+  const back = [];
+  await mm.send({ sendMessage: async (j, c) => back.push(c) }, 'a@g.us', 'cap');
+  process.env.MENU_MEDIA = 'off';
+  assert.ok(back[0].video.length > 10000, 'the TurboFex video is back');
+  store.setAuto('menu', {});
+});
+
+test('setmenu image / video: usage help without a file, and "media default" resets', async () => {
+  const store = require('../whatsapp/store');
+  const setmenu = require('../commands/owner2').find((c) => c.name === 'setmenu');
+  const out = [];
+  const base = { args: [], rest: '', reply: async (t) => out.push(t), prefix: '.', jid: 'a@s.whatsapp.net', botIds: [], msg: { key: { remoteJid: 'a@s.whatsapp.net', id: 'X' }, message: { conversation: '.setmenu image' } }, sock: {} };
+  await setmenu.run({ ...base, args: ['image'], rest: 'image' });
+  assert.match(out.at(-1), /Menu picture[\s\S]*Send a picture/);
+  await setmenu.run({ ...base, args: ['video'], rest: 'video' });
+  assert.match(out.at(-1), /Menu video[\s\S]*Up to 15 seconds/);
+  await setmenu.run({ ...base, args: ['media', 'default'], rest: 'media default' });
+  assert.match(out.at(-1), /back/);
+  assert.strictEqual(require('../whatsapp/menumedia').mode(), 'off'); // the tests keep MENU_MEDIA=off
+  store.setAuto('menu', {});
+});
+
+test('antigstatus report: counts what happened, so no console is needed', async () => {
+  const store = require('../whatsapp/store');
+  const protect = require('../whatsapp/protect');
+  const cmd = require('../commands/antigstatus')[0];
+  const jid = '120369000000300003@g.us';
+  store.getGroup(jid);
+  store.update(jid, (g) => { g.antigstatusMode = 'delete'; });
+  const sender = '27811110011@s.whatsapp.net';
+  const sock = { sendMessage: async () => {}, relayMessage: async () => {} };
+  const before = { ...protect.gstats };
+  const post = (id) => ({ key: { remoteJid: jid, id, participant: sender }, message: { groupStatusMessageV2: { message: {} } } });
+  await protect.runProtections({ sock, msg: post('R1'), jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
+  await protect.runProtections({ sock, msg: post('R2'), jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: true, isOwner: false }) });
+  await protect.runProtections({ sock, msg: post('R3'), jid, text: '', getRoles: async () => ({ isBotAdmin: false, isAdmin: false, isOwner: false }) });
+  await protect.runProtections({ sock: { sendMessage: async () => { throw new Error('no'); }, relayMessage: async () => { throw new Error('no'); } }, msg: post('R4'), jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
+  const g = protect.gstats;
+  assert.deepStrictEqual([g.seen - before.seen, g.deleted - before.deleted, g.adminPosted - before.adminPosted, g.botNotAdmin - before.botNotAdmin, g.refused - before.refused], [4, 1, 1, 1, 1]);
+  const out = [];
+  await cmd.run({ args: ['report'], reply: async (t) => out.push(t), isOwner: true, jid, prefix: '.' });
+  assert.match(out[0], /Group statuses since the bot started[\s\S]*Seen:\* \d+[\s\S]*Refused by WhatsApp/);
+});
+
+// ------------------------------------------------------------ v1.1.4
+test('a group status is deleted with a wrapped revoke (a plain delete does not remove it)', async () => {
+  const store = require('../whatsapp/store');
+  const protect = require('../whatsapp/protect');
+  const jid = '120369000000300009@g.us';
+  store.getGroup(jid);
+  store.update(jid, (g) => { g.antigstatusMode = 'delete'; });
+  const sender = '27811110031@s.whatsapp.net';
+  const relayed = [];
+  const sock = { sendMessage: async () => {}, relayMessage: async (j, content, opts) => { relayed.push({ j, content, opts }); } };
+  const msg = { key: { remoteJid: jid, id: 'GS1', participant: sender }, message: { groupStatusMessageV2: { message: { imageMessage: {} } } } };
+  await protect.runProtections({ sock, msg, jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
+  assert.strictEqual(relayed.length, 1);
+  const w = relayed[0].content.groupStatusMessageV2.message.protocolMessage;
+  assert.strictEqual(w.type, 0, 'a revoke');
+  assert.strictEqual(w.key.id, 'GS1');
+  assert.strictEqual(w.key.participant, sender);
+  assert.strictEqual(w.key.remoteJid, jid);
+  assert.strictEqual(relayed[0].opts.additionalAttributes.edit, '8', 'an admin delete');
+  // a normal message is still deleted the normal way
+  const plain = [];
+  const sock2 = { sendMessage: async (j, c) => plain.push(c), relayMessage: async () => { throw new Error('must not be used'); } };
+  store.update(jid, (g) => { g.antilink = true; g.antilinkMode = 'delete'; });
+  await protect.runProtections({ sock: sock2, msg: { key: { remoteJid: jid, id: 'N9', participant: sender }, message: { conversation: 'visit https://spam.example now' } }, jid, text: 'visit https://spam.example now', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
+});
+
+test('shapeOf: short part names, no raw bytes and no numbered entries', () => {
+  const { shapeOf } = require('../whatsapp/shape');
+  const bytes = new Uint8Array(40);
+  const shape = shapeOf({ senderKeyDistributionMessage: { groupId: 'g', axolotlSenderKeyDistributionMessage: bytes, list: [1, 2, 3] }, groupStatusMessageV2: { message: { imageMessage: { url: 'x' } } } });
+  assert.ok(shape.includes('groupStatusMessageV2.message.imageMessage'));
+  assert.ok(!shape.some((k) => /\.\d+$/.test(k)), 'no numbered entries');
+  assert.ok(shape.length < 12);
+});
+
+test('autoviewonce debug: an EMPTY message also reaches the owner', async () => {
+  const watchers = require('../whatsapp/watchers');
+  const sent = [];
+  const sock = { user: { id: '27899999999:1@s.whatsapp.net' }, sendMessage: async (j, c) => { sent.push([j, c]); }, requestPlaceholderResend: async () => {} };
+  watchers.startDebug();
+  watchers.early(sock, { key: { remoteJid: '120369000000500001@g.us', id: 'EMP1', participant: '27811110040@s.whatsapp.net' }, message: null, messageStubType: 2 });
+  await new Promise((r) => setTimeout(r, 30));
+  const report = sent.find(([j, c]) => c.text && /Auto view-once check/.test(c.text));
+  assert.ok(report, 'a report was sent');
+  assert.match(report[1].text, /none \(empty message\)/);
+  assert.match(report[1].text, /Stub type:\* 2/);
+});
+
+test('the reaction: the hourglass shows 500 ms after the message arrived (not after the command started)', async () => {
+  delete require.cache[require.resolve('../whatsapp/cmdreact')];
+  const cmdreact = require('../whatsapp/cmdreact');
+  const store = require('../whatsapp/store');
+  store.setCmdReact('on');
+  const sent = [];
+  const sock = { sendMessage: async (j, c) => { sent.push(c.react.text); return {}; } };
+  // the command started 450 ms after the message arrived: the hourglass must come at once (not 500 ms later)
+  const r = cmdreact.begin(sock, { key: { remoteJid: 'a@s.whatsapp.net', id: 'T1' } }, { since: Date.now() - 450 });
+  await new Promise((x) => setTimeout(x, 150));
+  assert.deepStrictEqual(sent, ['⏳']);
+  r.finish('ok');
+  await new Promise((x) => setTimeout(x, 30));
+  assert.deepStrictEqual(sent, ['⏳', '✅']);
 });

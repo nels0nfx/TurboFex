@@ -1,3 +1,17 @@
+TurboFex v1.1.4 - group statuses are really deleted, menu back, reactions on time, view-once check
+CHANGED IN 1.1.4
+- FIXED: group statuses were recognised and a delete was sent, but WhatsApp ignores a normal delete for them. They are now deleted with a revoke wrapped the way the status was posted (as an admin delete). The plain delete is still sent after it as a backup.
+- FIXED: the menu was not arriving. The picture on the one-message menu was too big: together with the menu text it went over WhatsApp's size limit. The card picture is now small (320 px, 12 KB, also for your own picture), and a menu that takes more than 25 seconds falls back to the video or plain text.
+- FIXED: the command reaction. The hourglass now appears 500 ms after the message ARRIVED (before, the wait started only after the bot had checked roles and permissions, so it could be seconds late), and the check mark waits until the answer has really been sent (before, it could come first). A reaction that cannot be sent is given up after 4 seconds instead of 10, so it no longer holds the next one back.
+- FIXED: `autoviewonce debug` sent nothing: empty messages (this is how WhatsApp delivers a hidden view-once) were skipped before the report. They are reported now, with the stub type.
+- CHANGED: the check reports list the part names only (no raw bytes, no numbered entries), so they are short and readable.
+
+TurboFex v1.1.3 - your own menu picture and video, group status report
+CHANGED IN 1.1.3
+- NEW: the owner can use a picture and a video of their own in the menu. `setmenu image` (send a picture with it as the caption, or reply to a picture) and `setmenu video` (a video or GIF, up to 15 seconds, made small automatically). The files are kept in the data folder, so updates never remove them. `setmenu media default` brings back the TurboFex picture and video; `setmenu media card / video / off` chooses how the menu looks.
+- NEW: `antigstatus` now shows a report: how many group statuses were seen, deleted, refused by WhatsApp, skipped because the poster is an admin or the owner, skipped because the bot is not an admin, and posted from the bot's own account. `antigstatus report` shows it alone. After one test the report says exactly why a status was not deleted. Admins, the owner and the bot's own account are never affected: test with a member who is not an admin.
+- FIXED: `setmenu reset` no longer forgets the picture choice.
+
 TurboFex v1.1.2 - one-message menu, complete update notes, no false view-once
 CHANGED IN 1.1.2
 - FIXED: the menu header and the commands are now ONE message again: the TurboFex picture on top and the whole menu under it. (A video caption can only hold about 1000 characters, so the long menu cannot sit inside a video caption.) `setmenu media video` keeps the intro video with the header as its caption and the commands after it; `setmenu media off` is plain text. If the picture cannot be sent, the video, then plain text, is used.

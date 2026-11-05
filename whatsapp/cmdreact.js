@@ -9,19 +9,19 @@ const LOADING = '⏳';
 const DONE = '✅';
 const WARN = '⚠️';
 const FAIL = '❌';
-const LOADING_AFTER_MS = 900;
+const LOADING_AFTER_MS = 500; // counted from the moment the message ARRIVED, not from when the command started (roles and checks take time)
 // the reaction is taken off again a few seconds after the command is done (a problem stays a little longer so it is noticed)
 const CLEAR_OK_MS = (Number(process.env.CMDREACT_CLEAR_SECONDS) || 5) * 1000;
 const CLEAR_PROBLEM_MS = CLEAR_OK_MS + 4000;
 
-function begin(sock, msg) {
+function begin(sock, msg, opts = {}) {
   const mode = store.getCmdReact();
   if (mode === 'off' || !msg?.key?.id || !msg.key.remoteJid) return { finish() {} };
 
   let chain = Promise.resolve(); // reactions go one after the other so the last one always wins
   const send = (text) => {
     chain = chain
-      .then(() => withTimeout(sock.sendMessage(msg.key.remoteJid, { react: { text, key: msg.key } }), 10000, 'reaction timed out'))
+      .then(() => withTimeout(sock.sendMessage(msg.key.remoteJid, { react: { text, key: msg.key } }), 4000, 'reaction timed out'))
       .catch(() => {}); // a missing reaction must never break a command
     return chain;
   };
@@ -31,10 +31,12 @@ function begin(sock, msg) {
     return done;
   };
   let loadingShown = false;
+  // the wait before the ⏳ is counted from when the message arrived: a command that was slow to start shows it at once
+  const waited = opts.since ? Date.now() - opts.since : 0;
   const timer = setTimeout(() => {
     loadingShown = true;
     send(LOADING);
-  }, LOADING_AFTER_MS);
+  }, Math.max(0, LOADING_AFTER_MS - waited));
 
   return {
     // outcome: 'ok' | 'warn' | 'fail'
