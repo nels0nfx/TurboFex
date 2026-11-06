@@ -18,7 +18,7 @@ module.exports = [
       }
       const report = () => {
         const s = protect.gstats;
-        return `📊 *Group statuses since the bot started*\n▸ *Seen:* ${s.seen}\n▸ *Deleted:* ${s.deleted}\n▸ *Refused by WhatsApp:* ${s.refused}\n▸ *Skipped, the poster is an admin or the owner:* ${s.adminPosted}\n▸ *Skipped, I am not an admin:* ${s.botNotAdmin}\n▸ *Posted from the bot's own account (never touched):* ${s.ownPosts}`;
+        return `📊 *Group statuses since the bot started*\n▸ *Seen:* ${s.seen}\n▸ *Deleted:* ${s.deleted}\n▸ *Refused by WhatsApp:* ${s.refused}\n▸ *Skipped, the poster is an admin or the owner:* ${s.adminPosted}\n▸ *Skipped, I am not an admin:* ${s.botNotAdmin}\n▸ *Posted from the bot's own account (never touched):* ${s.ownPosts}\n▸ *Last answer to a delete:* ${require('../whatsapp/delivery').last.delete}`;
       };
       if ((ctx.args[0] || '').toLowerCase() === 'report') return ctx.reply(report());
       await setActionMode(ctx, { key: 'antigstatusMode', label: 'Anti group status', trigger: 'posts a group status' });

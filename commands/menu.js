@@ -93,8 +93,9 @@ module.exports = {
     // normally ONE message: the picture with the whole menu under it. Video mode: the header is the video caption and the commands
     // follow. If nothing with a picture can be sent, one text menu.
     const whole = `${head}\n\n${body}\n\n${tips}`;
-    if (sock && jid && (await menumedia.sendCard(sock, jid, whole, msg))) return; // header and commands in ONE message
-    if (sock && jid && (await menumedia.send(sock, jid, head, msg))) return reply(`${body}\n\n${tips}`);
+    if (sock && jid && menumedia.mode() === 'card' && (await menumedia.sendCard(sock, jid, whole, msg))) return; // one message with a picture on top
+    // the picture or video first, then the header and the commands together as ONE message
+    if (sock && jid) await menumedia.send(sock, jid, '', msg);
     return reply(whole);
   },
 };

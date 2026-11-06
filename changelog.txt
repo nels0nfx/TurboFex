@@ -1,3 +1,10 @@
+TurboFex v1.1.5 - menu delivery, group status answers, hidden files
+CHANGED IN 1.1.5
+- FIXED: the menu. The one-message picture card was not shown on your phone (WhatsApp accepted it but nothing appeared). The default is now: the TurboFex video (or your own picture or video) first, then the WHOLE menu, header and commands together, as ONE message under it. The card is still there with `setmenu media card`, and now WhatsApp's answer is checked: when it refuses the card, the normal menu is sent automatically. If the video cannot be sent, the picture is used, then plain text.
+- NEW: the bot now knows what WhatsApp answered to a message it sent (accepted or refused, with the error code). `antigstatus` shows "Last answer to a delete", and the debug report shows what WhatsApp said to the delete of a group status: accepted, refused (with its error code), or no answer. A refused wrapped revoke is followed by the plain delete.
+- NEW: `autoviewonce guess on/off`. A file that arrives empty and that your phone then sends back is kept. It is labelled *Hidden picture / video* ("it may have been a view-once") unless it really carries the view-once flag, then it is labelled *View-once*. With `guess off` only real view-once files are kept.
+- NEW: the `autoviewonce debug` report says when the file is the answer to our request to the phone, and says so when the phone did not answer at all.
+
 TurboFex v1.1.4 - group statuses are really deleted, menu back, reactions on time, view-once check
 CHANGED IN 1.1.4
 - FIXED: group statuses were recognised and a delete was sent, but WhatsApp ignores a normal delete for them. They are now deleted with a revoke wrapped the way the status was posted (as an admin delete). The plain delete is still sent after it as a backup.

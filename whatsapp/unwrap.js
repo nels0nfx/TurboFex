@@ -44,7 +44,7 @@ function findViewOnce(message, assume = false) {
     if (node && (viewOnce || node.viewOnce || assume)) {
       // a view-once whose file details were not sent to this device
       const empty = !node.mediaKey && !node.url && !node.directPath;
-      return { kind: key.replace('Message', ''), node, empty };
+      return { kind: key.replace('Message', ''), node, empty, guessed: !(viewOnce || node.viewOnce) };
     }
   }
   return null;

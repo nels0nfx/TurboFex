@@ -126,7 +126,7 @@ async function debugReport(sock, jid, msg, sender, roles, outcome) {
   debug.left -= 1;
   const me = String(sock.user?.id || '').replace(/:\d+@/, '@');
   try {
-    await sock.sendMessage(me, { text: `🔎 *Anti group status check*\n▸ *Parts:* ${shapeOf(msg.message).join(', ') || 'none (empty message)'}\n▸ *Sender is admin:* ${roles.isAdmin ? 'yes' : 'no'}\n▸ *Bot is admin:* ${roles.isBotAdmin ? 'yes' : 'no'}\n▸ *Recognised as group status:* ${outcome ? 'yes' : 'no'}${outcome === 'deleted' ? '\n▸ *Delete:* sent' : outcome ? '\n▸ *Delete:* failed' : ''}` });
+    await sock.sendMessage(me, { text: `🔎 *Anti group status check*\n▸ *Parts:* ${shapeOf(msg.message).join(', ') || 'none (empty message)'}\n▸ *Sender is admin:* ${roles.isAdmin ? 'yes' : 'no'}\n▸ *Bot is admin:* ${roles.isBotAdmin ? 'yes' : 'no'}\n▸ *Recognised as group status:* ${outcome ? 'yes' : 'no'}${outcome === 'deleted' ? '\n▸ *Delete:* sent' : outcome ? '\n▸ *Delete:* failed' : ''}${outcome ? `\n▸ *WhatsApp answered:* ${require('./delivery').last.delete}` : ''}` });
   } catch (err) {
     // nothing more we can do
   }

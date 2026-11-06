@@ -49,13 +49,27 @@ test('view-once: group events (a stub type) are not chased, and nothing is asked
   store.updateWatch('viewonce', (w) => { w.mode = 'all'; });
 });
 
-test('view-once: the phone answers our request with an ORDINARY picture (no flag): it is NOT reported as a view-once', async () => {
+test('view-once: the phone answers our request with a picture WITHOUT the flag: it is kept but labelled Hidden, never View-once', async () => {
   const sock = mkSock({ requestPlaceholderResend: async () => {} });
   watchers.early(sock, empty('E4'));
   await settle();
-  await handler.handleMessage(sock, withMedia('E4', { imageMessage: IMG })); // plain picture, same id
+  await handler.handleMessage(sock, withMedia('E4', { imageMessage: IMG })); // same id, no view-once flag
   await settle();
-  assert.strictEqual(sent.filter((s) => s.c.image).length, 0, 'an ordinary picture is never copied or labelled view-once');
+  const img = sent.find((s) => s.c.image);
+  assert.ok(img, 'the picture was copied');
+  assert.match(img.c.caption, /Hidden picture/);
+  assert.ok(!/View-once picture/.test(img.c.caption), 'it is not claimed to be a view-once');
+});
+
+test('view-once: with "guess off" a picture without the flag is ignored', async () => {
+  store.updateWatch('viewonce', (w) => { w.guess = false; });
+  const sock = mkSock({ requestPlaceholderResend: async () => {} });
+  watchers.early(sock, empty('E4c'));
+  await settle();
+  await handler.handleMessage(sock, withMedia('E4c', { imageMessage: IMG }));
+  await settle();
+  store.updateWatch('viewonce', (w) => { w.guess = true; });
+  assert.strictEqual(sent.filter((s) => s.c.image).length, 0);
 });
 
 test('view-once: the phone answers our request with the real view-once (flag present): it is opened', async () => {

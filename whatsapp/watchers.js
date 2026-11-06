@@ -182,7 +182,7 @@ async function debugReport(sock, msg, jid, vo) {
   debug.left -= 1;
   const node = media ? content[media] : null;
   const where = jid.endsWith('@g.us') ? 'group' : 'private chat';
-  await sock.sendMessage(ownerChat(sock), { text: `🔎 *Auto view-once check*\n▸ *Chat:* ${where}\n▸ *Parts:* ${shapeOf(msg.message).join(', ') || 'none (empty message)'}\n▸ *View-once flag:* ${vo ? 'yes' : 'no'}\n▸ *File included:* ${node ? (node.mediaKey || node.url || node.directPath ? 'yes' : 'no') : 'no media'}\n▸ *Stub type:* ${msg.messageStubType ?? 'none'}` });
+  await sock.sendMessage(ownerChat(sock), { text: `🔎 *Auto view-once check*\n▸ *Chat:* ${where}\n▸ *Parts:* ${shapeOf(msg.message).join(', ') || 'none (empty message)'}\n▸ *View-once flag:* ${vo ? 'yes' : 'no'}\n▸ *File included:* ${node ? (node.mediaKey || node.url || node.directPath ? 'yes' : 'no') : 'no media'}\n▸ *Stub type:* ${msg.messageStubType ?? 'none'}${msg.key.id && voAsked.has(msg.key.id) ? '\n▸ *This is the answer to my request to the phone*' : ''}` });
 }
 
 // copies one view-once file to the owner (see early() below); throws a clear problem when something unexpected breaks
@@ -247,7 +247,9 @@ async function viewOnce(sock, msg, isGroup, assume = false) {
       }
       return warnOwner(sock, `👁️ A view-once ${kind} from ${tagOf(sender)} arrived in ${where}, but I could not save it.\nReason: ${String(buffer.message).slice(0, 100)}\n${OPEN_ON_PHONE}`, 'viewonce', [sender]);
     }
-    const header = `👁️ *View-once ${kind}*\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`;
+    const header = vo.guessed
+      ? `👁️ *Hidden ${kind}*\n▸ It arrived without its content, so it may have been a view-once.\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`
+      : `👁️ *View-once ${kind}*\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`;
     await sendCopy(sock, normalize(sock, cfg.to) || ownerChat(sock), { kind, buffer, mime: vo.node.mimetype, text: vo.node.caption || '', sender }, header);
     if (id) voState.set(id, Date.now());
     stats.viewOnceSaved += 1;
@@ -279,6 +281,7 @@ function chaseHidden(sock, msg, jid) {
   const timer = setTimeout(() => {
     voAsked.delete(id);
     console.log('👁️ The phone did not send the hidden message back. WhatsApp is not giving this view-once to this device.');
+    if (debug.left > 0 && Date.now() < debug.until) sock.sendMessage(ownerChat(sock), { text: '🔎 *Auto view-once check*\n▸ I asked your phone for the hidden message and it did *not* answer. WhatsApp is not giving this one to the bot.' }).catch(() => {});
     // Many ordinary messages arrive empty (could not be decrypted yet, group events, reactions), so this is only a GUESS about a
     // view-once. It stays in the console and is NOT sent to the owner, otherwise normal chats trigger it. EMPTY_NOTICE=1 turns it on.
     if (process.env.EMPTY_NOTICE === '1') warnOwner(sock, `👁️ A message from ${tagOf(sender)} arrived without its content (probably a view-once) and I asked your phone for it, but WhatsApp did not send it to this bot.\n${OPEN_ON_PHONE}`, 'viewonce', [sender]).catch(() => {});
@@ -310,7 +313,7 @@ function early(sock, msg) {
     const id = msg.key.id;
     // Only a message that really carries the view-once flag is opened. (The phone's answer to our request used to be opened
     // even without the flag, so an ordinary picture that had arrived late was reported as a view-once.)
-    const assume = false;
+    const assume = store.watchCfg('viewonce').guess !== false && !!(id && voAsked.has(id)); // the phone's answer to our request: opened, but only called a view-once when it carries the flag
     const vo = findViewOnce(msg.message, assume);
     if (!vo) {
       if (id && voAsked.has(id) && peel(msg.message).content && Object.keys(peel(msg.message).content).some((k) => /^(image|video|audio)Message$/.test(k))) {

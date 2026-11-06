@@ -436,6 +436,7 @@ async function startWhatsApp() {
   // edits and deletions that WhatsApp reports as updates
   sock.ev.on('messages.update', (updates) => {
     if (!alive()) return;
+    require('./delivery').note(updates); // what WhatsApp answered to our own messages (accepted or refused)
     watchers.onUpdate(sock, updates).catch((e) => console.error('Update watcher error:', e.message));
   });
 

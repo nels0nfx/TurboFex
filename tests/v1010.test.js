@@ -1,5 +1,6 @@
 // v1.0.10: download errors and temp space, the clean reminder wording, the response standard (scan of every reply string)
 require('./_setup');
+process.env.TURBOFEX_FAST = '1'; // the tests do not wait seconds for WhatsApp answers
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -255,29 +256,35 @@ test('menu media: video mode sends the video, then the picture, then nothing; of
   assert.strictEqual(await mm.sendCard({ sendMessage: async () => sent.push('x') }, 'a@g.us', 'cap'), false);
 });
 
-test('the menu: header and commands are ONE message (card), video mode keeps the header in the caption, plain text when nothing can be sent', async () => {
+test('the menu: the video first, then header and commands as ONE message; card mode is checked; plain text when nothing can be sent', async () => {
   const menu = require('../commands/menu');
+  const delivery = require('../whatsapp/delivery');
   const commandList = [].concat(...fs.readdirSync(path.join(root, 'commands')).filter((f) => f.endsWith('.js')).map((f) => require(path.join(root, 'commands', f))));
   const run = async (sock) => {
     const texts = [];
     await menu.run({ reply: async (t) => texts.push(t), commandList, prefix: '.', args: [], isOwner: false, isAdmin: false, sock, jid: 'a@s.whatsapp.net', msg: { key: {} } });
     return texts;
   };
-  // card (the default): one message with the picture on top and the whole menu in it
+  // default: the video (no caption), then the WHOLE menu in one message
   delete process.env.MENU_MEDIA;
   const sent = [];
-  let texts = await run({ sendMessage: async (j, c) => { sent.push(c); } });
-  assert.strictEqual(sent.length, 1, 'one message');
-  assert.strictEqual(texts.length, 0, 'nothing sent apart from the card');
-  assert.ok(sent[0].text.includes('┏✦ ◈') && sent[0].text.includes('┏ ❏'), 'header and commands in the same message');
-  assert.ok(sent[0].contextInfo.externalAdReply.thumbnail.length > 5000 && sent[0].contextInfo.externalAdReply.renderLargerThumbnail);
-  // video mode: the header is the caption, the commands follow
-  process.env.MENU_MEDIA = 'video';
-  const vsent = [];
-  texts = await run({ sendMessage: async (j, c) => { vsent.push(c); } });
-  assert.ok(vsent[0].video && vsent[0].caption.includes('┏✦'));
-  assert.match(texts[0], /┏ ❏/);
-  assert.ok(!texts[0].includes('┏✦ ◈'));
+  let texts = await run({ sendMessage: async (j, c) => { sent.push(c); return { key: { id: 'M1' } }; } });
+  assert.ok(sent[0].video && !sent[0].caption, 'the video comes first, without a caption');
+  assert.strictEqual(texts.length, 1, 'one text message');
+  assert.ok(texts[0].includes('┏✦ ◈') && texts[0].includes('┏ ❏'), 'header and commands together in that message');
+  // card mode: one message with a picture on top
+  process.env.MENU_MEDIA = 'card';
+  const csent = [];
+  texts = await run({ sendMessage: async (j, c) => { csent.push(c); return { key: { id: 'C1' } }; } });
+  assert.strictEqual(csent.length, 1);
+  assert.strictEqual(texts.length, 0);
+  assert.ok(csent[0].text.includes('┏✦ ◈') && csent[0].text.includes('┏ ❏'));
+  assert.ok(csent[0].contextInfo.externalAdReply.thumbnail.length > 3000 && csent[0].contextInfo.externalAdReply.renderLargerThumbnail);
+  // card mode, WhatsApp refuses the card: the normal menu is sent instead
+  const refused = [];
+  texts = await run({ sendMessage: async (j, c) => { refused.push(c); if (c.contextInfo) { setTimeout(() => delivery.note([{ key: { id: 'R1' }, update: { status: 0, messageStubParameters: ['479'] } }]), 1); return { key: { id: 'R1' } }; } return { key: { id: 'X' } }; } });
+  assert.ok(refused.some((c) => c.video), 'the video was sent after the refused card');
+  assert.strictEqual(texts.length, 1, 'and the menu as text');
   // nothing can be sent: one plain text menu
   delete process.env.MENU_MEDIA;
   texts = await run({ sendMessage: async () => { throw new Error('no'); } });
@@ -350,7 +357,7 @@ test('the update-complete message after a restart carries the whole what is new'
 });
 
 // ------------------------------------------------------------ view-once: no more guessing
-test('a picture the phone sent late is not reported as view-once; one with the flag still is', async () => {
+test('a picture the phone sent late is labelled Hidden, never View-once', async () => {
   const watchers = require('../whatsapp/watchers');
   const store = require('../whatsapp/store');
   store.updateWatch('viewonce', (w) => { w.mode = 'all'; });
@@ -361,7 +368,7 @@ test('a picture the phone sent late is not reported as view-once; one with the f
   await new Promise((r) => setTimeout(r, 20));
   watchers.early(sock, { key, message: { imageMessage: { mediaKey: Buffer.from('k'), url: 'https://x', mimetype: 'image/jpeg' } } });
   await new Promise((r) => setTimeout(r, 50));
-  assert.ok(!sent.some((c) => c.image || /View-once/.test(c.caption || c.text || '')), 'nothing is reported');
+  assert.ok(!sent.some((c) => /View-once/.test(c.caption || c.text || '')), 'never called a view-once');
   store.updateWatch('viewonce', (w) => { w.mode = 'off'; });
 });
 
@@ -380,7 +387,7 @@ test('menu: the owner can add a picture and a video of their own, and go back to
   await mm.send({ sendMessage: async (j, c) => sent.push(c) }, 'a@g.us', 'cap');
   process.env.MENU_MEDIA = 'off';
   // the card uses the owner's small picture
-  delete process.env.MENU_MEDIA;
+  process.env.MENU_MEDIA = 'card';
   const cards = [];
   await mm.sendCard({ sendMessage: async (j, c) => cards.push(c) }, 'a@g.us', 'text');
   process.env.MENU_MEDIA = 'off';
@@ -508,4 +515,33 @@ test('the reaction: the hourglass shows 500 ms after the message arrived (not af
   r.finish('ok');
   await new Promise((x) => setTimeout(x, 30));
   assert.deepStrictEqual(sent, ['⏳', '✅']);
+});
+
+test('delivery: a refused answer is known by the id, also when it arrived before we asked', async () => {
+  const delivery = require('../whatsapp/delivery');
+  const waiting = delivery.expect('ID-A', 1000);
+  delivery.note([{ key: { id: 'ID-A' }, update: { status: 0, messageStubParameters: ['403'] } }]);
+  assert.deepStrictEqual(await waiting, { result: 'refused', error: '403' });
+  delivery.note([{ key: { id: 'ID-B' }, update: { status: 3 } }]);
+  assert.deepStrictEqual(await delivery.expect('ID-B', 1000), { result: 'ok' });
+  assert.deepStrictEqual(await delivery.expect('ID-NEVER', 20), { result: 'unknown' });
+});
+
+test('group status delete: the answer of WhatsApp is kept for the report; a refused wrapped revoke is followed by the plain delete', async () => {
+  const store = require('../whatsapp/store');
+  const protect = require('../whatsapp/protect');
+  const delivery = require('../whatsapp/delivery');
+  const jid = '120369000000300011@g.us';
+  store.getGroup(jid);
+  store.update(jid, (g) => { g.antigstatusMode = 'delete'; });
+  const sender = '27811110050@s.whatsapp.net';
+  const calls = [];
+  const sock = {
+    relayMessage: async (j, c, o) => { calls.push('wrapped'); setTimeout(() => delivery.note([{ key: { id: o.messageId }, update: { status: 0, messageStubParameters: ['403'] } }]), 1); },
+    sendMessage: async (j, c, o) => { if (!c.delete) return; calls.push('plain'); setTimeout(() => delivery.note([{ key: { id: o.messageId }, update: { status: 3 } }]), 1); },
+  };
+  const msg = { key: { remoteJid: jid, id: 'GS7', participant: sender }, message: { groupStatusMessageV2: { message: {} } } };
+  await protect.runProtections({ sock, msg, jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
+  assert.deepStrictEqual(calls, ['wrapped', 'plain']);
+  assert.match(delivery.last.delete, /wrapped revoke: WhatsApp refused it \(error 403\); plain delete: WhatsApp accepted it/);
 });

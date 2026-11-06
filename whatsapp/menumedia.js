@@ -1,6 +1,11 @@
-// The menu opens with the TurboFex intro video. Where the video cannot be sent (the file is missing, WhatsApp refuses it),
-// the TurboFex picture is sent instead, and when even that fails the menu is simply sent as text.
-// Turn it off with MENU_MEDIA=off in the settings of the host.
+// The menu comes with the TurboFex look. Chosen with "setmenu media video / card / off" (or MENU_MEDIA on the host):
+//  - video (default): the TurboFex video (or your own picture or video) first, then the WHOLE menu, header and commands together,
+//    as ONE message right under it.
+//  - card: ONE message with a small picture on top and the whole menu in it. Not every phone shows it, so WhatsApp's answer is
+//    checked and a menu it refuses is sent the normal way.
+//  - off: plain text.
+// (WhatsApp keeps media captions to about 1000 characters, so a menu this long cannot sit inside a picture or video caption.)
+// Where the video or picture cannot be sent, the next one is tried, and at the end the menu is sent as plain text.
 const fs = require('fs');
 const { withTimeout } = require('./timeout');
 const path = require('path');
@@ -69,9 +74,9 @@ function resetCustom() {
 
 function mode() {
   const env = String(process.env.MENU_MEDIA || '').toLowerCase();
-  const chosen = env || String(((require('./store').getAuto('menu') || {}).media) || 'card').toLowerCase();
+  const chosen = env || String(((require('./store').getAuto('menu') || {}).media) || 'video').toLowerCase();
   if (/^(off|0|false|no|text)$/.test(chosen)) return 'off';
-  return chosen === 'video' ? 'video' : 'card';
+  return chosen === 'card' ? 'card' : 'video';
 }
 
 // ONE message: the picture on top, the whole text under it. Returns true when it was sent.
@@ -86,10 +91,16 @@ async function sendCard(sock, jid, text, quoted) {
     // the default link is used
   }
   try {
-    await withTimeout(sock.sendMessage(jid, {
+    const sent = await withTimeout(sock.sendMessage(jid, {
       text,
       contextInfo: { externalAdReply: { title: require('../core/brand').botName, body: 'Command menu', thumbnail, mediaType: 1, renderLargerThumbnail: true, showAdAttribution: false, sourceUrl: `https://github.com/${repo}` } },
     }, quoted ? { quoted } : {}), 25000, 'the menu card took too long');
+    // WhatsApp answers a refused message with an error: then the normal way is used (a phone that cannot show it never sees it)
+    const verdict = await require('./delivery').expect(sent?.key?.id, 6000);
+    if (verdict.result === 'refused') {
+      console.log(`Menu card refused by WhatsApp (error ${verdict.error || 'unknown'}), the normal menu is sent instead.`);
+      return false;
+    }
     return true;
   } catch (err) {
     console.log('Menu card could not be sent, the video is used instead:', err.message);
@@ -101,22 +112,19 @@ async function sendCard(sock, jid, text, quoted) {
 async function send(sock, jid, caption, quoted) {
   if (mode() === 'off') return false;
   const options = quoted ? { quoted } : {};
-  const video = load('video');
-  if (video) {
+  const own = custom();
+  // the owner's own picture comes before the TurboFex video; the owner's own video comes first of all
+  const order = own.image && !own.video ? ['image', 'video'] : ['video', 'image'];
+  for (const kind of order) {
+    const file = load(kind);
+    if (!file) continue;
+    const content = kind === 'video' ? { video: file, mimetype: 'video/mp4', gifPlayback: true } : { image: file, mimetype: 'image/jpeg' };
+    if (caption) content.caption = caption;
     try {
-      await sock.sendMessage(jid, { video, mimetype: 'video/mp4', gifPlayback: true, caption }, options);
+      await withTimeout(sock.sendMessage(jid, content, options), 25000, 'the menu media took too long');
       return true;
     } catch (err) {
-      console.log('Menu video could not be sent, the picture is used instead:', err.message);
-    }
-  }
-  const image = load('image');
-  if (image) {
-    try {
-      await sock.sendMessage(jid, { image, mimetype: 'image/jpeg', caption }, options);
-      return true;
-    } catch (err) {
-      console.log('Menu picture could not be sent, the text menu is used instead:', err.message);
+      console.log(`Menu ${kind} could not be sent, the next choice is used:`, err.message);
     }
   }
   return false;
