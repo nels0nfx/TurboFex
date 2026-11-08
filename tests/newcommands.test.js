@@ -4,7 +4,6 @@ const assert = require('node:assert');
 const baileys = require('../core/baileys');
 const store = require('../whatsapp/store');
 const handler = require('../whatsapp/handler');
-const Aurum = require('../core/realm/aurum');
 const protect = require('../whatsapp/protect');
 const presence = require('../whatsapp/presence');
 const wordle = require('../whatsapp/play/wordle');
@@ -97,13 +96,11 @@ test('connect 4: turns are kept and the winner is announced', async () => {
   assert.match(c.out.at(-1), /wins/);
 });
 
-test('duel: attack, defend, heal and the winner takes the bet', async () => {
+test('duel: attack, defend, heal and a winner', async () => {
   const a = '27844440001@s.whatsapp.net';
   const b = '27844440002@s.whatsapp.net';
   const G = '120363000000000002@g.us';
-  Aurum.add(G, a, 500);
-  Aurum.add(G, b, 500);
-  const g = duel.create({ bet: 300, group: G }, [who(a), who(b)]);
+  const g = duel.create({}, [who(a), who(b)]);
   const c = collector();
   await duel.onMessage({ game: g, text: '1', who: who(b), ...c });
   assert.match(c.out.at(-1), /not your turn/);
@@ -114,8 +111,7 @@ test('duel: attack, defend, heal and the winner takes the bet', async () => {
   g.b.guard = false;
   await duel.onMessage({ game: g, text: '1', who: who(a), rand: () => 0.5, ...c });
   assert.ok(c.out.includes('<end>'));
-  assert.strictEqual(Aurum.balance(G, a), 800);
-  assert.strictEqual(Aurum.balance(G, b), 200);
+  assert.match(c.out.join(' '), /wins the duel/);
 });
 
 test('riddles and emoji quiz: answers are matched loosely, and every item has an answer', async () => {
@@ -201,7 +197,7 @@ test('web helper: entities and CDATA are decoded', () => {
 
 test('every new command has a valid category and a description', () => {
   const { info: CATEGORIES } = require('../whatsapp/categories');
-  const files = ['realm', 'automation', 'groupextras', 'webtools', 'lookups2', 'games2'];
+  const files = ['automation', 'groupextras', 'webtools', 'lookups2', 'games2'];
   for (const f of files) {
     for (const c of [].concat(require(`../commands/${f}`))) {
       assert.ok(c.description && c.description.length > 10, `${c.name} needs a description`);
@@ -336,7 +332,7 @@ test('no prefix mode: "join" and "start" belong to the lobby; commands keep work
   store.setMode('public');
   store.setNoPrefix(true);
   try {
-    assert.ok(handler.isKnownCommand('join') && handler.isKnownCommand('daily'), 'both words are command names');
+    assert.ok(handler.isKnownCommand('join') && handler.isKnownCommand('ping'), 'both words are command names');
     await say(OWNER, 'wordle');
     await settle();
     assert.strictEqual(games.get(G2)?.phase, 'lobby');
@@ -350,10 +346,8 @@ test('no prefix mode: "join" and "start" belong to the lobby; commands keep work
     // while the game runs, the bot still answers its commands without a prefix...
     sent.length = 0;
     await say(M, 'ping');
-    await say(M, 'daily');
     await settle();
     assert.ok(texts().some((t) => /pong/i.test(t)), 'ping works during the game');
-    assert.ok(texts().some((t) => /Daily gift/.test(t)), 'daily works during the game');
     // ...and a word that is not a command is a guess
     sent.length = 0;
     await say(M, 'crane');

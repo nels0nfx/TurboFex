@@ -26,7 +26,7 @@ test('a syntax error, a missing file, a bad package.json or a changed name is re
 test('an update that loads a file it does not contain is rejected (Cannot find module)', () => {
   const broken = [...good(), entry('core/scheduler.js', "const market = require('./market');"), entry('core/clock.js', 'module.exports = 1;')];
   assert.throws(() => validateEntries(broken, 'bot/'), /scheduler\.js needs \.\/market/);
-  const fine = [...good(), entry('core/scheduler.js', "const c = require('./clock'); const b = require('../whatsapp/handler'); require('fs'); const x = require('./realm/ticker');"), entry('core/clock.js', ''), entry('core/realm/ticker.js', '')];
+  const fine = [...good(), entry('core/scheduler.js', "const c = require('./clock'); const b = require('../whatsapp/handler'); require('fs'); const x = require('./other');"), entry('core/clock.js', ''), entry('core/other.js', '')];
   assert.doesNotThrow(() => validateEntries(fine, 'bot/'));
 });
 test('versions are compared', () => {
@@ -87,8 +87,4 @@ test('an update never deletes a file it ships itself, but still removes old file
   const text = '# old\ncommands/market.js\ncore/economy.js\n../evil.js\nconfig.js\ndata/x.json\n';
   assert.deepStrictEqual(filesToRemove(text, new Set(['commands/market.js'])), ['core/economy.js']);
   assert.deepStrictEqual(filesToRemove(text), ['commands/market.js', 'core/economy.js'], 'without the guard it would delete it');
-});
-test('market, herald, trade and auction are all loaded commands', () => {
-  const { isKnownCommand } = require('../whatsapp/handler');
-  for (const c of ['market', 'herald', 'trade', 'auction']) assert.ok(isKnownCommand(c), c);
 });

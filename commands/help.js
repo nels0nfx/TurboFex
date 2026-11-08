@@ -45,7 +45,7 @@ module.exports = {
       '',
       '*Good ones to try first*',
       `▸ \`${p}ping\` – is the bot online?`,
-      `▸ \`${p}daily\` – your daily gift in the Empire of Fex (groups)`,
+      `▸ \`${p}menu\` – every command, by category`,
       `▸ \`${p}weather Lagos\` – the weather in a city`,
     ];
     if (isAdmin || isOwner) {

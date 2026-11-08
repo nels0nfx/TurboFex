@@ -5,10 +5,19 @@ const welcomedm = require('../whatsapp/welcomedm');
 const ai = require('../core/ai');
 const clock = require('../core/clock');
 const repeat = require('../core/repeat');
-const { spark } = require('../core/realm/ui');
 const levels = require('../whatsapp/levels');
 const { num, participantIds, getTargets, quotedText, getQuoted } = require('../whatsapp/utils');
 const { removeMember } = require('../whatsapp/actions');
+
+// a tiny chart of the last values: ▁▂▃▄▅▆▇█
+const spark = (values, size = 12) => {
+  const v = values.slice(-size);
+  if (v.length < 2) return '';
+  const lo = Math.min(...v);
+  const hi = Math.max(...v);
+  const bars = '▁▂▃▄▅▆▇█';
+  return v.map((x) => bars[hi === lo ? 3 : Math.round(((x - lo) / (hi - lo)) * 7)]).join('');
+};
 
 const base = { category: 'group', groupOnly: true, needs: [], weight: 'light' };
 const adminBase = { ...base, adminOnly: true };

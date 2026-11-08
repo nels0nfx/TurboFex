@@ -29,7 +29,7 @@ test('no reply string explains internals (mentions, memory, disk) or carries dev
     /lorem ipsum/i,
   ];
   const files = [];
-  for (const d of ['commands', 'whatsapp', 'whatsapp/play', 'core', 'core/realm']) {
+  for (const d of ['commands', 'whatsapp', 'whatsapp/play', 'core']) {
     for (const f of fs.readdirSync(path.join(root, d))) if (f.endsWith('.js')) files.push(path.join(root, d, f));
   }
   const problems = [];

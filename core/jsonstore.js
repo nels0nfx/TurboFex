@@ -1,4 +1,4 @@
-// A small saved JSON file for a feature (levels, notes, birthdays, stats, the Empire...). Changes are kept in memory and
+// A small saved JSON file for a feature (levels, notes, birthdays, stats, and more...). Changes are kept in memory and
 // written to disk a moment later (and always when the bot stops or restarts).
 //
 // What makes it safe (see core/safefile.js for the file part):
@@ -15,7 +15,6 @@ const { DATA } = require('./paths');
 const { onFlushSync } = require('./flush');
 const safefile = require('./safefile');
 
-require('./ecoclean').run(DATA); // the old coin economy is set aside once, before any saved file is opened
 
 const DEFAULT_DELAY = 1000; // a change is written this long after it happens
 const NET_EVERY = 10000; // the safety net looks for unnoticed changes this often

@@ -12,7 +12,6 @@ const info = {
   tools: { title: 'TOOLS', icon: '🧰', symbol: '✪' },
   fun: { title: 'FUN', icon: '🎉', symbol: '✺' },
   games: { title: 'GAMES', icon: '🎮', symbol: '✥' },
-  economy: { title: 'EMPIRE OF FEX', icon: '⚜️', symbol: '❁' },
   ai: { title: 'AI', icon: '🤖', symbol: '✦' },
   budget: { title: 'BUDGET', icon: '💰', symbol: '❂' },
   download: { title: 'DOWNLOAD', icon: '📥', symbol: '⇩' },

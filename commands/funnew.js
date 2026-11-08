@@ -1,12 +1,7 @@
-// New fun and games (v1.0.7): neverhaveiever, twotruths, hotseat, wordchain, storychain, memorygame, pet, fish, battleship (spinwheel is now part of choose)
+// New fun and games (v1.0.7): neverhaveiever, twotruths, hotseat, wordchain, storychain, memorygame, pet, battleship (spinwheel is now part of choose)
 const games = require('../whatsapp/play');
 const jsonstore = require('../core/jsonstore');
 const levels = require('../whatsapp/levels');
-const { realmCommand } = require('../core/realm/cmd');
-const A = require('../core/realm/aurum');
-const civic = require('../core/realm/civic');
-const settings = require('../core/realm/settings');
-const ui = require('../core/realm/ui');
 const { num } = require('../whatsapp/utils');
 
 const fun = { category: 'fun', needs: [], weight: 'light' };
@@ -75,17 +70,6 @@ const moodOf = (p) => {
   return low >= 60 ? '😄 happy' : low >= 30 ? '🙂 fine' : low >= 10 ? '😟 needs you' : '😭 miserable';
 };
 const petCard = (p) => `${p.icon} *${p.name}*  _(${Math.max(1, Math.floor((p.t - p.born) / (24 * H)) + 1)} day${Math.floor((p.t - p.born) / (24 * H)) ? 's' : ''} old)_\n*Mood:* ${moodOf(p)}\n🍖 Food   ${bar(p.hunger)}\n🎾 Fun    ${bar(p.fun)}\n⚡ Energy ${bar(p.energy)}`;
-
-// ---------------------------------------------------------------- fishing
-const CATCHES = [
-  { upto: 12, icon: '🥾', name: 'an old boot', factor: 0 },
-  { upto: 62, icon: '🐟', name: 'a small fish', factor: [0.4, 0.8] },
-  { upto: 87, icon: '🐠', name: 'a nice fish', factor: [0.9, 1.4] },
-  { upto: 96, icon: '🐡', name: 'a big fish', factor: [1.5, 2.4] },
-  { upto: 99, icon: '🦑', name: 'a rare squid', factor: [2.8, 4] },
-  { upto: 100, icon: '💰', name: 'a treasure chest', factor: [5, 7] },
-];
-const between = ([a, b]) => a + Math.random() * (b - a);
 
 module.exports = [
   {
@@ -273,24 +257,6 @@ module.exports = [
       return reply(`${petCard(p)}\n\n\`${prefix}pet feed\` · \`${prefix}pet play\` · \`${prefix}pet sleep\`${p.hunger < 25 ? `\n\n⚠️ *${p.name} is very hungry!*` : ''}`);
     },
   },
-
-  realmCommand({
-    name: 'fish',
-    aliases: ['fishing', 'castline'],
-    description: 'Go fishing for Aurum in the Empire of Fex (every 25 minutes)',
-    async run({ reply, myJid }, { group }) {
-      const cd = A.cooldown(group, myJid, 'fish', 25 * 60000);
-      if (!cd.ok) return reply(ui.wait('The fish are hiding.', cd.waitMs));
-      const roll = Math.random() * 100;
-      const c = CATCHES.find((x) => roll < x.upto) || CATCHES[1];
-      const base = Number(settings.get('careers.payBase', group)) || 100;
-      const gross = c.factor ? Math.round(base * between(c.factor) * A.earnMult(group, myJid)) : 0;
-      const tax = gross ? civic.tax(group, gross) : 0;
-      const pay = gross - tax;
-      if (pay > 0) A.add(group, myJid, pay);
-      return reply(ui.card('🎣', 'You went fishing', [`*You caught:* ${c.icon} ${c.name}`, pay > 0 ? `*Sold for:* +${ui.money(pay)}${tax ? ` _(tax ${ui.money(tax)})_` : ''}` : '*Sold for:* nothing. Better luck next time!', `*Purse:* ${ui.money(A.balance(group, myJid))}`], [], 'Come back in 25 minutes. Rare catches pay a lot!'));
-    },
-  }),
 
   { ...gameBase, name: 'battleship', aliases: ['seabattle', 'sinkships'], description: 'Sink a hidden fleet together before the 20 shots run out: type a square like B4', run: (ctx) => games.fromCommand(ctx, 'battleship', { defaultRounds: 1 }) },
 ];

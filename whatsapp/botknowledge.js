@@ -158,7 +158,7 @@ const GUIDES = [
     key: 'modes',
     words: /\b(mode|public|private|prefix|silent|ignores|not (replying|responding|answering|working)|no (reply|response))\b/i,
     text:
-      'MODES AND NOT REPLYING: The bot starts in PRIVATE mode: only the owner can use commands and everybody else gets no reply (a few member commands work anyway: Empire of Fex commands, rank, top, rules, report, birthday, feedback). Public mode lets everybody use the commands they are allowed to; the owner switches with mode public / mode private. ' +
+      'MODES AND NOT REPLYING: The bot starts in PRIVATE mode: only the owner can use commands and everybody else gets no reply (a few member commands work anyway: rank, top, rules, report, birthday, feedback). Public mode lets everybody use the commands they are allowed to; the owner switches with mode public / mode private. ' +
       'A person who is not allowed to use a command gets no answer on purpose. Group-changing commands need the bot to be a group admin. Protections (antilink, antispam, welcome...) are OFF until an admin switches them on. The prefix is a dot by default.',
   },
   {
@@ -174,12 +174,6 @@ const GUIDES = [
     text:
       'AI SETUP (owner): the AI needs a free key. Get one at aistudio.google.com/apikey and send setapi gemini <key> (groq and pollinations keys also work: setapi groq <key>). "chatbot on" lets NelsonFx answer chats (chatbot where dms/groups/all/selected picks the chats), "chatbot test" checks every AI service. ' +
       'The AI learns the bot by itself from its commands, version and changelog. The owner can add own facts with "chatbot teach <text>", see them with "chatbot notes" and remove them with "chatbot unteach <number>" (or "all"). Taught notes can be heard by anybody who asks the AI, so no secrets in them. Everybody can ask with "help ask <question>".',
-  },
-  {
-    key: 'empire',
-    words: /\b(empire|fex|aurum|realm|daily|career|estate|estates|guild|dungeon|auction|election|market|court|money|coins)\b/i,
-    text:
-      'EMPIRE OF FEX: every group is its own realm with its own money (Aurum); nothing is shared between groups. Start with daily. Then career and work, estates and collect, market, sell, trade, auction, election, law, court, guild, dungeon. "realm guide" explains the whole game; group admins close or open it with "realm off" / "realm on".',
   },
   {
     key: 'support',
@@ -238,7 +232,7 @@ function forQuestion(opts = {}) {
   if (style) out.push(style);
 
   out.push(
-    `BOT KNOWLEDGE\n${brand.botName} v${version()} by ${brand.creator}: a WhatsApp bot for group management, protections, games, tools, downloads, stickers, AI chat and the Empire of Fex game. ` +
+    `BOT KNOWLEDGE\n${brand.botName} v${version()} by ${brand.creator}: a WhatsApp bot for group management, protections, games, tools, downloads, stickers, and AI chat. ` +
       `Prefix: ${p ? `"${p}"` : 'none (type the command name)'}. Mode now: ${store.getMode() === 'private' ? 'PRIVATE (only the owner can use commands)' : 'PUBLIC (everybody can use the commands they are allowed to)'}. ` +
       `${p}menu shows all commands by category, ${p}menu <category> one category, ${p}menu <command> help for one command, ${p}list every command, ${p}help a beginner guide, ${p}help ask <question> asks you.`
   );

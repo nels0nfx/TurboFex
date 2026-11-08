@@ -21,7 +21,6 @@ const safefetch = require('../core/safefetch');
 const ai = require('../core/ai');
 const games = require('../whatsapp/play');
 const knowledge = require('../whatsapp/botknowledge');
-const A = require('../core/realm/aurum');
 const sharp = require('sharp');
 
 const all = [].concat(...fs.readdirSync(path.join(__dirname, '..', 'commands')).filter((f) => f.endsWith('.js')).map((f) => require(`../commands/${f}`)));
@@ -34,9 +33,9 @@ const NEW = {
   media: ['spotify', 'facebook', 'twitter', 'pinterest', 'soundcloud', 'ytthumb', 'emojimix', 'tovideo', 'collage', 'resize'],
   tools: ['calendar', 'dateadd', 'loan', 'interest', 'fuelcost', 'teams', 'shuffle', 'habit', 'shoplist', 'gradecalc'],
   lookup: ['movie', 'tvshow', 'rhyme', 'synonym', 'wordofday', 'namemeaning', 'dialcode', 'postcode', 'hadith', 'emojimeaning'],
-  fun: ['neverhaveiever', 'twotruths', 'hotseat', 'wordchain', 'storychain', 'spinwheel', 'memorygame', 'pet', 'fish', 'battleship'],
+  fun: ['neverhaveiever', 'twotruths', 'hotseat', 'wordchain', 'storychain', 'spinwheel', 'memorygame', 'pet', 'battleship'],
 };
-const CATEGORY = { group: 'group', ai: 'ai', media: ['download', 'media'], tools: 'tools', lookup: 'lookup', fun: ['fun', 'games', 'economy'] };
+const CATEGORY = { group: 'group', ai: 'ai', media: ['download', 'media'], tools: 'tools', lookup: 'lookup', fun: ['fun', 'games'] };
 
 // ---------------------------------------------------------------- fakes
 const M = (i) => `2781111${String(i).padStart(4, '0')}@s.whatsapp.net`;
@@ -93,9 +92,9 @@ const userText = (entry) => JSON.parse(entry.body).contents.map((c) => c.parts.m
 const png = (w = 80, h = 40) => sharp({ create: { width: w, height: h, channels: 3, background: '#3366cc' } }).png().toBuffer();
 
 // ---------------------------------------------------------------- all sixty
-test('all 60 new commands exist once, in the right category, with a description, and the AI knows them', () => {
+test('all 59 new commands exist once, in the right category, with a description, and the AI knows them', () => {
   const names = Object.values(NEW).flat();
-  assert.strictEqual(names.length, 60);
+  assert.strictEqual(names.length, 59);
   for (const [area, list] of Object.entries(NEW)) {
     for (const n of list) {
       const c = cmd(n);
@@ -796,28 +795,6 @@ test('pet: adopt, feed, play, sleep, waiting times, hunger and leaving', async (
     // other people have their own pet
     assert.match(last(await run('pet', '', { myJid: M(71) })), /no pet yet/);
   } finally { Date.now = real; }
-});
-
-test('fish pays Aurum in the Empire, with a waiting time and the tax', async () => {
-  const jid = newGroup();
-  const me = M(80);
-  const realRandom = Math.random;
-  try {
-    Math.random = () => 0.7; // a nice fish
-    const before = A.balance(jid, me);
-    const m = await run('fish', '', { jid, myJid: me });
-    assert.match(last(m), /You went fishing[\s\S]*nice fish[\s\S]*Sold for:\* \+/);
-    assert.ok(A.balance(jid, me) > before);
-    assert.match(last(await run('fish', '', { jid, myJid: me })), /fish are hiding/i);
-    Math.random = () => 0; // an old boot
-    const m2 = await run('fish', '', { jid, myJid: M(81) });
-    assert.match(last(m2), /old boot[\s\S]*nothing/);
-  } finally { Math.random = realRandom; }
-  // a closed realm: nothing happens
-  const closed = newGroup();
-  require('../core/realm/state').setOn(closed, false);
-  assert.match(last(await run('fish', '', { jid: closed, myJid: me })), /realm is closed/i);
-  assert.strictEqual(cmd('fish').category, 'economy');
 });
 
 // ---------------------------------------------------------------- the three new games

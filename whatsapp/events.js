@@ -92,7 +92,8 @@ async function handleParticipants(sock, update) {
 
   if (action === 'add' && !stale) welcomedm.send(sock, id, ids.filter((x) => !removed.includes(x))).catch((e) => console.error('Private welcome error:', e.message));
   // the introduction goes out for new members when it is ON, also when the welcome message is OFF
-  const introNow = action === 'add' && !stale && g.intro.on;
+  // (with the verification ON it waits until the new member has answered the sum: see captcha.js)
+  const introNow = action === 'add' && !stale && g.intro.on && !g.captcha;
   if (action === 'add' && (!g.welcome || stale) && !introNow) return;
   if (action === 'remove' && (!g.goodbye || stale)) return;
 

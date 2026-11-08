@@ -110,24 +110,22 @@ for (const how of ['exit', 'term', 'kill-late']) {
       assert.strictEqual(b.json.seen1, true, 'a handled message is still known');
       assert.strictEqual(b.json.seen3, false);
       assert.ok(b.json.xp >= 5, 'xp kept');
-      assert.ok(b.json.coins >= 777, 'the money is kept');
       // a second restart changes nothing (no doubling)
       const c = run(dir, 'counters-get', 'exit');
       assert.strictEqual(c.json.msgs, 25);
       assert.strictEqual(c.json.spent, 40);
-      assert.strictEqual(c.json.coins, b.json.coins);
     } finally {
       cleanup(dir);
     }
   });
 }
 
-test('money added right before a hard kill is saved within a fraction of a second', () => {
+test('a number added right before a hard kill is saved within a fraction of a second', () => {
   const dir = freshDir();
   try {
     const a = run(dir, 'add-coins', 'kill-late', '100');
     const b = run(dir, 'counters-get', 'exit');
-    assert.strictEqual(b.json.coins, a.json.coins);
+    assert.strictEqual(b.json.n, a.json.n);
   } finally {
     cleanup(dir);
   }
@@ -298,19 +296,7 @@ test('a daily copy of every saved file is kept (protects against a wrong save)',
     run(dir, 'add-coins', 'exit', '5');
     const snaps = fs.existsSync(path.join(dir, 'backups')) ? fs.readdirSync(path.join(dir, 'backups')) : [];
     assert.ok(snaps.some((f) => f.startsWith('groups.')), 'a copy of groups.json exists');
-    assert.ok(snaps.some((f) => f.startsWith('realm.')), 'a copy of the Empire data exists');
-  } finally {
-    cleanup(dir);
-  }
-});
-
-test('the old economy files are set aside, never deleted', () => {
-  const ecoclean = require('../core/ecoclean');
-  const dir = freshDir();
-  try {
-    fs.writeFileSync(path.join(dir, 'economy.json'), '{"coins":123}');
-    assert.strictEqual(ecoclean.run(dir), 1);
-    assert.strictEqual(fs.readFileSync(path.join(dir, 'legacy-economy', 'economy.json'), 'utf8'), '{"coins":123}');
+    assert.ok(snaps.some((f) => f.startsWith('backuptest.')), 'a copy of the other saved file exists');
   } finally {
     cleanup(dir);
   }

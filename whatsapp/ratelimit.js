@@ -24,37 +24,9 @@ function check(who) {
   return { ok: true };
 }
 
-// A second, tighter guard only for the Empire's commands (purse, daily, give...): by default 8 in 20 seconds, then a 20 second pause (God sets the numbers).
-// It protects the economy from spam even when the normal limit is high.
-const eco = new Map();
-const ecoBlocked = new Map();
-const settings = require('../core/realm/settings');
-require('../core/realm/aurum'); // registers the settings
-const ECO = () => ({ window: settings.get('core.rateWindow') * 1000, max: settings.get('core.rateMax'), block: settings.get('core.rateBlock') * 1000 });
-function checkEconomy(who) {
-  const cfg = store.rateCfg();
-  if (!cfg.on || !who) return { ok: true };
-  const now = Date.now();
-  const until = ecoBlocked.get(who) || 0;
-  if (until > now) return { ok: false, seconds: Math.ceil((until - now) / 1000), notify: false };
-  const E = ECO();
-  const list = (eco.get(who) || []).filter((t) => now - t < E.window);
-  list.push(now);
-  eco.set(who, list);
-  if (eco.size > 5000) eco.clear();
-  if (list.length > E.max) {
-    ecoBlocked.set(who, now + E.block);
-    eco.delete(who);
-    return { ok: false, seconds: E.block / 1000, notify: true };
-  }
-  return { ok: true };
-}
-
 const reset = () => {
   hits.clear();
   blocked.clear();
-  eco.clear();
-  ecoBlocked.clear();
 };
 
-module.exports = { check, checkEconomy, reset };
+module.exports = { check, reset };

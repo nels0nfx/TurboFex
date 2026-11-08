@@ -4,7 +4,6 @@ const assert = require('node:assert');
 const baileys = require('../core/baileys');
 const store = require('../whatsapp/store');
 const handler = require('../whatsapp/handler');
-const Aurum = require('../core/realm/aurum');
 const captcha = require('../whatsapp/captcha');
 const chatbot = require('../whatsapp/chatbot');
 const ai = require('../core/ai');
@@ -45,7 +44,7 @@ const collector = () => {
   return { out, send: async (t) => out.push(t), end: (w) => out.push('<end>'), touch() {}, later: (ms, fn) => out.push({ later: ms, fn }) };
 };
 
-test('blackjack: hand values, naturals, dealer and bets', async () => {
+test('blackjack: hand values, naturals and the dealer', async () => {
   const c = (r, s = '♠') => ({ r, s });
   assert.strictEqual(bj.value([c('A'), c('K')]), 21);
   assert.strictEqual(bj.value([c('A'), c('A'), c('9')]), 21, 'aces drop from 11 to 1');
@@ -54,9 +53,7 @@ test('blackjack: hand values, naturals, dealer and bets', async () => {
   const p = '27844441111@s.whatsapp.net';
   const q = '27844442222@s.whatsapp.net';
   const G = '120363000000000001@g.us';
-  Aurum.add(G, p, 1000);
-  Aurum.add(G, q, 1000);
-  const g = bj.create({ bet: 100, group: G }, [who(p), who(q)]);
+  const g = bj.create({}, [who(p), who(q)]);
   g.players = [who(p), who(q)]; // the game framework sets this
   g.hands = [[c('K'), c('9')], [c('K'), c('5'), c('9')]]; // 19 and a bust (24)
   g.dealer = [c('10'), c('8')]; // 18
@@ -64,8 +61,6 @@ test('blackjack: hand values, naturals, dealer and bets', async () => {
   const text = bj.results(g);
   assert.match(text, /wins/);
   assert.match(text, /bust/);
-  assert.strictEqual(Aurum.balance(G, p), 1100);
-  assert.strictEqual(Aurum.balance(G, q), 900);
   // turns
   const g2 = bj.create({}, [A, B]);
   g2.players = [A, B];

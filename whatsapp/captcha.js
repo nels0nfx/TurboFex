@@ -3,12 +3,15 @@ const levels = require('./levels');
 const idmap = require('./idmap');
 const { num, whoIds } = require('./utils');
 const jsonstore = require('../core/jsonstore');
+const store = require('./store');
+const meta = require('./metadata');
+const intro = require('./intro');
 
 // Open questions are saved (data/captcha-pending.json). A restart used to forget them: new members who had not answered yet
 // were never removed. Now every open question is picked up again after a restart (resume below).
 const js = jsonstore.open('captcha-pending', { items: {} }, { delay: 300 });
 
-const pending = new Map(); // "group|key" -> { answer, tries, jids, ids, timer }
+const pending = new Map(); // "group|key" -> { answer, tries, jid, ids, timer, intro }
 const joins = new Map(); // group -> [{ t, jid }]
 const MAX_TRIES = 3;
 
@@ -47,9 +50,47 @@ function resume(sock) {
       }
     }, left);
     if (timer.unref) timer.unref();
-    pending.set(key, { answer: it.answer, tries: it.tries || 0, ids: it.ids || [num(it.jid)], jid: it.jid, timer });
+    pending.set(key, { answer: it.answer, tries: it.tries || 0, ids: it.ids || [num(it.jid)], jid: it.jid, timer, intro: it.intro === true });
   }
 }
+
+// The introduction of a new member waits for the verification. It is sent once the sum is answered right, with the
+// introduction settings of the group as they are at that moment (the admins may have changed them in the meantime).
+async function sendIntro(sock, group, jid) {
+  const g = store.getGroup(group);
+  if (!g.intro || !g.intro.on) return;
+  let info = null;
+  try {
+    info = await meta.getMeta(sock, group);
+  } catch (err) {
+    info = null;
+  }
+  await intro.send(sock, group, [jid], info?.subject || 'the group', info?.participants?.length, g.intro).catch((e) => console.error('Introduction error:', e.message));
+}
+
+// seconds -> "90 seconds", "5 minutes", "1 hour 30 minutes"
+function words(sec) {
+  if (sec < 120) return `${sec} seconds`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  const parts = [];
+  if (m >= 60) parts.push(`${Math.floor(m / 60)} ${Math.floor(m / 60) === 1 ? 'hour' : 'hours'}`);
+  if (m % 60) parts.push(`${m % 60} ${m % 60 === 1 ? 'minute' : 'minutes'}`);
+  if (s) parts.push(`${s} seconds`);
+  return parts.join(' ');
+}
+
+// "90", "90s", "5m", "2m30s", "1h" -> seconds (30 seconds to 1 hour); anything else -> null
+const MIN_SECONDS = 30;
+const MAX_SECONDS = 3600;
+function parseSeconds(text) {
+  const t = String(text || '').trim().toLowerCase().replace(/\s+/g, '');
+  if (/^\d+$/.test(t)) return inRange(Number(t));
+  const m = /^(?:(\d+)h)?(?:(\d+)m(?:in)?)?(?:(\d+)s(?:ec)?)?$/.exec(t);
+  if (!m || (!m[1] && !m[2] && !m[3])) return null;
+  return inRange(Number(m[1] || 0) * 3600 + Number(m[2] || 0) * 60 + Number(m[3] || 0));
+}
+const inRange = (n) => (Number.isInteger(n) && n >= MIN_SECONDS && n <= MAX_SECONDS ? n : null);
 
 async function kick(sock, group, jid, why) {
   try {
@@ -60,8 +101,10 @@ async function kick(sock, group, jid, why) {
   }
 }
 
+// Returns the people who got a question. Their introduction waits until they have answered it.
 async function onJoin(sock, group, jids, g) {
-  if (!g.captcha) return;
+  if (!g.captcha) return [];
+  const asked = [];
   for (const jid of jids) {
     const a = 2 + Math.floor(Math.random() * 8);
     const b = 2 + Math.floor(Math.random() * 8);
@@ -70,14 +113,17 @@ async function onJoin(sock, group, jids, g) {
     const timer = setTimeout(() => {
       if (pending.delete(key)) {
         forgetSaved(key);
-        kick(sock, group, jid, `did not answer the verification in ${g.captchaSeconds} seconds`).catch(() => {});
+        kick(sock, group, jid, `did not answer the verification in ${words(g.captchaSeconds)}`).catch(() => {});
       }
     }, g.captchaSeconds * 1000);
     if (timer.unref) timer.unref();
-    pending.set(key, { answer: a + b, tries: 0, ids: idsOf(jid), jid, timer });
-    saveItem(key, group, { answer: a + b, tries: 0, ids: idsOf(jid), jid, until: Date.now() + g.captchaSeconds * 1000 });
-    await sock.sendMessage(group, { text: `🔐 *Verification*\nWelcome @${num(jid)}! Answer this to stay in the group:\n\n*${a} + ${b} = ?*\n\n_Send only the number. You have ${g.captchaSeconds} seconds and ${MAX_TRIES} tries._`, mentions: [jid] }).catch(() => {});
+    const withIntro = !!(g.intro && g.intro.on);
+    pending.set(key, { answer: a + b, tries: 0, ids: idsOf(jid), jid, timer, intro: withIntro });
+    saveItem(key, group, { answer: a + b, tries: 0, ids: idsOf(jid), jid, until: Date.now() + g.captchaSeconds * 1000, intro: withIntro });
+    asked.push(jid);
+    await sock.sendMessage(group, { text: `🔐 *Verification*\nWelcome @${num(jid)}! Answer this to stay in the group:\n\n*${a} + ${b} = ?*\n\n_Send only the number. You have ${words(g.captchaSeconds)} and ${MAX_TRIES} tries._`, mentions: [jid] }).catch(() => {});
   }
+  return asked;
 }
 
 // a message in the group: true when it was a verification answer (it is then not handled as normal chat)
@@ -91,7 +137,8 @@ function check(sock, msg, group, text, botIds) {
     clearTimeout(v.timer);
     pending.delete(key);
     forgetSaved(key);
-    sock.sendMessage(group, { text: `✅ @${num(v.jid)} is verified. Welcome!`, mentions: [v.jid] }).catch(() => {});
+    const done = sock.sendMessage(group, { text: `✅ @${num(v.jid)} is verified. Welcome!`, mentions: [v.jid] }).catch(() => {});
+    if (v.intro) done.then(() => sendIntro(sock, group, v.jid)).catch(() => {}); // the introduction follows the verification
     return true;
   }
   v.tries += 1;
@@ -129,4 +176,4 @@ async function onRaid(sock, group, jids, g, now = Date.now()) {
   return true;
 }
 
-module.exports = { onJoin, check, onRaid, pending, resume };
+module.exports = { onJoin, check, onRaid, pending, resume, sendIntro, words, parseSeconds, MIN_SECONDS, MAX_SECONDS };

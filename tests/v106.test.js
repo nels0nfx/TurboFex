@@ -52,10 +52,10 @@ test('the owner in a private chat hears about owner-only commands; the real-owne
   assert.match(dm, /\.setapi/);
   assert.match(dm, /AI SETUP \(owner\)/);
   assert.match(dm, /talking to the bot owner in a private chat/);
-  const helper = knowledge.forQuestion({ question: 'what does the god command do', commandList: all, isOwner: true, isRealOwner: false });
-  assert.ok(!/\.god\b/.test(helper), 'a sudo helper does not hear about real-owner-only commands');
-  const real = knowledge.forQuestion({ question: 'what does the god command do', commandList: all, isOwner: true, isRealOwner: true });
-  assert.match(real, /\.god\b/);
+  const helper = knowledge.forQuestion({ question: 'what does the broadcast command do', commandList: all, isOwner: true, isRealOwner: false });
+  assert.ok(!/\.broadcast\b/.test(helper), 'a sudo helper does not hear about real-owner-only commands');
+  const real = knowledge.forQuestion({ question: 'what does the broadcast command do', commandList: all, isOwner: true, isRealOwner: true });
+  assert.match(real, /\.broadcast\b/);
   // the owner in a GROUP is told to ask in private
   const group = knowledge.forQuestion({ question: ask, commandList: all, isOwner: true, isRealOwner: true, isGroup: true });
   assert.ok(!/\.setapi/.test(group) && !/AI SETUP/.test(group));

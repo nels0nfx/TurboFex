@@ -1,7 +1,5 @@
-// Blackjack against the dealer. On your turn: hit (another card) or stand. 21 wins, over 21 busts. A bet is optional.
+// Blackjack against the dealer. On your turn: hit (another card) or stand. 21 wins, over 21 busts. 
 const { num } = require('../utils');
-const A = require('../../core/realm/aurum');
-const ui = require('../../core/realm/ui');
 
 const timeoutMs = 900000;
 const title = 'Blackjack';
@@ -41,11 +39,11 @@ const keyOf = (p) => p.ids[0] || p.jid;
 function create(opts, players) {
   const cards = deck();
   const draw = () => cards.pop();
-  return { type: 'blackjack', cards, bet: opts.bet || 0, group: opts.group, dealer: [draw(), draw()], hands: players.map(() => [draw(), draw()]), done: players.map(() => false), idx: 0, over: false };
+  return { type: 'blackjack', cards, dealer: [draw(), draw()], hands: players.map(() => [draw(), draw()]), done: players.map(() => false), idx: 0, over: false };
 }
 
 const lines = (g) => g.players.map((p, i) => `@${num(p.jid)}: ${show(g.hands[i])}${g.done[i] && value(g.hands[i]) > 21 ? ' 💥' : ''}`).join('\n');
-const intro = (g) => `🃏 *Blackjack*${g.bet ? ` – bet *${ui.money(g.bet)}*` : ''}\n*Dealer:* ${g.dealer[0].r}${g.dealer[0].s} ❔\n\n${lines(g)}\n\nOn your turn send *hit* or *stand*.`;
+const intro = (g) => `🃏 *Blackjack*\n*Dealer:* ${g.dealer[0].r}${g.dealer[0].s} ❔\n\n${lines(g)}\n\nOn your turn send *hit* or *stand*.`;
 const status = (g) => `*Dealer:* ${g.dealer[0].r}${g.dealer[0].s} ❔\n${lines(g)}`;
 const reveal = () => 'The game ended.';
 
@@ -58,7 +56,7 @@ function nextPlayer(g) {
   return g.idx < g.players.length;
 }
 
-// the dealer plays and the bets are paid
+// the dealer plays
 function results(g) {
   while (value(g.dealer) < 17) g.dealer.push(g.cards.pop());
   const dv = value(g.dealer);
@@ -71,18 +69,8 @@ function results(g) {
     else if (dv > 21 || pv > dv) outcome = 'win';
     else if (pv === dv) outcome = 'push';
     else outcome = 'lose';
-    let money = '';
-    if (g.bet) {
-      if (outcome === 'win') A.add(g.group, p.jid, g.bet), (money = ` +${ui.fmt(g.bet)}`);
-      else if (outcome === 'blackjack') A.add(g.group, p.jid, Math.floor(g.bet * 1.5)), (money = ` +${ui.fmt(Math.floor(g.bet * 1.5))}`);
-      else if (outcome === 'lose') {
-        const lost = Math.min(g.bet, A.balance(g.group, p.jid));
-        A.take(g.group, p.jid, lost);
-        money = lost ? ` -${ui.fmt(lost)}` : '';
-      }
-    }
     const word = { win: '✅ wins', blackjack: '🎉 BLACKJACK', push: '🤝 push', lose: pv > 21 ? '💥 bust' : '❌ loses' }[outcome];
-    out.push(`@${num(p.jid)} ${show(g.hands[i])} ${word}${money}`);
+    out.push(`@${num(p.jid)} ${show(g.hands[i])} ${word}`);
   });
   return `*Dealer:* ${show(g.dealer)}${dv > 21 ? ' 💥' : ''}\n\n${out.join('\n')}`;
 }

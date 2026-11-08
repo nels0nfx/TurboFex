@@ -106,7 +106,7 @@ test('menu: command help says who can use it, and unknown names are explained', 
 
 test('commands that need input explain what is missing and give an example with the real prefix', async () => {
   store.setMode('public');
-  for (const name of ['trade', 'weather', 'define', 'translate', 'currency']) {
+  for (const name of ['weather', 'define', 'translate', 'currency']) {
     const out = (await say(OWNER, `.${name}`)).join('\n');
     assert.ok(out.length > 20, `${name} answers`);
     assert.match(out, new RegExp(`\\.${name}|\\.[a-z]+ `), `${name} shows a command example`);

@@ -1,11 +1,10 @@
-# ⚡ TurboFex v1.2.0
+# ⚡ TurboFex v1.2.1
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
-It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and even
-runs a small "Empire" game where every group becomes its own realm with its own money.
+It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and more.
 
-<!-- counts: 371 commands, 14 categories -->
-Members can use **371 commands in 14 categories** (the bot owner has even more, such as settings and diagnostics).
+<!-- counts: 321 commands, 13 categories -->
+Members can use **321 commands in 13 categories** (the bot owner has even more, such as settings and diagnostics).
 Send `.menu` to see them all.
 
 > ⚠️ **Please read:** WhatsApp does not officially allow bots, and a number used for a bot can be banned.
@@ -17,7 +16,6 @@ Send `.menu` to see them all.
 |---|---|
 | 👥 **Group management** | Welcome and goodbye messages, rules, warnings, kick / promote / demote, open and close the group, tag everyone, polls, giveaways, scheduled messages, birthdays, chat levels (`.rank`, `.top`), nicknames, and lists of who is active or new (`.listonline`, `.newmembers`, `.staff`). |
 | 🛡️ **Protection** | Anti-link, banned words, anti-spam, anti-bot, anti-raid, slow mode, verification questions for new members. All of them are **off until an admin switches them on**. |
-| ⚜️ **Empire of Fex** | A game inside every group: earn Aurum (the money), choose a career, own estates, craft goods, trade, bid at auctions, hold elections, join guilds and enter dungeons. Start with `.daily`. |
 | 🎮 **Games and fun** | Wordle, hangman, trivia, tic-tac-toe, connect four, slots, riddles, quizzes, jokes, truth or dare, hugs, a love meter, fortune cookies, cat and dog pictures, and more. |
 | 🧰 **Tools and lookups** | Weather, dictionary, Wikipedia, currency, translation, QR codes, calculator, reminders, timers, notes and to-dos, country facts, Pokémon, recipes, the space station, earthquakes, tip and discount calculators. |
 | 🎨 **Media** | Stickers, picture editing, audio and video effects, downloads (`.play`, `.dl`, `.ytsearch`, `.tiktok`, `.ig`) and PDFs (`.pdf`). Some of these need extra tools on the computer or host that runs the bot; if one is missing, the bot says the feature is not available. |
@@ -70,7 +68,7 @@ needs a city and shows `.weather Lagos`.
 ### Public and private mode
 
 - **Private mode (the default):** only the owner can use commands. Everybody else gets no reply to commands, with a few exceptions made for members
-  (the Empire of Fex commands, `.rank`, `.top`, `.rules`, `.report`, `.birthday`, `.feedback`, `.roast`). Group protections, running games and auto-replies still work.
+  (`.rank`, `.top`, `.rules`, `.report`, `.birthday`, `.feedback`, `.roast`). Group protections, running games and auto-replies still work.
 - **Public mode:** everybody can use the commands they are allowed to. The owner switches with `.mode public` or `.mode private`.
 
 ## Good things to know
@@ -86,23 +84,6 @@ needs a city and shows `.weather Lagos`.
 - **Backups:** while the bot is running it keeps a copy of its WhatsApp login every day (the last 3 copies) in its own `data` folder, and it can restore from them if the login file is damaged. These copies are never sent over WhatsApp.
 - **Reconnecting and updates:** if the connection drops, the bot tries to reconnect by itself. When it starts, it checks for a new version, and if an update breaks it at start-up, the previous version is put back.
   This is not a promise that it never stops: the host, your internet and WhatsApp itself can all interrupt it.
-
-## The Empire of Fex in short
-
-Every group is a realm with its own money (**Aurum**). Nothing is shared between groups.
-
-| Command | What it does |
-|---|---|
-| `.daily` | A gift every day, bigger when you come back several days in a row |
-| `.purse` / `.profile` | Your Aurum and rank / everything about a citizen |
-| `.career` and `.work` | Choose a profession and work for Aurum and goods |
-| `.estates` and `.collect` | Own a farm, mine or tavern that makes goods while you are away |
-| `.market`, `.sell`, `.trade`, `.auction` | Buy and sell goods, trade with others, bid at auctions |
-| `.election`, `.law`, `.court` | Choose a ruler, pass laws, take someone to court |
-| `.guild` and `.dungeon` | Join a guild, go into a dungeon with a party |
-| `.realm guide` | A guide to the whole game |
-
-Group admins can close the Empire in their group with `.realm off` and open it again with `.realm on`.
 
 ## Help and community
 

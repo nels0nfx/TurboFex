@@ -89,30 +89,28 @@ const post = (id) => ({ key: { remoteJid: 'status@broadcast', id, participant: '
     const budget = require(path.join(ROOT, 'whatsapp/budget'));
     const seen = require(path.join(ROOT, 'whatsapp/seen'));
     const levels = require(path.join(ROOT, 'whatsapp/levels'));
-    const A = require(path.join(ROOT, 'core/realm/aurum'));
     for (let i = 0; i < 25; i++) activity.count(GROUP, '27811111111@s.whatsapp.net');
     budget.setLimit('p1', 500);
     budget.add('p1', 'out', 40, 'bread');
     seen.check('chat', 'MSG1');
     seen.check('chat', 'MSG2');
     levels.award(GROUP, '27811111111@s.whatsapp.net');
-    A.add(GROUP, '27811111111@s.whatsapp.net', 777);
     out({ ok: true });
   } else if (action === 'counters-get') {
     const activity = require(path.join(ROOT, 'whatsapp/activity'));
     const budget = require(path.join(ROOT, 'whatsapp/budget'));
     const seen = require(path.join(ROOT, 'whatsapp/seen'));
     const levels = require(path.join(ROOT, 'whatsapp/levels'));
-    const A = require(path.join(ROOT, 'core/realm/aurum'));
     out({
       msgs: activity.total(GROUP), limit: budget.month('p1').limit, spent: budget.month('p1').spent,
       seen1: seen.check('chat', 'MSG1'), seen3: seen.check('chat', 'MSG3'),
-      xp: (levels.statsOf(GROUP, '27811111111@s.whatsapp.net') || {}).xp, coins: A.balance(GROUP, '27811111111@s.whatsapp.net'),
+      xp: (levels.statsOf(GROUP, '27811111111@s.whatsapp.net') || {}).xp, n: (require(path.join(ROOT, 'core/jsonstore')).open('backuptest', {}).data || {}).n,
     });
   } else if (action === 'add-coins') {
-    const A = require(path.join(ROOT, 'core/realm/aurum'));
-    A.add(GROUP, '27811111111@s.whatsapp.net', Number(arg) || 1);
-    out({ coins: A.balance(GROUP, '27811111111@s.whatsapp.net') });
+    const js = require(path.join(ROOT, 'core/jsonstore')).open('backuptest', {});
+    js.data.n = (js.data.n || 0) + (Number(arg) || 1);
+    js.touch();
+    out({ n: js.data.n });
   } else if (action === 'unannounced') {
     // changes the data WITHOUT calling touch(): the safety net must still save it
     const js = require(path.join(ROOT, 'core/jsonstore')).open('notes', {});

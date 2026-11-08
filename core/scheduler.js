@@ -3,7 +3,6 @@ const clock = require('./clock');
 const store = require('../whatsapp/store');
 const birthdays = require('../whatsapp/birthdays');
 const repeat = require('./repeat');
-const ticker = require('./realm/ticker'); // the Empire's timed jobs (checkRealms below runs them)
 
 let timer = null;
 let lastKey = '';
@@ -177,26 +176,9 @@ async function checkReminders(sock) {
   }
 }
 
-// the Empire: every job of the realms (news, elections, events...) that is due is done here
-let realmBusy = false;
-async function checkRealms(sock) {
-  if (realmBusy) return;
-  realmBusy = true;
-  try {
-    const mentions = require('../whatsapp/mentions');
-    await ticker.run(async (group, content) => {
-      await sock.sendMessage(group, await mentions.fix(sock, group, content));
-      await new Promise((r) => setTimeout(r, 1500 + Math.floor(Math.random() * 2500))); // groups are not all written to at the same second
-    });
-  } finally {
-    realmBusy = false;
-  }
-}
-
 function start(sock) {
   stop();
   timer = setInterval(() => {
-    checkRealms(sock).catch((e) => console.error('Realm error:', e.message));
     tick(sock).catch((e) => console.error('Scheduler error:', e.message));
     checkIntervals(sock).catch((e) => console.error('Scheduler (interval) error:', e.message));
     checkReminders(sock).catch((e) => console.error('Reminder error:', e.message));
@@ -208,4 +190,4 @@ function stop() {
   timer = null;
 }
 
-module.exports = { start, stop, tick, checkReminders, checkIntervals, checkRealms, dueRemind, remindText };
+module.exports = { start, stop, tick, checkReminders, checkIntervals, dueRemind, remindText };

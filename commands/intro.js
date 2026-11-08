@@ -25,7 +25,8 @@ module.exports = {
           `▸ *Status:* ${cfg.on ? 'ON' : 'OFF'}\n` +
           `▸ *Time limit:* ${cfg.timeMs ? intro.words(cfg.timeMs) : 'none'}\n` +
           `▸ *Picture:* ${intro.hasImage(jid) ? 'yes' : 'no'}\n` +
-          `▸ *Welcome message:* ${g.welcome ? 'ON (the introduction follows it)' : 'OFF'}\n\n` +
+          `▸ *Welcome message:* ${g.welcome ? 'ON (the introduction follows it)' : 'OFF'}\n` +
+          `${g.captcha ? '▸ *Verification:* ON (the introduction is sent once the new member has answered)\n' : ''}\n` +
           `*Message:*\n${preview}${(cfg.text || '').length > 300 ? '…' : ''}\n\n` +
           `▸ \`${p} on\` / \`${p} off\`\n` +
           `▸ \`${p} set your text here\`\n` +

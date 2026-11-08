@@ -117,6 +117,20 @@ function enqueue(jid, task) {
 
 const closeTimes = []; // when the connection closed (last hour)
 
+// Writes a line to the console when the bot froze for a few seconds (a frozen bot cannot answer WhatsApp and gets disconnected)
+let lagTimer = null;
+function startLagWatch() {
+  if (lagTimer) return;
+  let last = Date.now();
+  lagTimer = setInterval(() => {
+    const now = Date.now();
+    const late = now - last - 1000;
+    last = now;
+    if (late > 5000) console.log(`⏱️ The bot was frozen for about ${Math.round(late / 1000)} seconds (heavy work). A long freeze can make WhatsApp drop the connection.`);
+  }, 1000);
+  if (lagTimer.unref) lagTimer.unref();
+}
+
 async function startWhatsApp() {
   const lib = await baileys.load(); // works with the old and the new library version
   const { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = lib;
@@ -174,7 +188,12 @@ async function startWhatsApp() {
     browser: pickBrowser(Browsers),
     markOnlineOnConnect: false,
     syncFullHistory: false,
-    keepAliveIntervalMs: 25000, // WhatsApp is pinged more often, so a dead connection is noticed sooner
+    // The library closes the connection when WhatsApp was silent for this time + 5 seconds. A busy bot (many groups, big saves,
+    // pictures being made) can freeze for a few seconds: with 25 seconds that was taken for a dead connection, the bot reconnected
+    // and the phone showed "Finished syncing" again and again. 45 seconds leaves room; the watchdog below still finds a really dead line.
+    keepAliveIntervalMs: 45000,
+    connectTimeoutMs: 60000,
+    defaultQueryTimeoutMs: 60000,
     getMessage: async (key) => outbox.get(key), // lets WhatsApp ask for a message again ("Waiting for this message" fix)
     userDevicesCache: makeCache(30 * 60 * 1000), // who has which devices: remembered for 30 min (faster group replies)
     msgRetryCounterCache: makeCache(10 * 60 * 1000),
@@ -317,6 +336,7 @@ async function startWhatsApp() {
       presence.apply(sock); // always online / auto bio
       replay.open(); // for a few seconds, skip old messages WhatsApp re-delivers
       startWatchdog(sock, alive);
+      startLagWatch();
       sessionBackup.schedule(config.sessionDir); // daily login backup, monthly cleanup
       const stable = setTimeout(() => {
         if (alive()) attempts = 0; // connected for a while: forget earlier failures

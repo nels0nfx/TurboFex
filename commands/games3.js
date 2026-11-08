@@ -1,8 +1,5 @@
 // More games: blackjack, higherlower, mines, typerace, flags, capitals, bingo. Admins start them, everybody joins by typing join.
 const games = require('../whatsapp/play');
-const A = require('../core/realm/aurum');
-const S = require('../core/realm/state');
-const ui = require('../core/realm/ui');
 
 const base = { category: 'games', adminOnly: true, needs: [], weight: 'light' };
 
@@ -11,14 +8,8 @@ module.exports = [
     ...base,
     name: 'blackjack',
     aliases: ['bj', '21'],
-    description: 'Blackjack against the dealer, with an optional coin bet: blackjack 100',
-    async run(ctx) {
-      const raw = ctx.args.find((a) => /^\d{1,6}$/.test(a));
-      const bet = raw ? parseInt(raw, 10) : 0;
-      if (bet && !S.isOn(ctx.jid)) return ctx.reply(ui.warn('Bets need the realm to be open in this group.'));
-      if (bet && A.balance(ctx.jid, ctx.myJid) < bet) return ctx.reply(ui.warn(`You only have ${ui.money(A.balance(ctx.jid, ctx.myJid))}. See \`${ctx.prefix}daily\``));
-      return games.fromCommand({ ...ctx, args: ctx.args.filter((a) => a !== raw) }, 'blackjack', { defaultRounds: 1, options: { bet, group: ctx.jid } }); // the bet is not a number of rounds
-    },
+    description: 'Blackjack against the dealer, blackjack',
+    run: (ctx) => games.fromCommand(ctx, 'blackjack', { defaultRounds: 1 }),
   },
   { ...base, name: 'higherlower', aliases: ['hl'], description: 'Guess if the next number is higher or lower. Last one standing wins', run: (ctx) => games.fromCommand(ctx, 'higherlower', { defaultRounds: 1 }) },
   { ...base, name: 'mines', aliases: ['minesweeper'], description: 'Take turns opening squares: a mine knocks you out', run: (ctx) => games.fromCommand(ctx, 'mines', { defaultRounds: 1 }) },

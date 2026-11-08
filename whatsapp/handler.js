@@ -24,7 +24,6 @@ const presence = require('./presence');
 const chatbot = require('./chatbot');
 const captcha = require('./captcha');
 const autosticker = require('./autosticker');
-const aurum = require('../core/realm/aurum');
 const brand = require('../core/brand');
 const { addExif } = require('../core/webpexif');
 const capacity = require('../core/capacity');
@@ -203,11 +202,6 @@ async function handleMessageInner(sock, msg) {
   }
   // ranks: chatting earns XP (commands and rule breakers do not). Messages typed on the bot's own account count too
   // (they are the bot owner's own chat), under the account's own id.
-  // the Empire: chatting earns a little Aurum (with a waiting time and a daily limit, both set by God)
-  if (isGroup && !synthetic && text && !isCommandText(text, prefix, isKnownCommand)) {
-    const chatter = whoJid(msg, sock);
-    if (chatter) aurum.chat(jid, chatter);
-  }
   if (isGroup && !synthetic && store.getGroup(jid).rank && text && !isCommandText(text, prefix, isKnownCommand)) {
     const who = whoJid(msg, sock);
     const got = who ? levels.award(jid, who) : null;
@@ -281,7 +275,6 @@ async function handleMessageInner(sock, msg) {
   if (!isOwner || (store.rateCfg().owner && !synthetic)) {
     const who = levels.keyOf(msg.key.participant || msg.key.participantAlt || r.sIds[0] || jid) || r.sIds[0] || jid;
     let rl = { ok: true };
-    if (cmd.category === 'economy') rl = ratelimit.checkEconomy(who);
     if (rl.ok) rl = ratelimit.check(who);
     if (!rl.ok) {
       if (rl.notify) await rawReply(`⏳ *Slow down.* Please wait ${rl.seconds} seconds before using more commands.`).catch(() => {});

@@ -1,6 +1,7 @@
 // Group tools 2: disable, enable, captcha, antiraid, autosticker, pin, unpin (purge is now part of inactive)
 const store = require('../whatsapp/store');
 const activity = require('../whatsapp/activity');
+const captcha = require('../whatsapp/captcha');
 const { getContextInfo, num, participantIds } = require('../whatsapp/utils');
 
 const base = { category: 'group', groupOnly: true, adminOnly: true, needs: [], weight: 'light' };
@@ -49,23 +50,23 @@ module.exports = [
     name: 'captcha',
     aliases: ['verify'],
     botAdminRequired: true,
-    description: 'New members must answer a sum or they are removed: captcha on / off / time 120 (admins only)',
+    description: 'New members must answer a sum or they are removed: captcha on / off / time 90s, 5m (admins only)',
     async run({ jid, args, reply, prefix, isBotAdmin }) {
       const g = store.getGroup(jid);
       const w = (args[0] || '').toLowerCase();
       if (w === 'on' || w === 'off') {
         store.update(jid, (x) => { x.captcha = w === 'on'; });
-        await reply(`✅ *Verification is now ${state(w === 'on')}.*${w === 'on' ? `\n_Every new member gets a sum to answer within ${g.captchaSeconds} seconds, or is removed._` : ''}`);
+        await reply(`✅ *Verification is now ${state(w === 'on')}.*${w === 'on' ? `\n_Every new member gets a sum to answer within ${captcha.words(g.captchaSeconds)}, or is removed._${g.intro && g.intro.on ? '\n▸ The introduction is sent once the new member has answered correctly.' : ''}` : ''}`);
         if (w === 'on' && !isBotAdmin) await reply('⚠️ *I need admin rights for this to work.*\n▸ Make me a group admin so I can remove people who do not answer.');
         return;
       }
       if (w === 'time') {
-        const n = parseInt(args[1], 10);
-        if (!Number.isInteger(n) || n < 30 || n > 600) return reply(`⚠️ *Choose 30 to 600 seconds.* Example: \`${prefix}captcha time 120\``);
+        const n = captcha.parseSeconds(args.slice(1).join(''));
+        if (n === null) return reply(`⏳ *Time to answer*\n▸ \`${prefix}captcha time 90\` (seconds), \`${prefix}captcha time 5m\` or \`${prefix}captcha time 1h\`\n_From 30 seconds to 1 hour. New members are removed if they do not answer in time._`);
         store.update(jid, (x) => { x.captchaSeconds = n; });
-        return reply(`✅ *New members have ${n} seconds to answer.*`);
+        return reply(`✅ *New members have ${captcha.words(n)} to answer.*`);
       }
-      await reply(`🔐 *Verification*\n*Status:* ${state(g.captcha)}\n*Time to answer:* ${g.captchaSeconds} seconds\n\n▸ \`${prefix}captcha on\` / \`${prefix}captcha off\`\n▸ \`${prefix}captcha time 120\``);
+      await reply(`🔐 *Verification*\n*Status:* ${state(g.captcha)}\n*Time to answer:* ${captcha.words(g.captchaSeconds)}\n\n▸ \`${prefix}captcha on\` / \`${prefix}captcha off\`\n▸ \`${prefix}captcha time 90s\`, \`${prefix}captcha time 5m\``);
     },
   },
   {

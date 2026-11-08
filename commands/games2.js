@@ -1,8 +1,5 @@
 // New games: riddle, emojiquiz, wordle, connect4, duel, plus roast
 const games = require('../whatsapp/play');
-const A = require('../core/realm/aurum');
-const S = require('../core/realm/state');
-const ui = require('../core/realm/ui');
 const { resolveTarget, num } = require('../whatsapp/utils');
 
 // only admins (and the owner) start a game; everybody joins by typing join
@@ -50,15 +47,8 @@ module.exports = [
     ...base,
     name: 'duel',
     groupOnly: true,
-    description: 'Fight a member turn by turn, with an optional coin bet: duel @user 100',
-    run: twoPlayer('duel', 'Duel', async ({ args, myJid, prefix, jid }) => {
-      const raw = args.find((a) => /^\d{1,6}$/.test(a));
-      const bet = raw ? parseInt(raw, 10) : 0;
-      if (bet > 100000) return { error: '⚠️ The highest bet is 100,000 Aurum.' };
-      if (bet && !S.isOn(jid)) return { error: '⚠️ Bets need the realm to be open in this group.' };
-      if (bet && A.balance(jid, myJid) < bet) return { error: `⚠️ You only have ${ui.money(A.balance(jid, myJid))}. See ${prefix}daily` };
-      return { options: { bet, group: jid } };
-    }),
+    description: 'Fight a member turn by turn, duel @user',
+    run: twoPlayer('duel', 'Duel'),
   },
   {
     ...base,
