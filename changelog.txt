@@ -1,3 +1,12 @@
+TurboFex v1.2.0 - introduction for new members
+CHANGED IN 1.2.0
+- NEW: `intro` (also `introduction`, `setintro`), for group admins. When someone joins, the bot sends the introduction text the admins saved, tags the new member, and attaches the example picture if there is one. With the welcome message ON, the welcome comes first and the introduction follows it; with welcome OFF the introduction is still sent. Commands: `intro on / off`, `intro set <text>` (several lines are kept; use @user, {group}, {count} and {time}), `intro image` (send or reply to a picture; `intro image off` removes it; a picture sent with `intro set ...` is saved together with the text), `intro time 24h` (5 minutes to 30 days, or `off`: the new member is told how long they have to introduce themselves), `intro test` (shows it to you), `intro reset`. Without any text the default introduction (name, age, where you are from, what brings you here) is used.
+
+TurboFex v1.1.9 - status likes: only real statuses, no mass-liking of old ones
+CHANGED IN 1.1.9
+- FIXED: only a real status (picture, video, voice note or text) is viewed, liked and counted. Reactions to a status, key updates and messages without content that can arrive on the status channel are ignored, so they can no longer push the counters up or get a like.
+- CHANGED: statuses older than 3 hours are still viewed but no longer liked (STATUS_LIKE_MAX_HOURS changes it). After a new link or a long break WhatsApp hands over the statuses of the last 24 hours at once; the bot used to like all of them within minutes, which is the kind of behaviour that gets an account limited. Fresh statuses are liked as before.
+
 TurboFex v1.1.8 - android identity by default, debug code removed
 CHANGED IN 1.1.8
 - CHANGED: the bot now links as an ANDROID device by default (BOT_BROWSER=android is the default; BOT_BROWSER=web gives the old browser identity). WhatsApp sends view-once files only to a device linked like the Android app. The identity is applied when the bot is LINKED, so a bot that was linked earlier stays as it is until it is linked again with a new pairing code or session id, and the pairing site must use the Android identity too.

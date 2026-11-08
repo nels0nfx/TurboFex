@@ -77,3 +77,39 @@ test('statuses older than a day are ignored', async () => {
   await status.handleStatus(sock, old);
   assert.strictEqual(log.length, 0);
 });
+
+test('only a real status counts: reactions, key updates and empty messages on the status channel are ignored', async () => {
+  const cfg = store.statusCfg();
+  cfg.view = true; cfg.like = true; cfg.delayMin = 0; cfg.delayMax = 0; cfg.dailyLikeLimit = 0;
+  const { sock, log } = makeSock();
+  const before = status.stats.seen;
+  const odd = (id, message) => ({ ...post(id), message });
+  await status.handleStatus(sock, odd('X1', { reactionMessage: { text: '❤️' } }));
+  await status.handleStatus(sock, odd('X2', { senderKeyDistributionMessage: { groupId: 'status@broadcast' } }));
+  await status.handleStatus(sock, odd('X3', { messageContextInfo: {} }));
+  await status.handleStatus(sock, odd('X4', {}));
+  await wait(300);
+  assert.strictEqual(status.stats.seen, before, 'nothing counted');
+  assert.strictEqual(log.length, 0, 'nothing viewed or liked');
+  await status.handleStatus(sock, odd('X5', { extendedTextMessage: { text: 'a text status' } }));
+  await wait(2200);
+  assert.strictEqual(status.stats.seen, before + 1, 'a text status is real');
+});
+
+test('old statuses (a backlog) are viewed but not liked; fresh ones are liked', async () => {
+  const cfg = store.statusCfg();
+  cfg.view = true; cfg.like = true; cfg.delayMin = 0; cfg.delayMax = 0; cfg.dailyLikeLimit = 0;
+  const { sock, log } = makeSock();
+  const old = { ...post('OLD1'), messageTimestamp: Math.floor(Date.now() / 1000) - 5 * 3600 };
+  await status.handleStatus(sock, old);
+  await wait(2200);
+  assert.deepStrictEqual(log, ['view'], 'viewed, not liked');
+  await status.handleStatus(sock, old);
+  await wait(300);
+  assert.deepStrictEqual(log, ['view'], 'and not tried again');
+  log.length = 0;
+  await status.handleStatus(sock, post('NEW1'));
+  await wait(3500); // the bot keeps a pause of about 1.5 seconds between two likes
+  assert.strictEqual(log[0], 'view');
+  assert.ok(log.length >= 2 && log[1] !== 'view', 'a fresh status is liked (by a list or directly, depending on what earlier tests broke)');
+});

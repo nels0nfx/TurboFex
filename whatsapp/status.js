@@ -114,6 +114,9 @@ let routeBrokenUntil = 0;
 // A real person does not like hundreds of statuses a day. The bot stops liking (it keeps viewing) after this many per day,
 // and keeps a short pause between two likes. Both protect the account from being limited by WhatsApp.
 const LIKE_GAP_MS = 1500;
+// Statuses older than this are still VIEWED but not liked. After a new link or a long break WhatsApp hands over the statuses of the
+// last 24 hours in one go; liking hundreds of old statuses within minutes is what gets an account limited. (STATUS_LIKE_MAX_HOURS changes it.)
+const LIKE_MAX_AGE_S = (Number(process.env.STATUS_LIKE_MAX_HOURS) || 3) * 3600;
 // "Today" is the day in the bot's own time zone (the one set with the region command), the same clock the rest of the bot uses.
 const dayKey = () => {
   try {
@@ -230,6 +233,11 @@ async function handleStatus(sock, msg) {
   if (id && seen.statuses.has('status', id)) return; // handled by an older version: never twice
   if (id && inflight.has(id)) return; // already being worked on right now
 
+  // Only a real status counts: a picture, a video, a voice note or a text. Other things can arrive on the status channel
+  // (reactions to a status, key updates, messages without any content): they are never viewed, liked or counted.
+  const inner = media.unwrap(msg.message) || {};
+  if (!(inner.imageMessage || inner.videoMessage || inner.audioMessage || inner.ptvMessage || inner.conversation || inner.extendedTextMessage)) return;
+
   const who = msg.key.participant || msg.participant;
   if (!who) return;
   const posted = Number(msg.messageTimestamp?.low ?? msg.messageTimestamp) || 0;
@@ -240,6 +248,8 @@ async function handleStatus(sock, msg) {
   const first = !(id && js.data.progress[id]);
   const prog = id ? progressOf(id) : { t: Date.now() };
   if ((prog.n || 0) >= 3) return; // it failed three times: stop trying
+  const tooOldToLike = !!posted && Date.now() / 1000 - posted > LIKE_MAX_AGE_S;
+  if (tooOldToLike && cfg.like && !prog.l) prog.l = 3; // old: viewed, not liked, and not tried again
   const todo = {
     view: (cfg.view || cfg.like) && !prog.v,
     like: cfg.like && !prog.l,

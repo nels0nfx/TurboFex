@@ -6,6 +6,7 @@ const { num } = require('./utils');
 const adminguard = require('./adminguard');
 const captcha = require('./captcha');
 const welcomedm = require('./welcomedm');
+const intro = require('./intro');
 
 const recent = new Map();
 
@@ -90,7 +91,9 @@ async function handleParticipants(sock, update) {
   }
 
   if (action === 'add' && !stale) welcomedm.send(sock, id, ids.filter((x) => !removed.includes(x))).catch((e) => console.error('Private welcome error:', e.message));
-  if (action === 'add' && (!g.welcome || stale)) return;
+  // the introduction goes out for new members when it is ON, also when the welcome message is OFF
+  const introNow = action === 'add' && !stale && g.intro.on;
+  if (action === 'add' && (!g.welcome || stale) && !introNow) return;
   if (action === 'remove' && (!g.goodbye || stale)) return;
 
   let info = null;
@@ -106,9 +109,14 @@ async function handleParticipants(sock, update) {
       ? g.welcomeText || store.DEFAULT_WELCOME
       : g.goodbyeText || store.DEFAULT_GOODBYE;
 
-  for (const j of ids.filter((x) => !removed.includes(x))) {
-    await sock.sendMessage(id, { text: render(template, j, name, count), mentions: [j] });
+  const people = ids.filter((x) => !removed.includes(x));
+  if (action === 'remove' || (g.welcome && !stale)) {
+    for (const j of people) {
+      await sock.sendMessage(id, { text: render(template, j, name, count), mentions: [j] });
+    }
   }
+  // the introduction follows the welcome message
+  if (introNow && people.length) await intro.send(sock, id, people, name, count, g.intro).catch((e) => console.error('Introduction error:', e.message));
 }
 
 module.exports = { handleParticipants };

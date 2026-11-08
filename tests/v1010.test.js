@@ -378,3 +378,113 @@ test('the bot links as Android by default; BOT_BROWSER=web gives the browser ide
   assert.match(conn, /a\('13'\)/, 'the android version number, not a word');
   assert.match(conn, /return Browsers\.ubuntu\('Chrome'\);/, 'web / unknown values keep the browser identity');
 });
+
+// ------------------------------------------------------------ v1.2.0: introduction for new members
+test('intro: time limits are read like 24h, 2d, 90m, 1h30m and refused when too short or too long', () => {
+  const intro = require('../whatsapp/intro');
+  assert.strictEqual(intro.parseLimit('24h'), 24 * 3600000);
+  assert.strictEqual(intro.parseLimit('2d'), 48 * 3600000);
+  assert.strictEqual(intro.parseLimit('90m'), 90 * 60000);
+  assert.strictEqual(intro.parseLimit('1h 30m'), 90 * 60000);
+  assert.strictEqual(intro.parseLimit('1d12h'), 36 * 3600000);
+  assert.strictEqual(intro.parseLimit('off'), 0);
+  assert.strictEqual(intro.parseLimit('2m'), null, 'under 5 minutes');
+  assert.strictEqual(intro.parseLimit('40d'), null, 'over 30 days');
+  assert.strictEqual(intro.parseLimit('soon'), null);
+  assert.strictEqual(intro.words(24 * 3600000), '24 hours');
+  assert.strictEqual(intro.words(48 * 3600000), '2 days');
+  assert.strictEqual(intro.words(60 * 60000), '1 hour');
+});
+
+test('intro: the new member is always tagged, the placeholders are filled and the time limit is told', () => {
+  const intro = require('../whatsapp/intro');
+  const j = ['27811110001@s.whatsapp.net', '27811110002@s.whatsapp.net'];
+  let t = intro.compose({ text: 'Hi @user, welcome to {group}! You are member {count}.', timeMs: 0 }, [j[0]], 'Cool Club', 50);
+  assert.strictEqual(t, 'Hi @27811110001, welcome to Cool Club! You are member 50.');
+  t = intro.compose({ text: 'Tell us about yourself', timeMs: 24 * 3600000 }, [j[0]], 'G', 5);
+  assert.ok(t.startsWith('@27811110001\n\nTell us about yourself'), 'tagged at the start when the text has no @user');
+  assert.match(t, /⏳ \*You have 24 hours to introduce yourself\.\*$/);
+  t = intro.compose({ text: 'You have {time} to reply, @user', timeMs: 2 * 3600000 }, [j[0]], 'G', 5);
+  assert.strictEqual(t, 'You have 2 hours to reply, @27811110001', 'with {time} in the text nothing is added');
+  t = intro.compose({ text: null, timeMs: 0 }, j, 'G', 5);
+  assert.ok(t.startsWith('@27811110001 @27811110002\n\n👋 *Please introduce yourself*'), 'two people joined: both tagged, the default text');
+});
+
+test('intro command: on, set, time, test, reset (admins only)', async () => {
+  const store = require('../whatsapp/store');
+  const intro = require('../whatsapp/intro');
+  const cmd = require('../commands/intro');
+  assert.strictEqual(cmd.adminOnly, true);
+  assert.strictEqual(cmd.groupOnly, true);
+  const jid = '120369000000600001@g.us';
+  store.getGroup(jid);
+  const out = [];
+  const sent = [];
+  const base = { jid, reply: async (t) => out.push(t), prefix: '.', cmdName: 'intro', sock: { sendMessage: async (j, c) => sent.push(c) }, msg: { key: { remoteJid: jid, id: 'I1' }, message: { conversation: 'x' } }, botIds: [], myJid: '27811110003@s.whatsapp.net', groupMetadata: { subject: 'Cool Club', participants: [1, 2, 3] } };
+  const run = (text) => cmd.run({ ...base, args: text.split(/\s+/).filter(Boolean), rest: text });
+  await run('');
+  assert.match(out.at(-1), /Introduction[\s\S]*Status:\* OFF[\s\S]*Time limit:\* none/);
+  await run('set Hi @user, tell us your name and city.\nThanks!');
+  assert.match(out.at(-1), /Introduction saved[\s\S]*It is OFF/);
+  assert.strictEqual(store.getGroup(jid).intro.text, 'Hi @user, tell us your name and city.\nThanks!', 'the lines are kept');
+  await run('time 24h');
+  assert.match(out.at(-1), /Time limit: 24 hours/);
+  await run('time banana');
+  assert.match(out.at(-1), /Time limit[\s\S]*From 5 minutes to 30 days/);
+  await run('on');
+  assert.match(out.at(-1), /Introduction is ON/);
+  await run('test');
+  assert.ok(/Hi @27811110003, tell us your name and city\./.test(sent.at(-1).text) && /24 hours/.test(sent.at(-1).text));
+  assert.deepStrictEqual(sent.at(-1).mentions, ['27811110003@s.whatsapp.net']);
+  await run('set ' + 'x'.repeat(901));
+  assert.match(out.at(-1), /too long/);
+  await run('set');
+  assert.match(out.at(-1), /Introduction text/);
+  await run('image');
+  assert.match(out.at(-1), /Introduction picture[\s\S]*Send a picture/);
+  await run('reset');
+  assert.deepStrictEqual(store.getGroup(jid).intro, { on: false, text: null, timeMs: 0 });
+  assert.ok(!intro.hasImage(jid));
+});
+
+test('introduction on a join: after the welcome message, also when welcome is OFF, nothing when it is OFF or when the event is old', async () => {
+  const events = require('../whatsapp/events');
+  const store = require('../whatsapp/store');
+  const intro = require('../whatsapp/intro');
+  const jid = '120369000000600002@g.us';
+  store.getGroup(jid);
+  const sent = [];
+  const sock = { user: { id: '27899999999:1@s.whatsapp.net' }, sendMessage: async (j, c) => { sent.push(c); return {}; }, groupMetadata: async () => ({ id: jid, subject: 'Cool Club', participants: [{ id: '27811110004@s.whatsapp.net' }] }), groupParticipantsUpdate: async () => [] };
+  const join = (who, id) => events.handleParticipants(sock, { id: jid, action: 'add', participants: [who], author: null, ...(id ? { id } : {}) });
+  store.update(jid, (g) => { g.welcome = true; g.welcomeText = 'Welcome @user'; g.intro = { on: true, text: 'Please introduce yourself, @user', timeMs: 3600000 }; });
+  await join('27811110004@s.whatsapp.net');
+  const texts = sent.map((c) => c.text || c.caption);
+  assert.strictEqual(sent.length, 2);
+  assert.strictEqual(texts[0], 'Welcome @27811110004', 'the welcome comes first');
+  assert.match(texts[1], /^Please introduce yourself, @27811110004[\s\S]*⏳ \*You have 1 hour to introduce yourself\.\*$/);
+  assert.deepStrictEqual(sent[1].mentions, ['27811110004@s.whatsapp.net']);
+  // welcome OFF: only the introduction
+  sent.length = 0;
+  store.update(jid, (g) => { g.welcome = false; });
+  await events.handleParticipants(sock, { id: jid, action: 'add', participants: ['27811110005@s.whatsapp.net'], author: null, __uniq: 1 });
+  assert.strictEqual(sent.length, 1);
+  assert.match(sent[0].text, /Please introduce yourself, @27811110005/);
+  // introduction OFF: nothing
+  sent.length = 0;
+  store.update(jid, (g) => { g.intro.on = false; });
+  await events.handleParticipants(sock, { id: jid, action: 'add', participants: ['27811110006@s.whatsapp.net'], author: null });
+  assert.strictEqual(sent.length, 0);
+  // a leaving member never gets one
+  store.update(jid, (g) => { g.intro.on = true; g.goodbye = false; });
+  await events.handleParticipants(sock, { id: jid, action: 'remove', participants: ['27811110006@s.whatsapp.net'], author: null });
+  assert.strictEqual(sent.length, 0);
+  // with a picture: it is sent with the text as its caption
+  const fs2 = require('fs');
+  fs2.mkdirSync(path.dirname(intro.fileOf(jid)), { recursive: true });
+  fs2.writeFileSync(intro.fileOf(jid), Buffer.from('PIC'));
+  await events.handleParticipants(sock, { id: jid, action: 'add', participants: ['27811110007@s.whatsapp.net'], author: null });
+  assert.strictEqual(sent.length, 1);
+  assert.strictEqual(sent[0].image.toString(), 'PIC');
+  assert.match(sent[0].caption, /@27811110007/);
+  intro.removeImage(jid);
+});

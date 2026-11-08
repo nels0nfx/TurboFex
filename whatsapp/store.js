@@ -58,6 +58,8 @@ function getGroup(jid) {
     if (typeof g[k] !== 'boolean') g[k] = false;
   }
   if (typeof g.welcomeText !== 'string') g.welcomeText = null;
+  if (!g.intro || typeof g.intro !== 'object') g.intro = {}; // introduction for new members
+  g.intro = { on: g.intro.on === true, text: typeof g.intro.text === 'string' && g.intro.text ? g.intro.text : null, timeMs: Number(g.intro.timeMs) > 0 ? Number(g.intro.timeMs) : 0 };
   if (typeof g.goodbyeText !== 'string') g.goodbyeText = null;
   if (!Number.isInteger(g.warnLimit)) g.warnLimit = null;
   if (!g.warnings) g.warnings = {};
