@@ -237,81 +237,6 @@ test('cmdreact: the reaction is removed a few seconds after the command is done'
   delete require.cache[require.resolve('../whatsapp/cmdreact')];
 });
 
-test('menu media: video mode sends the video, then the picture, then nothing; off sends nothing', async () => {
-  const mm = require('../whatsapp/menumedia');
-  process.env.MENU_MEDIA = 'video';
-  assert.ok(fs.statSync(mm.FILES.video).size > 10000 && fs.statSync(mm.FILES.video).size < 2 * 1024 * 1024, 'the video is small enough');
-  assert.ok(fs.statSync(mm.FILES.image).size > 10000);
-  assert.ok(fs.statSync(mm.FILES.thumb).size > 5000 && fs.statSync(mm.FILES.thumb).size < 30 * 1024, 'the card picture is small (the whole message must stay far below the size limit)');
-  const sent = [];
-  assert.strictEqual(await mm.send({ sendMessage: async (j, c) => sent.push(Object.keys(c)[0]) }, 'a@g.us', 'cap'), true);
-  assert.deepStrictEqual(sent, ['video']);
-  sent.length = 0;
-  assert.strictEqual(await mm.send({ sendMessage: async (j, c) => { if (c.video) throw new Error('no'); sent.push('image'); } }, 'a@g.us', 'cap'), true);
-  assert.deepStrictEqual(sent, ['image']);
-  assert.strictEqual(await mm.send({ sendMessage: async () => { throw new Error('no'); } }, 'a@g.us', 'cap'), false);
-  process.env.MENU_MEDIA = 'off';
-  assert.strictEqual(mm.mode(), 'off');
-  assert.strictEqual(await mm.send({ sendMessage: async () => sent.push('x') }, 'a@g.us', 'cap'), false);
-  assert.strictEqual(await mm.sendCard({ sendMessage: async () => sent.push('x') }, 'a@g.us', 'cap'), false);
-});
-
-test('the menu: the video first, then header and commands as ONE message; card mode is checked; plain text when nothing can be sent', async () => {
-  const menu = require('../commands/menu');
-  const delivery = require('../whatsapp/delivery');
-  const commandList = [].concat(...fs.readdirSync(path.join(root, 'commands')).filter((f) => f.endsWith('.js')).map((f) => require(path.join(root, 'commands', f))));
-  const run = async (sock) => {
-    const texts = [];
-    await menu.run({ reply: async (t) => texts.push(t), commandList, prefix: '.', args: [], isOwner: false, isAdmin: false, sock, jid: 'a@s.whatsapp.net', msg: { key: {} } });
-    return texts;
-  };
-  // default: the video (no caption), then the WHOLE menu in one message
-  delete process.env.MENU_MEDIA;
-  const sent = [];
-  let texts = await run({ sendMessage: async (j, c) => { sent.push(c); return { key: { id: 'M1' } }; } });
-  assert.ok(sent[0].video && !sent[0].caption, 'the video comes first, without a caption');
-  assert.strictEqual(texts.length, 1, 'one text message');
-  assert.ok(texts[0].includes('┏✦ ◈') && texts[0].includes('┏ ❏'), 'header and commands together in that message');
-  // card mode: one message with a picture on top
-  process.env.MENU_MEDIA = 'card';
-  const csent = [];
-  texts = await run({ sendMessage: async (j, c) => { csent.push(c); return { key: { id: 'C1' } }; } });
-  assert.strictEqual(csent.length, 1);
-  assert.strictEqual(texts.length, 0);
-  assert.ok(csent[0].text.includes('┏✦ ◈') && csent[0].text.includes('┏ ❏'));
-  assert.ok(csent[0].contextInfo.externalAdReply.thumbnail.length > 3000 && csent[0].contextInfo.externalAdReply.renderLargerThumbnail);
-  // card mode, WhatsApp refuses the card: the normal menu is sent instead
-  const refused = [];
-  texts = await run({ sendMessage: async (j, c) => { refused.push(c); if (c.contextInfo) { setTimeout(() => delivery.note([{ key: { id: 'R1' }, update: { status: 0, messageStubParameters: ['479'] } }]), 1); return { key: { id: 'R1' } }; } return { key: { id: 'X' } }; } });
-  assert.ok(refused.some((c) => c.video), 'the video was sent after the refused card');
-  assert.strictEqual(texts.length, 1, 'and the menu as text');
-  // nothing can be sent: one plain text menu
-  delete process.env.MENU_MEDIA;
-  texts = await run({ sendMessage: async () => { throw new Error('no'); } });
-  assert.strictEqual(texts.length, 1);
-  assert.match(texts[0], /┏✦ ◈/);
-  assert.match(texts[0], /┏ ❏/);
-  process.env.MENU_MEDIA = 'off';
-});
-
-test('setmenu media: the owner picks card, video or off', async () => {
-  const store = require('../whatsapp/store');
-  const mm = require('../whatsapp/menumedia');
-  const setmenu = require('../commands/owner2').find((c) => c.name === 'setmenu');
-  const out = [];
-  delete process.env.MENU_MEDIA;
-  await setmenu.run({ args: ['media', 'video'], rest: 'media video', reply: async (t) => out.push(t), prefix: '.' });
-  assert.strictEqual(mm.mode(), 'video');
-  await setmenu.run({ args: ['media', 'off'], rest: 'media off', reply: async (t) => out.push(t), prefix: '.' });
-  assert.strictEqual(mm.mode(), 'off');
-  await setmenu.run({ args: ['media', 'card'], rest: 'media card', reply: async (t) => out.push(t), prefix: '.' });
-  assert.strictEqual(mm.mode(), 'card');
-  await setmenu.run({ args: ['media', 'zzz'], rest: 'media zzz', reply: async (t) => out.push(t), prefix: '.' });
-  assert.match(out.at(-1), /Menu picture/);
-  store.setAuto('menu', {});
-  process.env.MENU_MEDIA = 'off';
-});
-
 test('antigstatus: handled before slow mode and the debug report reaches the owner', async () => {
   const store = require('../whatsapp/store');
   const protect = require('../whatsapp/protect');
@@ -372,65 +297,7 @@ test('a picture the phone sent late is labelled Hidden, never View-once', async 
   store.updateWatch('viewonce', (w) => { w.mode = 'off'; });
 });
 
-// ------------------------------------------------------------ v1.1.3: own menu picture and video, group status report
-test('menu: the owner can add a picture and a video of their own, and go back to the default', async () => {
-  const mm = require('../whatsapp/menumedia');
-  const store = require('../whatsapp/store');
-  mm.resetCustom();
-  assert.deepStrictEqual(mm.custom(), { image: false, video: false });
-  // a fake picture tool: every size gives a different buffer
-  const fakeSharp = () => { const chain = { rotate: () => chain, resize: (w) => { chain.w = w; return chain; }, jpeg: () => chain, toBuffer: async () => Buffer.from(`pic-${chain.w}`) }; return chain; };
-  await mm.setImage(Buffer.from('original'), fakeSharp);
-  assert.deepStrictEqual(mm.custom(), { image: true, video: false });
-  const sent = [];
-  process.env.MENU_MEDIA = 'video';
-  await mm.send({ sendMessage: async (j, c) => sent.push(c) }, 'a@g.us', 'cap');
-  process.env.MENU_MEDIA = 'off';
-  // the card uses the owner's small picture
-  process.env.MENU_MEDIA = 'card';
-  const cards = [];
-  await mm.sendCard({ sendMessage: async (j, c) => cards.push(c) }, 'a@g.us', 'text');
-  process.env.MENU_MEDIA = 'off';
-  assert.strictEqual(cards[0].contextInfo.externalAdReply.thumbnail.toString(), 'pic-320');
-  // a video: made small by ffmpeg
-  await mm.setVideo(Buffer.from('bigvideo'), async (buf, ext) => { assert.strictEqual(ext, 'mp4'); return Buffer.from('small'); });
-  assert.deepStrictEqual(mm.custom(), { image: true, video: true });
-  process.env.MENU_MEDIA = 'video';
-  const vids = [];
-  await mm.send({ sendMessage: async (j, c) => vids.push(c) }, 'a@g.us', 'cap');
-  process.env.MENU_MEDIA = 'off';
-  assert.strictEqual(vids[0].video.toString(), 'small', 'the owner video is used');
-  // too big
-  await assert.rejects(mm.setVideo(Buffer.from('x'), async () => Buffer.alloc(7 * 1024 * 1024)), (e) => e.code === 'TOO_BIG');
-  // no ffmpeg: a small file is kept as it is, a big one is refused
-  await mm.setVideo(Buffer.from('tiny'), async () => { throw Object.assign(new Error('x'), { code: 'NEED_FFMPEG' }); });
-  await assert.rejects(mm.setVideo(Buffer.alloc(7 * 1024 * 1024), async () => { throw Object.assign(new Error('x'), { code: 'NEED_FFMPEG' }); }));
-  // back to the default
-  mm.resetCustom();
-  assert.deepStrictEqual(mm.custom(), { image: false, video: false });
-  process.env.MENU_MEDIA = 'video';
-  const back = [];
-  await mm.send({ sendMessage: async (j, c) => back.push(c) }, 'a@g.us', 'cap');
-  process.env.MENU_MEDIA = 'off';
-  assert.ok(back[0].video.length > 10000, 'the TurboFex video is back');
-  store.setAuto('menu', {});
-});
-
-test('setmenu image / video: usage help without a file, and "media default" resets', async () => {
-  const store = require('../whatsapp/store');
-  const setmenu = require('../commands/owner2').find((c) => c.name === 'setmenu');
-  const out = [];
-  const base = { args: [], rest: '', reply: async (t) => out.push(t), prefix: '.', jid: 'a@s.whatsapp.net', botIds: [], msg: { key: { remoteJid: 'a@s.whatsapp.net', id: 'X' }, message: { conversation: '.setmenu image' } }, sock: {} };
-  await setmenu.run({ ...base, args: ['image'], rest: 'image' });
-  assert.match(out.at(-1), /Menu picture[\s\S]*Send a picture/);
-  await setmenu.run({ ...base, args: ['video'], rest: 'video' });
-  assert.match(out.at(-1), /Menu video[\s\S]*Up to 15 seconds/);
-  await setmenu.run({ ...base, args: ['media', 'default'], rest: 'media default' });
-  assert.match(out.at(-1), /back/);
-  assert.strictEqual(require('../whatsapp/menumedia').mode(), 'off'); // the tests keep MENU_MEDIA=off
-  store.setAuto('menu', {});
-});
-
+// ------------------------------------------------------------ v1.1.3: group status report
 test('antigstatus report: counts what happened, so no console is needed', async () => {
   const store = require('../whatsapp/store');
   const protect = require('../whatsapp/protect');
@@ -544,4 +411,39 @@ test('group status delete: the answer of WhatsApp is kept for the report; a refu
   await protect.runProtections({ sock, msg, jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
   assert.deepStrictEqual(calls, ['wrapped', 'plain']);
   assert.match(delivery.last.delete, /wrapped revoke: WhatsApp refused it \(error 403\); plain delete: WhatsApp accepted it/);
+});
+
+test('the menu is ONE text message with the header and the commands, and sends no picture or video', async () => {
+  const menu = require('../commands/menu');
+  const commandList = [].concat(...fs.readdirSync(path.join(root, 'commands')).filter((f) => f.endsWith('.js')).map((f) => require(path.join(root, 'commands', f))));
+  const texts = [];
+  const media = [];
+  await menu.run({ reply: async (t) => texts.push(t), commandList, prefix: '.', args: [], isOwner: false, isAdmin: false, sock: { sendMessage: async (j, c) => media.push(c) }, jid: 'a@s.whatsapp.net', msg: { key: {} } });
+  assert.strictEqual(media.length, 0, 'nothing but the text menu');
+  assert.strictEqual(texts.length, 1);
+  assert.ok(texts[0].includes('┏✦ ◈') && texts[0].includes('┏ ❏'), 'header and commands together');
+  assert.ok(!fs.existsSync(path.join(root, 'assets')), 'no picture or video files');
+  assert.ok(!fs.existsSync(path.join(root, 'whatsapp', 'menumedia.js')));
+});
+
+test('view-once: a bot linked like WhatsApp Web is told why it gets empty messages; an Android-linked one is not', () => {
+  const identity = require('../whatsapp/identity');
+  const web = { authState: { creds: { platform: 'chrome' } } };
+  const android = { authState: { creds: { platform: 'android' } } };
+  assert.match(identity.viewOnceNote(web, '.'), /linked like WhatsApp Web[\s\S]*BOT_BROWSER=android[\s\S]*\.vv/);
+  assert.strictEqual(identity.viewOnceNote(android, '.'), '');
+  assert.strictEqual(identity.viewOnceNote({}, '.'), '', 'unknown: no false alarm');
+});
+
+test('the wrapped revoke of a group status carries the group-status stanza marker', async () => {
+  const store = require('../whatsapp/store');
+  const protect = require('../whatsapp/protect');
+  const jid = '120369000000300021@g.us';
+  store.getGroup(jid);
+  store.update(jid, (g) => { g.antigstatusMode = 'delete'; });
+  const seen = [];
+  const sock = { relayMessage: async (j, c, o) => { seen.push(o); }, sendMessage: async () => {} };
+  const msg = { key: { remoteJid: jid, id: 'GS9', participant: '27811110060@s.whatsapp.net' }, message: { groupStatusMessageV2: { message: {} } } };
+  await protect.runProtections({ sock, msg, jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
+  assert.deepStrictEqual(seen[0].additionalNodes, [{ tag: 'meta', attrs: { is_group_status: 'true' } }]);
 });

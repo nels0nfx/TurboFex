@@ -19,7 +19,7 @@ const delivery = require('./delivery');
 // posted: a revoke inside the group-status envelope, sent as an admin delete (edit 8).
 async function revokeGroupStatus(sock, jid, key, messageId) {
   if (typeof sock.relayMessage !== 'function') throw new Error('this WhatsApp library cannot send a wrapped revoke');
-  await sock.relayMessage(jid, { groupStatusMessageV2: { message: { protocolMessage: { key, type: 0 } } } }, { messageId, additionalAttributes: { edit: '8' } });
+  await sock.relayMessage(jid, { groupStatusMessageV2: { message: { protocolMessage: { key, type: 0 } } } }, { messageId, additionalAttributes: { edit: '8' }, additionalNodes: [{ tag: 'meta', attrs: { is_group_status: 'true' } }] }); // the same stanza marker as the status itself
 }
 
 const describe = (v) => (v.result === 'refused' ? `WhatsApp refused it (error ${v.error || 'unknown'})` : v.result === 'ok' ? 'WhatsApp accepted it' : 'no answer from WhatsApp');

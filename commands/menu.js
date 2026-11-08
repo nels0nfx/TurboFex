@@ -5,7 +5,6 @@ const { smallcaps: sc } = require('../core/fonts');
 const store = require('../whatsapp/store');
 const capacity = require('../core/capacity');
 const { groupByCategory } = require('../whatsapp/categories');
-const menumedia = require('../whatsapp/menumedia');
 
 const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
 const RULE = '────────────────'; // short on purpose: long lines wrap on phones
@@ -90,12 +89,7 @@ module.exports = {
       `${chunk(sections.map((s) => s.key), 5).map((r) => `_${r.join(' · ')}_`).join('\n')}\n` +
       `_${brand.botName} • v${pkg.version}_`;
 
-    // normally ONE message: the picture with the whole menu under it. Video mode: the header is the video caption and the commands
-    // follow. If nothing with a picture can be sent, one text menu.
-    const whole = `${head}\n\n${body}\n\n${tips}`;
-    if (sock && jid && menumedia.mode() === 'card' && (await menumedia.sendCard(sock, jid, whole, msg))) return; // one message with a picture on top
-    // the picture or video first, then the header and the commands together as ONE message
-    if (sock && jid) await menumedia.send(sock, jid, '', msg);
+    const whole = `${head}\n\n${body}\n\n${tips}`; // header and commands: ONE text message
     return reply(whole);
   },
 };

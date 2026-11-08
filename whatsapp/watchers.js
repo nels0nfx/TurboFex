@@ -182,7 +182,7 @@ async function debugReport(sock, msg, jid, vo) {
   debug.left -= 1;
   const node = media ? content[media] : null;
   const where = jid.endsWith('@g.us') ? 'group' : 'private chat';
-  await sock.sendMessage(ownerChat(sock), { text: `🔎 *Auto view-once check*\n▸ *Chat:* ${where}\n▸ *Parts:* ${shapeOf(msg.message).join(', ') || 'none (empty message)'}\n▸ *View-once flag:* ${vo ? 'yes' : 'no'}\n▸ *File included:* ${node ? (node.mediaKey || node.url || node.directPath ? 'yes' : 'no') : 'no media'}\n▸ *Stub type:* ${msg.messageStubType ?? 'none'}${msg.key.id && voAsked.has(msg.key.id) ? '\n▸ *This is the answer to my request to the phone*' : ''}` });
+  await sock.sendMessage(ownerChat(sock), { text: `🔎 *Auto view-once check*\n▸ *Chat:* ${where}\n▸ *Parts:* ${shapeOf(msg.message).join(', ') || 'none (empty message)'}\n▸ *View-once flag:* ${vo ? 'yes' : 'no'}\n▸ *File included:* ${node ? (node.mediaKey || node.url || node.directPath ? 'yes' : 'no') : 'no media'}\n▸ *Linked as:* ${require('./identity').platformOf(sock) || 'unknown'}\n▸ *Stub type:* ${msg.messageStubType ?? 'none'}${msg.key.id && voAsked.has(msg.key.id) ? '\n▸ *This is the answer to my request to the phone*' : ''}` });
 }
 
 // copies one view-once file to the owner (see early() below); throws a clear problem when something unexpected breaks

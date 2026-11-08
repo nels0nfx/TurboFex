@@ -44,48 +44,21 @@ module.exports = [
   {
     ...base,
     name: 'setmenu',
-    description: 'Change the menu: setmenu title MY BOT / subtitle text / image / video / media card, video, off or default / reset (owner only)',
+    description: 'Change the heading of the menu: setmenu title MY BOT / setmenu subtitle text / setmenu reset (owner only)',
     async run(ctx) {
       const { args, rest, reply, prefix } = ctx;
       const cur = store.getAuto('menu') || {};
       const w = (args[0] || '').toLowerCase();
       const text = rest.slice(args[0]?.length || 0).trim().slice(0, 40);
       if (w === 'reset') {
-        store.setAuto('menu', cur.media ? { media: cur.media } : {}); // the picture choice is kept
+        store.setAuto('menu', {});
         return reply('✅ *The menu heading is back to the default.*');
-      }
-      const menumedia = require('../whatsapp/menumedia');
-      const media = require('../whatsapp/media');
-      if (w === 'image' || w === 'photo' || w === 'picture') {
-        return media.handle(ctx, ['image'], `🖼️ *Menu picture*\n▸ Send a picture with \`${prefix}setmenu image\` as its caption, or reply to a picture with \`${prefix}setmenu image\`.`, async (found, buffer) => {
-          await menumedia.setImage(buffer, media.loadSharp());
-          store.setAuto('menu', { ...cur, media: 'video' });
-          await reply(`✅ *Menu picture saved.*\n▸ The menu now opens with your picture, and the whole menu follows in one message.\n_Open the menu to see it._`);
-        });
-      }
-      if (w === 'video' || w === 'gif') {
-        return media.handle(ctx, ['video'], `🎬 *Menu video*\n▸ Send a video or GIF with \`${prefix}setmenu video\` as its caption, or reply to one with \`${prefix}setmenu video\`.\n▸ Up to 15 seconds.`, async (found, buffer) => {
-          await menumedia.setVideo(buffer, media.ffmpeg);
-          store.setAuto('menu', { ...cur, media: 'video' });
-          await reply(`✅ *Menu video saved.*\n▸ The menu now opens with your video, and the whole menu follows in one message.`);
-        });
-      }
-      if (w === 'media') {
-        const m = (args[1] || '').toLowerCase();
-        if (m === 'default' || m === 'reset') {
-          menumedia.resetCustom();
-          store.setAuto('menu', { ...cur, media: 'video' });
-          return reply('✅ *The TurboFex picture and video are back.*');
-        }
-        if (!['card', 'video', 'off'].includes(m)) return reply(`🎬 *Menu picture*\n▸ *Now:* ${cur.media || 'video'}${menumedia.custom().image ? ' (your own picture)' : ''}${menumedia.custom().video ? ' (your own video)' : ''}\n\n▸ \`${prefix}setmenu image\` - your own picture (send or reply to a picture)\n▸ \`${prefix}setmenu video\` - your own video or GIF\n▸ \`${prefix}setmenu media video\` - picture or video, then the whole menu in one message (default)\n▸ \`${prefix}setmenu media card\` - one message with a small picture on top (not shown on every phone)\n▸ \`${prefix}setmenu media off\` - text only\n▸ \`${prefix}setmenu media default\` - the TurboFex picture and video again`);
-        store.setAuto('menu', { ...cur, media: m });
-        return reply(`✅ *Menu picture: ${m}.*\n_Open the menu to see it._`);
       }
       if ((w === 'title' || w === 'subtitle') && text) {
         store.setAuto('menu', { ...cur, [w]: text });
         return reply(`✅ *Menu ${w} saved:* ${text}\n_Open the menu to see it._`);
       }
-      await reply(`🎨 *Menu heading*\n*Title:* ${cur.title || 'default'}\n*Subtitle:* ${cur.subtitle || 'none'}\n\n▸ \`${prefix}setmenu title NELSONFX BOT\`\n▸ \`${prefix}setmenu subtitle Your friendly assistant\`\n▸ \`${prefix}setmenu media card\` / \`video\` / \`off\`\n▸ \`${prefix}setmenu reset\``);
+      await reply(`🎨 *Menu heading*\n*Title:* ${cur.title || 'default'}\n*Subtitle:* ${cur.subtitle || 'none'}\n\n▸ \`${prefix}setmenu title NELSONFX BOT\`\n▸ \`${prefix}setmenu subtitle Your friendly assistant\`\n▸ \`${prefix}setmenu reset\``);
     },
   },
   {

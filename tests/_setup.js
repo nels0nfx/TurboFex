@@ -10,4 +10,3 @@ process.env.OWNER_NUMBER = process.env.OWNER_NUMBER || '27800000001';
 process.on('exit', () => fs.rmSync(dir, { recursive: true, force: true }));
 
 module.exports = { dir };
-process.env.MENU_MEDIA = 'off'; // the menu tests read the header from the text; the media tests switch it on themselves

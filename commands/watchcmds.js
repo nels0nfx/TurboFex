@@ -7,7 +7,7 @@ const MODES = { all: 'everywhere', dm: 'private chats only', group: 'groups only
 function modeCommand(name, aliases, key, label, description, note) {
   return {
     name, aliases, category: 'watch', ownerOnly: true, description,
-    async run({ args, reply, prefix }) {
+    async run({ args, reply, prefix, sock }) {
       let c = (args[0] || '').toLowerCase();
       if (key === 'viewonce' && c === 'guess') {
         const on = (args[1] || '').toLowerCase() !== 'off';
@@ -18,7 +18,9 @@ function modeCommand(name, aliases, key, label, description, note) {
       }
       if (key === 'viewonce' && c === 'debug') {
         require('../whatsapp/watchers').startDebug();
-        return reply('🔎 *Auto view-once check is on for 10 minutes.*\n▸ Ask someone to send you a view-once picture. I will send you a short report in your own chat about what WhatsApp delivered.');
+        const identity = require('../whatsapp/identity');
+        const note = identity.viewOnceNote(sock, prefix);
+        return reply(`🔎 *Auto view-once check is on for 10 minutes.*\n▸ *Linked as:* ${identity.platformOf(sock) || 'unknown'}${note ? `\n\n${note}` : ''}\n▸ Ask someone to send you a view-once picture. I will send you a short report in your own chat about what WhatsApp delivered.`);
       }
       if (c === 'on') c = 'all';
       const cfg = store.watchCfg(key);
@@ -31,7 +33,10 @@ function modeCommand(name, aliases, key, label, description, note) {
       store.updateWatch(key, (w) => {
         w.mode = c;
       });
-      return reply(c === 'off' ? `✅ ${label} is now *OFF*.` : `✅ ${label} is now *ON* (${MODES[c]}).\n${note}`);
+      await reply(c === 'off' ? `✅ ${label} is now *OFF*.` : `✅ ${label} is now *ON* (${MODES[c]}).\n${note}`);
+      const warning = key === 'viewonce' && c !== 'off' ? require('../whatsapp/identity').viewOnceNote(sock, prefix) : '';
+      if (warning) await reply(warning);
+      return undefined;
     },
   };
 }

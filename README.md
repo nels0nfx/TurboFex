@@ -1,4 +1,4 @@
-# ⚡ TurboFex v1.1.5
+# ⚡ TurboFex v1.1.6
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and even
