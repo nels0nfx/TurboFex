@@ -167,24 +167,6 @@ async function askPhoneAgain(sock, msg) {
   }
 }
 
-// "autoviewonce debug" (owner): for 10 minutes the owner gets the SHAPE (names of the parts, never the content) of every message
-// with media or without content, so it is clear what WhatsApp really sends for a view-once.
-const debug = { until: 0, left: 0 };
-function startDebug() {
-  debug.until = Date.now() + 10 * 60 * 1000;
-  debug.left = 10;
-}
-const { shapeOf } = require('./shape');
-async function debugReport(sock, msg, jid, vo) {
-  const content = peel(msg.message).content || {};
-  const media = ['imageMessage', 'videoMessage', 'audioMessage'].find((k) => content[k]);
-  if (!media && msg.message) return; // plain text and the like: not interesting
-  debug.left -= 1;
-  const node = media ? content[media] : null;
-  const where = jid.endsWith('@g.us') ? 'group' : 'private chat';
-  await sock.sendMessage(ownerChat(sock), { text: `🔎 *Auto view-once check*\n▸ *Chat:* ${where}\n▸ *Parts:* ${shapeOf(msg.message).join(', ') || 'none (empty message)'}\n▸ *View-once flag:* ${vo ? 'yes' : 'no'}\n▸ *File included:* ${node ? (node.mediaKey || node.url || node.directPath ? 'yes' : 'no') : 'no media'}\n▸ *Linked as:* ${require('./identity').platformOf(sock) || 'unknown'}\n▸ *Stub type:* ${msg.messageStubType ?? 'none'}${msg.key.id && voAsked.has(msg.key.id) ? '\n▸ *This is the answer to my request to the phone*' : ''}` });
-}
-
 // copies one view-once file to the owner (see early() below); throws a clear problem when something unexpected breaks
 async function viewOnce(sock, msg, isGroup, assume = false) {
   const cfg = store.watchCfg('viewonce');
@@ -281,7 +263,6 @@ function chaseHidden(sock, msg, jid) {
   const timer = setTimeout(() => {
     voAsked.delete(id);
     console.log('👁️ The phone did not send the hidden message back. WhatsApp is not giving this view-once to this device.');
-    if (debug.left > 0 && Date.now() < debug.until) sock.sendMessage(ownerChat(sock), { text: '🔎 *Auto view-once check*\n▸ I asked your phone for the hidden message and it did *not* answer. WhatsApp is not giving this one to the bot.' }).catch(() => {});
     // Many ordinary messages arrive empty (could not be decrypted yet, group events, reactions), so this is only a GUESS about a
     // view-once. It stays in the console and is NOT sent to the owner, otherwise normal chats trigger it. EMPTY_NOTICE=1 turns it on.
     if (process.env.EMPTY_NOTICE === '1') warnOwner(sock, `👁️ A message from ${tagOf(sender)} arrived without its content (probably a view-once) and I asked your phone for it, but WhatsApp did not send it to this bot.\n${OPEN_ON_PHONE}`, 'viewonce', [sender]).catch(() => {});
@@ -304,7 +285,6 @@ function early(sock, msg) {
     if (!msg || msg.key?.fromMe) return;
     const jid = msg.key?.remoteJid;
     if (!jid || jid.endsWith('@broadcast') || jid.endsWith('@newsletter')) return;
-    if (debug.left > 0 && Date.now() < debug.until) debugReport(sock, msg, jid, msg.message ? findViewOnce(msg.message, false) : null).catch((e) => console.log('Auto view-once check failed:', e.message));
     if (!msg.message) {
       // announced but empty (this is how a hidden view-once looks): ask the phone for it
       if (hiddenStub(msg.messageStubType)) chaseHidden(sock, msg, jid);
@@ -521,4 +501,4 @@ async function onUpdate(sock, updates) {
 
 const resetWarnings = () => lastWarn.clear(); // for tests
 
-module.exports = { startDebug, timing, resetWarnings, run, early, noContent, onUpdate, findViewOnce, recentViewOnce, inScope, stats, fetchMedia, OPEN_ON_PHONE };
+module.exports = { timing, resetWarnings, run, early, noContent, onUpdate, findViewOnce, recentViewOnce, inScope, stats, fetchMedia, OPEN_ON_PHONE };

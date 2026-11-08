@@ -46,14 +46,14 @@ const queues = new Map(); // one line of waiting messages per chat
 
 const FRESH_SECONDS = 120; // a message that arrived while the bot was reconnecting is still answered if it is this young
 
-// how the bot shows up in Linked devices (only used when linking). 'android' can receive view-once files.
-function pickBrowser(Browsers, registered) {
-  // While LINKING, the standard identity is used unless BOT_BROWSER is set on purpose: it is the one WhatsApp accepts reliably
-  const want = String(registered ? store.getBrowser() || config.browser || process.env.BOT_BROWSER || '' : process.env.BOT_BROWSER || '').toLowerCase();
+// how the bot shows up in Linked devices (it is fixed when the bot is LINKED). The default is 'android': WhatsApp sends view-once
+// files only to a device linked like the Android app. BOT_BROWSER=web (or macos / windows) switches back to a browser identity.
+function pickBrowser(Browsers) {
+  const want = String(store.getBrowser() || config.browser || 'android').toLowerCase();
   if (want === 'android') {
     const a = Browsers.android;
     try {
-      if (typeof a === 'function') return a('Chrome');
+      if (typeof a === 'function') return a('13'); // the argument is the Android version number (the library's own example uses '13'); the browser name inside stays Chrome, which pairing codes need
       if (Array.isArray(a)) return a;
     } catch (err) {
       // fall through
@@ -171,7 +171,7 @@ async function startWhatsApp() {
     auth: { creds: state.creds, keys: cacheKeys(fastKeys(state.keys), logger) },
     logger,
     ...versionOpt,
-    browser: pickBrowser(Browsers, !!state.creds.registered),
+    browser: pickBrowser(Browsers),
     markOnlineOnConnect: false,
     syncFullHistory: false,
     keepAliveIntervalMs: 25000, // WhatsApp is pinged more often, so a dead connection is noticed sooner
@@ -436,7 +436,6 @@ async function startWhatsApp() {
   // edits and deletions that WhatsApp reports as updates
   sock.ev.on('messages.update', (updates) => {
     if (!alive()) return;
-    require('./delivery').note(updates); // what WhatsApp answered to our own messages (accepted or refused)
     watchers.onUpdate(sock, updates).catch((e) => console.error('Update watcher error:', e.message));
   });
 

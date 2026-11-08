@@ -52,5 +52,5 @@ module.exports = {
 
   // Optional. How the bot shows up in WhatsApp > Linked devices when you link it. Leave it empty to keep the default.
   // 'android' lets the bot receive view-once pictures and videos (you must link the bot again after changing it).
-  browser: process.env.BOT_BROWSER || '',
+  browser: process.env.BOT_BROWSER || 'android', // how the bot shows up in Linked devices. android receives view-once files; BOT_BROWSER=web gives the old browser identity
 };

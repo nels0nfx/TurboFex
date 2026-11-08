@@ -1,3 +1,12 @@
+TurboFex v1.1.8 - android identity by default, debug code removed
+CHANGED IN 1.1.8
+- CHANGED: the bot now links as an ANDROID device by default (BOT_BROWSER=android is the default; BOT_BROWSER=web gives the old browser identity). WhatsApp sends view-once files only to a device linked like the Android app. The identity is applied when the bot is LINKED, so a bot that was linked earlier stays as it is until it is linked again with a new pairing code or session id, and the pairing site must use the Android identity too.
+- REMOVED: all debugging code: `antigstatus debug`, `antigstatus report` and its counters, `autoviewonce debug`, the check reports, and the tracker of WhatsApp's answers to sent messages. The group status delete (wrapped revoke with the group-status marker, then the plain delete) and the notes about how the bot is linked stay.
+
+TurboFex v1.1.7 - android identity argument
+CHANGED IN 1.1.7
+- FIXED: with BOT_BROWSER=android the bot passed the word "Chrome" where the library expects the Android version number. It now passes a version number ('13', the library's own example), so the Android identity is built the way the library describes it. This only matters when the bot is linked with BOT_BROWSER=android; nothing changes for a bot that is already linked.
+
 TurboFex v1.1.6 - menu picture and video removed, why view-once arrives empty, group status
 CHANGED IN 1.1.6
 - REMOVED: the menu picture and video (setmenu image / video / media, the card, the delivery check for it). The menu is again ONE plain text message with the header and the commands together. `setmenu title / subtitle / reset` stay.

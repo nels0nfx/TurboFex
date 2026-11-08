@@ -16,12 +16,6 @@ function modeCommand(name, aliases, key, label, description, note) {
         });
         return reply(on ? '✅ *Hidden pictures and videos are kept.*\n▸ A file that arrives without its content and that your phone then sends is copied, labelled *Hidden*, because it may have been a view-once.' : '✅ *Only real view-once files are kept.*\n▸ A hidden file that your phone sends without the view-once flag is ignored.');
       }
-      if (key === 'viewonce' && c === 'debug') {
-        require('../whatsapp/watchers').startDebug();
-        const identity = require('../whatsapp/identity');
-        const note = identity.viewOnceNote(sock, prefix);
-        return reply(`🔎 *Auto view-once check is on for 10 minutes.*\n▸ *Linked as:* ${identity.platformOf(sock) || 'unknown'}${note ? `\n\n${note}` : ''}\n▸ Ask someone to send you a view-once picture. I will send you a short report in your own chat about what WhatsApp delivered.`);
-      }
       if (c === 'on') c = 'all';
       const cfg = store.watchCfg(key);
       if (!['off', ...Object.keys(MODES)].includes(c)) {

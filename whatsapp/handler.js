@@ -188,9 +188,6 @@ async function handleMessageInner(sock, msg) {
     if (!r.isOwner) return presence.pmGuard(sock, jid, store.getAuto('pm'));
   }
 
-  // a group status posted from the bot's own account is never touched: it is only counted, so the antigstatus report can say so
-  if (isGroup && msg.key.fromMe && require('./protect').isGroupStatusPost(msg.message)) require('./protect').gstats.ownPosts += 1;
-
   // Passive protections (anti-link, anti-word, anti-spam) and message counting
   if (isGroup && !msg.key.fromMe) {
     activity.count(jid, msg.key.participant);

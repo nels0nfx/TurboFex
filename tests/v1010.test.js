@@ -237,27 +237,6 @@ test('cmdreact: the reaction is removed a few seconds after the command is done'
   delete require.cache[require.resolve('../whatsapp/cmdreact')];
 });
 
-test('antigstatus: handled before slow mode and the debug report reaches the owner', async () => {
-  const store = require('../whatsapp/store');
-  const protect = require('../whatsapp/protect');
-  const jid = '120369000000300002@g.us';
-  store.getGroup(jid);
-  store.update(jid, (g) => { g.antigstatusMode = 'delete'; g.slowmode = 30; });
-  const sender = '27811110010@s.whatsapp.net';
-  const sent = [];
-  const sock = { user: { id: '27899999999:3@s.whatsapp.net' }, sendMessage: async (j, c) => { sent.push([j, c]); }, relayMessage: async () => {} };
-  const roles = async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false });
-  protect.startDebug();
-  const post = (id) => ({ key: { remoteJid: jid, id, participant: sender }, message: { groupStatusMessageV2: { message: { videoMessage: {} } } } });
-  await protect.runProtections({ sock, msg: { key: { remoteJid: jid, id: 'W0', participant: sender }, message: { conversation: 'warm' } }, jid, text: 'warm', getRoles: roles }); // starts the slow-mode clock
-  assert.strictEqual(await protect.runProtections({ sock, msg: post('W1'), jid, text: '', getRoles: roles }), true);
-  assert.ok(sent.some(([j, c]) => c.delete && c.delete.id === 'W1'), 'deleted although slow mode was also triggered');
-  const report = sent.find(([j, c]) => j === '27899999999@s.whatsapp.net' && c.text);
-  assert.ok(report, 'the owner gets a report');
-  assert.match(report[1].text, /Recognised as group status:\* yes/);
-  assert.ok(!/video/.test(report[1].text.split('Parts:')[0]), 'only names, in the Parts line');
-});
-
 // ------------------------------------------------------------ update notices are never cut
 test('what changed: every line of every newer version, long ones split into several messages', () => {
   const uw = require('../whatsapp/updatewatch');
@@ -298,28 +277,6 @@ test('a picture the phone sent late is labelled Hidden, never View-once', async 
 });
 
 // ------------------------------------------------------------ v1.1.3: group status report
-test('antigstatus report: counts what happened, so no console is needed', async () => {
-  const store = require('../whatsapp/store');
-  const protect = require('../whatsapp/protect');
-  const cmd = require('../commands/antigstatus')[0];
-  const jid = '120369000000300003@g.us';
-  store.getGroup(jid);
-  store.update(jid, (g) => { g.antigstatusMode = 'delete'; });
-  const sender = '27811110011@s.whatsapp.net';
-  const sock = { sendMessage: async () => {}, relayMessage: async () => {} };
-  const before = { ...protect.gstats };
-  const post = (id) => ({ key: { remoteJid: jid, id, participant: sender }, message: { groupStatusMessageV2: { message: {} } } });
-  await protect.runProtections({ sock, msg: post('R1'), jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
-  await protect.runProtections({ sock, msg: post('R2'), jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: true, isOwner: false }) });
-  await protect.runProtections({ sock, msg: post('R3'), jid, text: '', getRoles: async () => ({ isBotAdmin: false, isAdmin: false, isOwner: false }) });
-  await protect.runProtections({ sock: { sendMessage: async () => { throw new Error('no'); }, relayMessage: async () => { throw new Error('no'); } }, msg: post('R4'), jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
-  const g = protect.gstats;
-  assert.deepStrictEqual([g.seen - before.seen, g.deleted - before.deleted, g.adminPosted - before.adminPosted, g.botNotAdmin - before.botNotAdmin, g.refused - before.refused], [4, 1, 1, 1, 1]);
-  const out = [];
-  await cmd.run({ args: ['report'], reply: async (t) => out.push(t), isOwner: true, jid, prefix: '.' });
-  assert.match(out[0], /Group statuses since the bot started[\s\S]*Seen:\* \d+[\s\S]*Refused by WhatsApp/);
-});
-
 // ------------------------------------------------------------ v1.1.4
 test('a group status is deleted with a wrapped revoke (a plain delete does not remove it)', async () => {
   const store = require('../whatsapp/store');
@@ -346,28 +303,6 @@ test('a group status is deleted with a wrapped revoke (a plain delete does not r
   await protect.runProtections({ sock: sock2, msg: { key: { remoteJid: jid, id: 'N9', participant: sender }, message: { conversation: 'visit https://spam.example now' } }, jid, text: 'visit https://spam.example now', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
 });
 
-test('shapeOf: short part names, no raw bytes and no numbered entries', () => {
-  const { shapeOf } = require('../whatsapp/shape');
-  const bytes = new Uint8Array(40);
-  const shape = shapeOf({ senderKeyDistributionMessage: { groupId: 'g', axolotlSenderKeyDistributionMessage: bytes, list: [1, 2, 3] }, groupStatusMessageV2: { message: { imageMessage: { url: 'x' } } } });
-  assert.ok(shape.includes('groupStatusMessageV2.message.imageMessage'));
-  assert.ok(!shape.some((k) => /\.\d+$/.test(k)), 'no numbered entries');
-  assert.ok(shape.length < 12);
-});
-
-test('autoviewonce debug: an EMPTY message also reaches the owner', async () => {
-  const watchers = require('../whatsapp/watchers');
-  const sent = [];
-  const sock = { user: { id: '27899999999:1@s.whatsapp.net' }, sendMessage: async (j, c) => { sent.push([j, c]); }, requestPlaceholderResend: async () => {} };
-  watchers.startDebug();
-  watchers.early(sock, { key: { remoteJid: '120369000000500001@g.us', id: 'EMP1', participant: '27811110040@s.whatsapp.net' }, message: null, messageStubType: 2 });
-  await new Promise((r) => setTimeout(r, 30));
-  const report = sent.find(([j, c]) => c.text && /Auto view-once check/.test(c.text));
-  assert.ok(report, 'a report was sent');
-  assert.match(report[1].text, /none \(empty message\)/);
-  assert.match(report[1].text, /Stub type:\* 2/);
-});
-
 test('the reaction: the hourglass shows 500 ms after the message arrived (not after the command started)', async () => {
   delete require.cache[require.resolve('../whatsapp/cmdreact')];
   const cmdreact = require('../whatsapp/cmdreact');
@@ -382,35 +317,6 @@ test('the reaction: the hourglass shows 500 ms after the message arrived (not af
   r.finish('ok');
   await new Promise((x) => setTimeout(x, 30));
   assert.deepStrictEqual(sent, ['⏳', '✅']);
-});
-
-test('delivery: a refused answer is known by the id, also when it arrived before we asked', async () => {
-  const delivery = require('../whatsapp/delivery');
-  const waiting = delivery.expect('ID-A', 1000);
-  delivery.note([{ key: { id: 'ID-A' }, update: { status: 0, messageStubParameters: ['403'] } }]);
-  assert.deepStrictEqual(await waiting, { result: 'refused', error: '403' });
-  delivery.note([{ key: { id: 'ID-B' }, update: { status: 3 } }]);
-  assert.deepStrictEqual(await delivery.expect('ID-B', 1000), { result: 'ok' });
-  assert.deepStrictEqual(await delivery.expect('ID-NEVER', 20), { result: 'unknown' });
-});
-
-test('group status delete: the answer of WhatsApp is kept for the report; a refused wrapped revoke is followed by the plain delete', async () => {
-  const store = require('../whatsapp/store');
-  const protect = require('../whatsapp/protect');
-  const delivery = require('../whatsapp/delivery');
-  const jid = '120369000000300011@g.us';
-  store.getGroup(jid);
-  store.update(jid, (g) => { g.antigstatusMode = 'delete'; });
-  const sender = '27811110050@s.whatsapp.net';
-  const calls = [];
-  const sock = {
-    relayMessage: async (j, c, o) => { calls.push('wrapped'); setTimeout(() => delivery.note([{ key: { id: o.messageId }, update: { status: 0, messageStubParameters: ['403'] } }]), 1); },
-    sendMessage: async (j, c, o) => { if (!c.delete) return; calls.push('plain'); setTimeout(() => delivery.note([{ key: { id: o.messageId }, update: { status: 3 } }]), 1); },
-  };
-  const msg = { key: { remoteJid: jid, id: 'GS7', participant: sender }, message: { groupStatusMessageV2: { message: {} } } };
-  await protect.runProtections({ sock, msg, jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
-  assert.deepStrictEqual(calls, ['wrapped', 'plain']);
-  assert.match(delivery.last.delete, /wrapped revoke: WhatsApp refused it \(error 403\); plain delete: WhatsApp accepted it/);
 });
 
 test('the menu is ONE text message with the header and the commands, and sends no picture or video', async () => {
@@ -430,7 +336,7 @@ test('view-once: a bot linked like WhatsApp Web is told why it gets empty messag
   const identity = require('../whatsapp/identity');
   const web = { authState: { creds: { platform: 'chrome' } } };
   const android = { authState: { creds: { platform: 'android' } } };
-  assert.match(identity.viewOnceNote(web, '.'), /linked like WhatsApp Web[\s\S]*BOT_BROWSER=android[\s\S]*\.vv/);
+  assert.match(identity.viewOnceNote(web, '.'), /linked like WhatsApp Web[\s\S]*link the bot again[\s\S]*\.vv/);
   assert.strictEqual(identity.viewOnceNote(android, '.'), '');
   assert.strictEqual(identity.viewOnceNote({}, '.'), '', 'unknown: no false alarm');
 });
@@ -446,4 +352,29 @@ test('the wrapped revoke of a group status carries the group-status stanza marke
   const msg = { key: { remoteJid: jid, id: 'GS9', participant: '27811110060@s.whatsapp.net' }, message: { groupStatusMessageV2: { message: {} } } };
   await protect.runProtections({ sock, msg, jid, text: '', getRoles: async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false }) });
   assert.deepStrictEqual(seen[0].additionalNodes, [{ tag: 'meta', attrs: { is_group_status: 'true' } }]);
+});
+
+test('antigstatus: a group status is handled before slow mode and the other rules', async () => {
+  const store = require('../whatsapp/store');
+  const protect = require('../whatsapp/protect');
+  const jid = '120369000000300002@g.us';
+  store.getGroup(jid);
+  store.update(jid, (g) => { g.antigstatusMode = 'delete'; g.slowmode = 30; });
+  const sender = '27811110010@s.whatsapp.net';
+  const sent = [];
+  const sock = { user: { id: '27899999999:3@s.whatsapp.net' }, sendMessage: async (j, c) => { sent.push(c); }, relayMessage: async () => {} };
+  const roles = async () => ({ isBotAdmin: true, isAdmin: false, isOwner: false });
+  await protect.runProtections({ sock, msg: { key: { remoteJid: jid, id: 'W0', participant: sender }, message: { conversation: 'warm' } }, jid, text: 'warm', getRoles: roles }); // starts the slow-mode clock
+  const post = { key: { remoteJid: jid, id: 'W1', participant: sender }, message: { groupStatusMessageV2: { message: { videoMessage: {} } } } };
+  assert.strictEqual(await protect.runProtections({ sock, msg: post, jid, text: '', getRoles: roles }), true);
+  assert.ok(sent.some((c) => c.delete && c.delete.id === 'W1'), 'deleted although slow mode was also triggered');
+});
+
+test('the bot links as Android by default; BOT_BROWSER=web gives the browser identity', () => {
+  const src = fs.readFileSync(path.join(root, 'config.js'), 'utf8');
+  assert.match(src, /browser: process\.env\.BOT_BROWSER \|\| 'android'/);
+  const conn = fs.readFileSync(path.join(root, 'whatsapp', 'connection.js'), 'utf8');
+  assert.match(conn, /String\(store\.getBrowser\(\) \|\| config\.browser \|\| 'android'\)/);
+  assert.match(conn, /a\('13'\)/, 'the android version number, not a word');
+  assert.match(conn, /return Browsers\.ubuntu\('Chrome'\);/, 'web / unknown values keep the browser identity');
 });
