@@ -7,8 +7,9 @@ const idmap = require('./idmap');
 const { num } = require('./utils');
 
 const js = jsonstore.open('names', {}); // { number: "Name" } (phone number or LID number)
+let count = Object.keys(js.data).length; // counted once: walking through all keys for every new name froze big accounts
 const saved = jsonstore.open('saved-contacts', {}); // { number: 1 }: people who are in the owner's phone contacts
-const MAX = 6000;
+const MAX = 40000; // names of a big contact list all fit
 
 const clean = (n) =>
   String(n || '')
@@ -28,13 +29,22 @@ function remember(jid, name) {
   let changed = false;
   for (const k of keys) {
     if (k && js.data[k] !== n) {
+      if (!(k in js.data)) count += 1;
       js.data[k] = n;
       changed = true;
     }
   }
   if (!changed) return;
-  const all = Object.keys(js.data);
-  if (all.length > MAX) for (const k of all.slice(0, all.length - MAX)) delete js.data[k];
+  while (count > MAX) {
+    let dropped = false;
+    for (const k in js.data) { // the oldest names go first
+      delete js.data[k];
+      count -= 1;
+      dropped = true;
+      break;
+    }
+    if (!dropped) break;
+  }
   js.touch();
 }
 

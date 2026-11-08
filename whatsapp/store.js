@@ -44,6 +44,7 @@ function getGroup(jid) {
   if (typeof g.autosticker !== 'boolean') g.autosticker = false; // pictures and videos become stickers
   if (typeof g.captcha !== 'boolean') g.captcha = false; // new members must answer a question
   if (!Number.isInteger(g.captchaSeconds) || g.captchaSeconds < 30) g.captchaSeconds = 120;
+  if (typeof g.captchaVerified !== 'string' || !g.captchaVerified) g.captchaVerified = null; // the admins' own "you are verified" message
   if (!['off', 'lock', 'kick'].includes(g.antiraid)) g.antiraid = 'off'; // many joins at once
   if (!Number.isInteger(g.antiraidJoins) || g.antiraidJoins < 3) g.antiraidJoins = 8;
   if (!Number.isInteger(g.antiraidSeconds) || g.antiraidSeconds < 10) g.antiraidSeconds = 60;

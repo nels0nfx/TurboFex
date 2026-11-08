@@ -1,6 +1,8 @@
 const store = require('../whatsapp/store');
 const { getQuoted, quotedText } = require('../whatsapp/utils');
 
+const MAX_RULES = 60000; // not a bot limit: the longest message WhatsApp can carry
+
 module.exports = [
   {
     name: 'rules',
@@ -30,7 +32,7 @@ module.exports = [
       const quoted = getQuoted(msg);
       const text = (rest || (quoted ? quotedText(quoted) : '') || '').trim();
       if (!text) return reply(`Write the rules after the command, or reply to a message that holds them.\nExample: ${prefix}setrules 1. Be kind\n2. No spam`);
-      if (text.length > 1500) return reply('⚠️ Keep the rules under 1500 characters.');
+      if (text.length > MAX_RULES) return reply('⚠️ *These rules are too long for one message.*\n▸ WhatsApp cannot send more than about 60,000 characters at once. Please shorten them a little.');
       store.update(jid, (g) => {
         g.rules = text;
       });

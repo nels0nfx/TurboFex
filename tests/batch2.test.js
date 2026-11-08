@@ -210,20 +210,20 @@ test('captcha: a new member answers the sum, or is removed after wrong answers',
   sent.length = 0;
   sock.updates = [];
   await captcha.onJoin(sock, GROUP, [newbie], g);
-  const q = texts().find((t) => /Verification/.test(t));
+  const q = texts().find((t) => /Quick puzzle/.test(t));
   const [, a, b] = /\*(\d+) \+ (\d+) = \?\*/.exec(q);
   const msg = (text) => ({ key: { remoteJid: GROUP, participant: newbie, id: `C${++n}` }, message: { conversation: text } });
   assert.strictEqual(captcha.check(sock, msg('hello everyone'), GROUP, 'hello everyone', []), false, 'normal chat is not an answer');
   const wrong1 = String(Number(a) + Number(b) + 1); // always wrong
   assert.strictEqual(captcha.check(sock, msg(wrong1), GROUP, wrong1, []), true, 'a wrong answer');
-  assert.ok(texts().some((t) => /Wrong answer/.test(t)));
+  assert.ok(texts().some((t) => /not quite/.test(t)));
   assert.strictEqual(captcha.check(sock, msg(String(Number(a) + Number(b))), GROUP, String(Number(a) + Number(b)), []), true);
-  assert.ok(texts().some((t) => /is verified/.test(t)));
+  assert.ok(texts().some((t) => /solved the puzzle/.test(t)));
   assert.strictEqual(captcha.pending.size, 0);
   // three wrong answers: removed
   sent.length = 0;
   await captcha.onJoin(sock, GROUP, [newbie], g);
-  const [, a2, b2] = /\*(\d+) \+ (\d+) = \?\*/.exec(texts().find((t) => /Verification/.test(t)));
+  const [, a2, b2] = /\*(\d+) \+ (\d+) = \?\*/.exec(texts().find((t) => /Quick puzzle/.test(t)));
   const wrong2 = String(Number(a2) + Number(b2) + 1);
   for (let i = 0; i < 3; i++) captcha.check(sock, msg(wrong2), GROUP, wrong2, []);
   await new Promise((r) => setTimeout(r, 30));

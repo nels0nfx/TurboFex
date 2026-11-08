@@ -7,11 +7,19 @@ const jsonstore = require('../core/jsonstore');
 const isLid = (j) => String(j).endsWith('@lid');
 const isPn = (j) => String(j).endsWith('@s.whatsapp.net');
 const TTL = 10 * 60 * 1000;
-const MAX = 5000;
+const MAX = 50000; // a big contact list must not push people out of the table again and again
 
 // data/idmap.json: the safe store (atomic writes, backup copy, written again on stop or restart)
 const js = jsonstore.open('idmap', {}, { delay: 2000 });
 const known = js.data; // lid number -> phone jid
+// The other way round (phone number -> lid number), kept up to date by learn(): looking a person up used to walk through the
+// whole table every time (every message, every reply, every contact), which froze big accounts for seconds.
+const reverse = new Map();
+let count = 0;
+for (const k of Object.keys(known)) {
+  reverse.set(num(known[k]), k);
+  count += 1;
+}
 
 function flush() {
   js.flush();
@@ -22,9 +30,18 @@ function learn(lid, pn) {
   const k = num(lid);
   const clean = `${num(pn)}@s.whatsapp.net`;
   if (known[k] === clean) return;
+  if (k in known) reverse.delete(num(known[k]));
+  else count += 1;
   known[k] = clean;
-  const keys = Object.keys(known);
-  if (keys.length > MAX) delete known[keys[0]];
+  reverse.set(num(clean), k);
+  if (count > MAX) {
+    for (const first in known) { // the oldest pair goes
+      reverse.delete(num(known[first]));
+      delete known[first];
+      count -= 1;
+      break;
+    }
+  }
   js.touch();
 }
 
@@ -66,8 +83,7 @@ async function pnFor(sock, lid) {
 
 async function lidFor(sock, pn) {
   const find = () => {
-    const n = num(pn);
-    const k = Object.keys(known).find((x) => num(known[x]) === n);
+    const k = reverse.get(num(pn));
     return k ? `${k}@lid` : null;
   };
   return find() || (await load(sock), find());
@@ -76,8 +92,7 @@ async function lidFor(sock, pn) {
 // instant lookups (only what is already known, nothing is asked from WhatsApp)
 const pnSync = (lid) => known[num(lid)] || null;
 const lidSync = (pn) => {
-  const n = num(pn);
-  const k = Object.keys(known).find((x) => num(known[x]) === n);
+  const k = reverse.get(num(pn));
   return k ? `${k}@lid` : null;
 };
 

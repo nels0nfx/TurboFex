@@ -46,11 +46,11 @@ test('verification ON: the introduction is held back until the sum is answered',
   await events.handleParticipants(sock, { id: GROUP, action: 'add', participants: [newbie], author: null });
   await settle();
   const first = texts(sock);
-  assert.ok(first.some((t) => /Verification/.test(t)), 'the question is asked');
+  assert.ok(first.some((t) => /Quick puzzle/.test(t)), 'the question is asked');
   assert.ok(first.some((t) => /5 minutes/.test(t)), 'the time is shown in words');
   assert.ok(!first.some((t) => /tell us about you/.test(t)), 'no introduction yet');
 
-  const [, a, b] = /\*(\d+) \+ (\d+) = \?\*/.exec(first.find((t) => /Verification/.test(t)));
+  const [, a, b] = /\*(\d+) \+ (\d+) = \?\*/.exec(first.find((t) => /Quick puzzle/.test(t)));
   const msg = (text) => ({ key: { remoteJid: GROUP, participant: newbie, id: `V${++n}` }, message: { conversation: text } });
   const wrong = String(Number(a) + Number(b) + 1);
   captcha.check(sock, msg(wrong), GROUP, wrong, []);
@@ -61,7 +61,7 @@ test('verification ON: the introduction is held back until the sum is answered',
   assert.strictEqual(captcha.check(sock, msg(right), GROUP, right, []), true);
   await settle();
   const all = texts(sock);
-  const iVerified = all.findIndex((t) => /is verified/.test(t));
+  const iVerified = all.findIndex((t) => /solved the puzzle/.test(t));
   const iIntro = all.findIndex((t) => /tell us about you in 1 hour/.test(t));
   assert.ok(iVerified >= 0 && iIntro > iVerified, 'the introduction follows the verified message');
   assert.strictEqual(captcha.pending.size, 0);
@@ -72,7 +72,7 @@ test('verification ON: a member who fails never gets the introduction', async ()
   const newbie = '27811110002@s.whatsapp.net';
   await events.handleParticipants(sock, { id: GROUP, action: 'add', participants: [newbie], author: null });
   await settle();
-  const [, a, b] = /\*(\d+) \+ (\d+) = \?\*/.exec(texts(sock).find((t) => /Verification/.test(t)));
+  const [, a, b] = /\*(\d+) \+ (\d+) = \?\*/.exec(texts(sock).find((t) => /Quick puzzle/.test(t)));
   const wrong = String(Number(a) + Number(b) + 1);
   const msg = () => ({ key: { remoteJid: GROUP, participant: newbie, id: `W${++n}` }, message: { conversation: wrong } });
   for (let i = 0; i < 3; i++) captcha.check(sock, msg(), GROUP, wrong, []);
@@ -87,10 +87,6 @@ test('verification OFF: the introduction is sent at once, as before', async () =
   await events.handleParticipants(sock, { id: GROUP, action: 'add', participants: ['27811110003@s.whatsapp.net'], author: null });
   await settle();
   assert.ok(texts(sock).some((t) => /tell us about you/.test(t)));
-});
-
-test('the version is 1.2.1', () => {
-  assert.strictEqual(require('../package.json').version, '1.2.1');
 });
 
 test('the Empire of Fex is gone: no files, no commands, no bets', () => {

@@ -46,7 +46,7 @@ function resume(sock) {
     const timer = setTimeout(() => {
       if (pending.delete(key)) {
         forgetSaved(key);
-        kick(sock, it.group, it.jid, 'did not answer the verification in time').catch(() => {});
+        kick(sock, it.group, it.jid, 'the puzzle was not solved in time').catch(() => {});
       }
     }, left);
     if (timer.unref) timer.unref();
@@ -66,6 +66,17 @@ async function sendIntro(sock, group, jid) {
     info = null;
   }
   await intro.send(sock, group, [jid], info?.subject || 'the group', info?.participants?.length, g.intro).catch((e) => console.error('Introduction error:', e.message));
+}
+
+const DEFAULT_VERIFIED = (jid) => `🎉 *Yay, you did it!* @${num(jid)} solved the puzzle. Welcome, you are in! ✅`;
+
+// the message after a right answer: the one the admins saved (@user is the new member), or the default
+function verifiedText(group, jid) {
+  const own = store.getGroup(group).captchaVerified;
+  if (!own) return DEFAULT_VERIFIED(jid);
+  const tag = `@${num(jid)}`;
+  const text = own.replace(/@user/gi, () => tag);
+  return text.includes(tag) ? text : `${tag}\n${text}`; // the new member is always tagged
 }
 
 // seconds -> "90 seconds", "5 minutes", "1 hour 30 minutes"
@@ -113,7 +124,7 @@ async function onJoin(sock, group, jids, g) {
     const timer = setTimeout(() => {
       if (pending.delete(key)) {
         forgetSaved(key);
-        kick(sock, group, jid, `did not answer the verification in ${words(g.captchaSeconds)}`).catch(() => {});
+        kick(sock, group, jid, `the puzzle was not solved in ${words(g.captchaSeconds)}`).catch(() => {});
       }
     }, g.captchaSeconds * 1000);
     if (timer.unref) timer.unref();
@@ -121,7 +132,7 @@ async function onJoin(sock, group, jids, g) {
     pending.set(key, { answer: a + b, tries: 0, ids: idsOf(jid), jid, timer, intro: withIntro });
     saveItem(key, group, { answer: a + b, tries: 0, ids: idsOf(jid), jid, until: Date.now() + g.captchaSeconds * 1000, intro: withIntro });
     asked.push(jid);
-    await sock.sendMessage(group, { text: `🔐 *Verification*\nWelcome @${num(jid)}! Answer this to stay in the group:\n\n*${a} + ${b} = ?*\n\n_Send only the number. You have ${words(g.captchaSeconds)} and ${MAX_TRIES} tries._`, mentions: [jid] }).catch(() => {});
+    await sock.sendMessage(group, { text: `🔐 *Quick puzzle!*\nHi @${num(jid)}! 👋 Welcome!\nTo stay in the group, please solve this little puzzle:\n\n*${a} + ${b} = ?*\n\n▸ Count it on your fingers if you like ✋\n▸ Type only the answer number, nothing else.\n▸ You have ${words(g.captchaSeconds)} and ${MAX_TRIES} tries.`, mentions: [jid] }).catch(() => {});
   }
   return asked;
 }
@@ -137,7 +148,7 @@ function check(sock, msg, group, text, botIds) {
     clearTimeout(v.timer);
     pending.delete(key);
     forgetSaved(key);
-    const done = sock.sendMessage(group, { text: `✅ @${num(v.jid)} is verified. Welcome!`, mentions: [v.jid] }).catch(() => {});
+    const done = sock.sendMessage(group, { text: verifiedText(group, v.jid), mentions: [v.jid] }).catch(() => {});
     if (v.intro) done.then(() => sendIntro(sock, group, v.jid)).catch(() => {}); // the introduction follows the verification
     return true;
   }
@@ -150,9 +161,9 @@ function check(sock, msg, group, text, botIds) {
     clearTimeout(v.timer);
     pending.delete(key);
     forgetSaved(key);
-    kick(sock, group, v.jid, 'failed the verification').catch(() => {});
+    kick(sock, group, v.jid, 'the puzzle was not solved after 3 tries').catch(() => {});
   } else {
-    sock.sendMessage(group, { text: `❌ Wrong answer, @${num(v.jid)}. ${MAX_TRIES - v.tries} ${MAX_TRIES - v.tries === 1 ? 'try' : 'tries'} left.`, mentions: [v.jid] }).catch(() => {});
+    sock.sendMessage(group, { text: `❌ *Oops, not quite,* @${num(v.jid)}. Look again and try once more! You have ${MAX_TRIES - v.tries} ${MAX_TRIES - v.tries === 1 ? 'try' : 'tries'} left.`, mentions: [v.jid] }).catch(() => {});
   }
   return true;
 }
@@ -176,4 +187,4 @@ async function onRaid(sock, group, jids, g, now = Date.now()) {
   return true;
 }
 
-module.exports = { onJoin, check, onRaid, pending, resume, sendIntro, words, parseSeconds, MIN_SECONDS, MAX_SECONDS };
+module.exports = { onJoin, check, onRaid, pending, resume, sendIntro, verifiedText, DEFAULT_VERIFIED, words, parseSeconds, MIN_SECONDS, MAX_SECONDS };

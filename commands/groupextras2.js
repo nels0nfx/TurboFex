@@ -50,8 +50,8 @@ module.exports = [
     name: 'captcha',
     aliases: ['verify'],
     botAdminRequired: true,
-    description: 'New members must answer a sum or they are removed: captcha on / off / time 90s, 5m (admins only)',
-    async run({ jid, args, reply, prefix, isBotAdmin }) {
+    description: 'New members must answer a sum or they are removed: captcha on / off / time 90s, 5m / message <text> (admins only)',
+    async run({ jid, args, rest, reply, prefix, isBotAdmin }) {
       const g = store.getGroup(jid);
       const w = (args[0] || '').toLowerCase();
       if (w === 'on' || w === 'off') {
@@ -60,13 +60,27 @@ module.exports = [
         if (w === 'on' && !isBotAdmin) await reply('⚠️ *I need admin rights for this to work.*\n▸ Make me a group admin so I can remove people who do not answer.');
         return;
       }
+      if (w === 'message' || w === 'verified' || w === 'welcome') {
+        const text = rest.replace(/^\S+\s*/, '').trim();
+        const cmdName = `${prefix}captcha message`;
+        if (!text) {
+          const now = g.captchaVerified;
+          return reply(`💬 *Message after a right answer*\n▸ *Now:* ${now ? now.slice(0, 300) + (now.length > 300 ? '…' : '') : 'the default one'}\n\n▸ \`${cmdName} Well done @user! Welcome to the family 🎉\` saves your own\n▸ \`${cmdName} reset\` goes back to the default\n_Write @user where the new member should be tagged._`);
+        }
+        if (['reset', 'default', 'off'].includes(text.toLowerCase())) {
+          store.update(jid, (x) => { x.captchaVerified = null; });
+          return reply('✅ *The default message is back.*');
+        }
+        store.update(jid, (x) => { x.captchaVerified = text; });
+        return reply(`✅ *Message saved.*\n▸ New members see it right after they solve the puzzle.\n▸ Preview:\n${captcha.verifiedText(jid, '27800000000@s.whatsapp.net').replace(/@27800000000/g, '@newmember')}`);
+      }
       if (w === 'time') {
         const n = captcha.parseSeconds(args.slice(1).join(''));
         if (n === null) return reply(`⏳ *Time to answer*\n▸ \`${prefix}captcha time 90\` (seconds), \`${prefix}captcha time 5m\` or \`${prefix}captcha time 1h\`\n_From 30 seconds to 1 hour. New members are removed if they do not answer in time._`);
         store.update(jid, (x) => { x.captchaSeconds = n; });
         return reply(`✅ *New members have ${captcha.words(n)} to answer.*`);
       }
-      await reply(`🔐 *Verification*\n*Status:* ${state(g.captcha)}\n*Time to answer:* ${captcha.words(g.captchaSeconds)}\n\n▸ \`${prefix}captcha on\` / \`${prefix}captcha off\`\n▸ \`${prefix}captcha time 90s\`, \`${prefix}captcha time 5m\``);
+      await reply(`🔐 *Verification*\n*Status:* ${state(g.captcha)}\n*Time to answer:* ${captcha.words(g.captchaSeconds)}\n*Message after a right answer:* ${g.captchaVerified ? 'your own' : 'default'}\n\n▸ \`${prefix}captcha on\` / \`${prefix}captcha off\`\n▸ \`${prefix}captcha time 90s\`, \`${prefix}captcha time 5m\`\n▸ \`${prefix}captcha message Well done @user!\` (your own message after a right answer)`);
     },
   },
   {

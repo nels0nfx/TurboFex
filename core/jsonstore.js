@@ -75,6 +75,7 @@ function open(name, initial, opts = {}) {
   let dirty = loaded.state === 'recovered' || loaded.state === 'lost'; // a repaired file is written back at once
   let timer = null;
   let failures = 0;
+  let costMs = 0; // how long the last save took: a big file is saved and checked less often, so it can never keep the bot busy
 
   const write = () => {
     if (timer) {
@@ -82,16 +83,19 @@ function open(name, initial, opts = {}) {
       timer = null;
     }
     let text;
+    const began = Date.now();
     try {
       text = JSON.stringify(data);
     } catch (err) {
       console.error(`Could not save ${name}:`, err.message);
       return false;
     }
+    costMs = Date.now() - began;
     if (!dirty && text === last) return true; // nothing changed
     try {
       if (last !== null) snapshot(file, name); // only a file that was loaded fine is copied (never a repaired or empty one)
       safefile.writeText(file, text);
+      costMs = Date.now() - began;
       last = text;
       dirty = false;
       failures = 0;
@@ -108,10 +112,16 @@ function open(name, initial, opts = {}) {
   onFlushSync(write);
 
   // the safety net: a change that nobody announced with touch() is found and saved
+  // (the check itself costs time for a big file: it is done at most about once for every 50 times its own cost)
+  let nextNet = 0;
   const net = setInterval(() => {
-    if (dirty) return;
+    if (dirty || Date.now() < nextNet) return;
     try {
-      if (JSON.stringify(data) !== last) write();
+      const began = Date.now();
+      const same = JSON.stringify(data) === last;
+      const took = Date.now() - began;
+      nextNet = Date.now() + took * 50;
+      if (!same) write();
     } catch (err) {
       // not important
     }
@@ -136,7 +146,7 @@ function open(name, initial, opts = {}) {
         timer = setTimeout(() => {
           timer = null;
           write();
-        }, delay);
+        }, Math.max(delay, Math.min(60000, costMs * 20))); // a file that takes 300 ms to save is saved every 6 seconds at most
         if (timer.unref) timer.unref();
       }
     },

@@ -16,9 +16,10 @@ async function fix(sock, groupJid, content) {
     if (!members.length) return content;
 
     const swaps = new Map(); // old number -> number the group uses
+    const byId = meta.indexOf(info).byId; // a lookup table: walking through every member for every tag froze big groups
     const ids = content.mentions.map((m) => {
       const n = num(m);
-      const p = members.find((x) => participantIds(x).includes(n));
+      const p = byId.get(n);
       if (!p || !p.id) return m;
       if (num(p.id) !== n) swaps.set(n, num(p.id));
       return p.id;
