@@ -1,3 +1,9 @@
+TurboFex v1.3.2 - old Empire of Fex files are cleared on every start
+CHANGED IN 1.3.2
+- FIXED: some bots that updated from an old version still had the Empire of Fex commands after v1.2.1 removed them. Cause: the update only deletes old files if the bot that runs the update knows how, and very old bots never did. Now the bot itself clears them every time it starts: every file in `removed-files.txt` that is still on the disk, the whole old realm folder, and any bot file that still loads it (even if its name was never on the list).
+- SAFE: each file is first copied to `data/legacy-removed/`, so nothing is lost. `data/` (including the saved realm data), `session/`, `config.js`, `config.env`, `session_id.txt` and `node_modules/` are never touched. If a clean-up ever fails, the bot still starts.
+- The clean-up also runs when an update restarts the bot, not only on a full start.
+
 TurboFex v1.3.1 - the verification explains itself, reminds, and gives a last minute
 CHANGED IN 1.3.1
 - CHANGED: the message a new member gets now says what the verification is ("this group checks that every new member is a real person and not a spam bot"), what to do, how much time there is and that they are removed if it is not solved.

@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 require('./core/envfile').load(); // optional config.env (SESSION_ID, PREFIX, ...); the child process inherits it
+require('./core/legacyclean').run(__dirname); // files of removed features that an old updater left behind go before the bot loads its commands
 const { RESTART_CODE } = require('./core/restart');
 const bootnote = require('./core/bootnote');
 
@@ -36,6 +37,7 @@ function tryRollback() {
 }
 
 if (process.env.FLASH_CHILD === '1') {
+  require('./core/legacyclean').run(__dirname); // after an update the old supervisor starts this new bot: the clean-up must run here too
   require('./core/integrity').enforce();
   require('./core/boot')
     .start()
