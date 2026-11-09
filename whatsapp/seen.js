@@ -14,16 +14,22 @@ function makeSeen(fileName, max) {
   const set = new Set(list);
   let dirty = loaded.state === 'recovered';
 
+  let nextAt = 0; // the timer does not write before this time: a slow save (slow disk, big list) makes the next ones rarer
   function saveNow() {
     if (!dirty) return;
+    const began = Date.now();
     try {
       safefile.save(file, [...set]);
       dirty = false;
     } catch (err) {
       console.error(`Could not save ${fileName}:`, err.message); // stays dirty: tried again
     }
+    nextAt = Date.now() + Math.min(15000, (Date.now() - began) * 20); // a 50 ms save waits 1 s, a 300 ms save waits 6 s
   }
-  const timer = setInterval(saveNow, 1000);
+  const tick = () => {
+    if (Date.now() >= nextAt) saveNow();
+  };
+  const timer = setInterval(tick, 1000);
   if (timer.unref) timer.unref();
   onFlushSync(saveNow);
 

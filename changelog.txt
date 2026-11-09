@@ -1,3 +1,18 @@
+TurboFex v1.3.1 - the verification explains itself, reminds, and gives a last minute
+CHANGED IN 1.3.1
+- CHANGED: the message a new member gets now says what the verification is ("this group checks that every new member is a real person and not a spam bot"), what to do, how much time there is and that they are removed if it is not solved.
+- NEW: reminders on the way. The member is tagged halfway through the time the admins set, and again when 1 minute is left (for times of 4 minutes or more). Each reminder shows the sum again, so nobody has to scroll up.
+- NEW: when the time is up the member is tagged and gets 1 extra minute as a last chance. Only after that minute are they removed. A right answer in the extra minute still verifies them.
+- The reminders and the extra minute survive a restart: a member whose time ran out while the bot was offline is tagged and gets the extra minute when the bot is back.
+- `captcha`, `captcha time ...`: the texts now describe the reminders and the extra minute.
+
+TurboFex v1.3.0 - lighter on the disk and on memory
+CHANGED IN 1.3.0
+- FASTER: the list of already handled messages and statuses (`seen.json`, `seen-status.json`) was written to disk every second while it changed. A busy status feed on a slow disk could keep the bot waiting on that. The writes now space themselves out by how long the last save took (still every second on a normal disk, never more than every 15 seconds on a very slow one), and the list is always written in full when the bot stops or restarts.
+- FASTER: every save of a data file no longer checks the disk for the daily backup copy; it looks once a day per file.
+- FIXED: a small list in the admin guard (who was already told) could grow without end on a very busy bot. It is now capped.
+- CHECKED, nothing to change: the bot loads in about 0.1 s, a command lookup, group settings read and duplicate check each take under a microsecond, and every other in-memory list already had a cap.
+
 TurboFex v1.2.11 - session_id.txt comes inside the ZIP
 CHANGED IN 1.2.11
 - NEW: `session_id.txt` is now part of the hosting ZIP (blank, with the steps inside). People open it, paste the session ID after `SESSION_ID=`, save and start the bot. No need to start the bot first to get the file. The bot still makes it by itself if it is missing and never overwrites it.

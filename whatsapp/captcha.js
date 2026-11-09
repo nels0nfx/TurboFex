@@ -36,21 +36,89 @@ function forgetSaved(key) {
     js.touch();
   }
 }
+// writes what the open question looks like now (tries, the extra minute) so a restart continues from the same point
+function persist(key) {
+  const v = pending.get(key);
+  if (v) saveItem(key, v.group, { answer: v.answer, question: v.question, tries: v.tries, ids: v.ids, jid: v.jid, until: v.until, total: v.total, grace: v.grace, intro: v.intro });
+}
 
-// After a restart or a reconnect: every question that was still open gets its timer back. A person whose time ran out while
+const GRACE_MS = 60 * 1000; // when the time is up the person is tagged and gets this one extra minute
+
+// when the reminders are sent, in seconds after the question: halfway, and (for 4 minutes or more) when 1 minute is left
+function reminderPoints(totalSec) {
+  const pts = [Math.round(totalSec / 2)];
+  if (totalSec >= 240) pts.push(totalSec - 60);
+  return pts;
+}
+
+function clearTimers(v) {
+  clearTimeout(v.timer);
+  for (const t of v.reminders || []) clearTimeout(t);
+  v.reminders = [];
+}
+
+// (re)starts the reminder timers and the end timer of an open question
+function schedule(sock, key) {
+  const v = pending.get(key);
+  if (!v) return;
+  clearTimers(v);
+  const now = Date.now();
+  if (!v.grace) {
+    const started = v.until - v.total * 1000;
+    for (const sec of reminderPoints(v.total)) {
+      const at = started + sec * 1000;
+      if (at <= now + 1000 || at >= v.until - 5000) continue;
+      const t = setTimeout(() => remind(sock, key), at - now);
+      if (t.unref) t.unref();
+      v.reminders.push(t);
+    }
+  }
+  v.timer = setTimeout(() => expire(sock, key), Math.max(0, v.until - now));
+  if (v.timer.unref) v.timer.unref();
+}
+
+function remind(sock, key) {
+  const v = pending.get(key);
+  if (!v) return;
+  const left = Math.max(1, Math.round((v.until - Date.now()) / 1000));
+  sock.sendMessage(v.group, { text: `⏰ *Reminder:* @${num(v.jid)}, you have not solved the puzzle yet.\n▸ About ${words(left)} left.\n▸ Just type the answer: *${v.question} = ?*\n_If it is not solved in time, you will be removed from the group._`, mentions: [v.jid] }).catch(() => {});
+}
+
+// the time is up: the first time the person is tagged and gets one extra minute, the second time they are removed
+function expire(sock, key) {
+  const v = pending.get(key);
+  if (!v) return;
+  if (!v.grace) {
+    v.grace = true;
+    v.until = Date.now() + GRACE_MS;
+    persist(key);
+    schedule(sock, key);
+    sock.sendMessage(v.group, { text: `⏳ *Time is up, @${num(v.jid)}!*\nYou have not solved the puzzle yet, so here is *1 extra minute* as your last chance.\n▸ Type only the answer: *${v.question} = ?*\n▸ If it is still not solved after this minute, you will be removed from the group.`, mentions: [v.jid] }).catch(() => {});
+    return;
+  }
+  pending.delete(key);
+  forgetSaved(key);
+  kick(sock, v.group, v.jid, `the puzzle was not solved in ${words(v.total)} plus the extra minute`).catch(() => {});
+}
+
+// After a restart or a reconnect: every question that was still open gets its timers back. A person whose time ran out while
 // the bot was away gets at least one more minute (they could not answer while the bot was offline).
 function resume(sock) {
   for (const [key, it] of Object.entries(js.data.items)) {
     if (pending.has(key)) continue;
-    const left = Math.max(60000, (it.until || 0) - Date.now());
-    const timer = setTimeout(() => {
-      if (pending.delete(key)) {
-        forgetSaved(key);
-        kick(sock, it.group, it.jid, 'the puzzle was not solved in time').catch(() => {});
-      }
-    }, left);
-    if (timer.unref) timer.unref();
-    pending.set(key, { answer: it.answer, tries: it.tries || 0, ids: it.ids || [num(it.jid)], jid: it.jid, timer, intro: it.intro === true });
+    const now = Date.now();
+    let until = it.until || 0;
+    let grace = it.grace === true;
+    let tell = false;
+    if (until - now < 1000) { // the time ran out while the bot was away
+      if (!grace) tell = true;
+      grace = true;
+      until = now + GRACE_MS;
+    }
+    pending.set(key, { group: it.group, answer: it.answer, question: it.question || 'the sum', tries: it.tries || 0, ids: it.ids || [num(it.jid)], jid: it.jid, until, total: it.total || 300, grace, intro: it.intro === true, reminders: [] });
+    persist(key);
+    schedule(sock, key);
+    if (tell) sock.sendMessage(it.group, { text: `⏳ *Time is up, @${num(it.jid)}!*\nYou have not solved the puzzle yet, so here is *1 extra minute* as your last chance.\n▸ Type only the answer: *${it.question || 'the sum'} = ?*\n▸ If it is still not solved after this minute, you will be removed from the group.`, mentions: [it.jid] }).catch(() => {});
   }
 }
 
@@ -120,19 +188,15 @@ async function onJoin(sock, group, jids, g) {
     const a = 2 + Math.floor(Math.random() * 8);
     const b = 2 + Math.floor(Math.random() * 8);
     const key = keyFor(group, jid);
-    clearTimeout(pending.get(key)?.timer);
-    const timer = setTimeout(() => {
-      if (pending.delete(key)) {
-        forgetSaved(key);
-        kick(sock, group, jid, `the puzzle was not solved in ${words(g.captchaSeconds)}`).catch(() => {});
-      }
-    }, g.captchaSeconds * 1000);
-    if (timer.unref) timer.unref();
+    const old = pending.get(key);
+    if (old) clearTimers(old);
     const withIntro = !!(g.intro && g.intro.on);
-    pending.set(key, { answer: a + b, tries: 0, ids: idsOf(jid), jid, timer, intro: withIntro });
-    saveItem(key, group, { answer: a + b, tries: 0, ids: idsOf(jid), jid, until: Date.now() + g.captchaSeconds * 1000, intro: withIntro });
+    const until = Date.now() + g.captchaSeconds * 1000;
+    pending.set(key, { group, answer: a + b, question: `${a} + ${b}`, tries: 0, ids: idsOf(jid), jid, until, total: g.captchaSeconds, grace: false, intro: withIntro, reminders: [] });
+    persist(key);
+    schedule(sock, key);
     asked.push(jid);
-    await sock.sendMessage(group, { text: `🔐 *Quick puzzle!*\nHi @${num(jid)}! 👋 Welcome!\nTo stay in the group, please solve this little puzzle:\n\n*${a} + ${b} = ?*\n\n▸ Count it on your fingers if you like ✋\n▸ Type only the answer number, nothing else.\n▸ You have ${words(g.captchaSeconds)} and ${MAX_TRIES} tries.`, mentions: [jid] }).catch(() => {});
+    await sock.sendMessage(group, { text: `🔐 *Quick puzzle!*\nHi @${num(jid)}! 👋 Welcome!\n\n*What is this?* This group checks that every new member is a real person and not a spam bot. It only takes a few seconds.\n\n*What to do:* please solve this little puzzle:\n\n*${a} + ${b} = ?*\n\n▸ Count it on your fingers if you like ✋\n▸ Type only the answer number, nothing else.\n▸ You have ${words(g.captchaSeconds)} and ${MAX_TRIES} tries.\n\n⚠️ If it is not solved in time, you will be removed from the group.`, mentions: [jid] }).catch(() => {});
   }
   return asked;
 }
@@ -145,7 +209,7 @@ function check(sock, msg, group, text, botIds) {
   if (!entry || !/^\s*-?\d{1,3}\s*$/.test(text)) return false;
   const [key, v] = entry;
   if (Number(text) === v.answer) {
-    clearTimeout(v.timer);
+    clearTimers(v);
     pending.delete(key);
     forgetSaved(key);
     const done = sock.sendMessage(group, { text: verifiedText(group, v.jid), mentions: [v.jid] }).catch(() => {});
@@ -158,7 +222,7 @@ function check(sock, msg, group, text, botIds) {
     js.touch();
   }
   if (v.tries >= MAX_TRIES) {
-    clearTimeout(v.timer);
+    clearTimers(v);
     pending.delete(key);
     forgetSaved(key);
     kick(sock, group, v.jid, 'the puzzle was not solved after 3 tries').catch(() => {});
@@ -187,4 +251,4 @@ async function onRaid(sock, group, jids, g, now = Date.now()) {
   return true;
 }
 
-module.exports = { onJoin, check, onRaid, pending, resume, sendIntro, verifiedText, DEFAULT_VERIFIED, words, parseSeconds, MIN_SECONDS, MAX_SECONDS };
+module.exports = { reminderPoints, GRACE_MS, onJoin, check, onRaid, pending, resume, sendIntro, verifiedText, DEFAULT_VERIFIED, words, parseSeconds, MIN_SECONDS, MAX_SECONDS };

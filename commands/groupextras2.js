@@ -56,7 +56,7 @@ module.exports = [
       const w = (args[0] || '').toLowerCase();
       if (w === 'on' || w === 'off') {
         store.update(jid, (x) => { x.captcha = w === 'on'; });
-        await reply(`✅ *Verification is now ${state(w === 'on')}.*${w === 'on' ? `\n_Every new member gets a sum to answer within ${captcha.words(g.captchaSeconds)}, or is removed._${g.intro && g.intro.on ? '\n▸ The introduction is sent once the new member has answered correctly.' : ''}` : ''}`);
+        await reply(`✅ *Verification is now ${state(w === 'on')}.*${w === 'on' ? `\n_Every new member gets a sum to answer within ${captcha.words(g.captchaSeconds)}. I explain what it is, remind them on the way, and when the time is up I tag them and give 1 extra minute before they are removed._${g.intro && g.intro.on ? '\n▸ The introduction is sent once the new member has answered correctly.' : ''}` : ''}`);
         if (w === 'on' && !isBotAdmin) await reply('⚠️ *I need admin rights for this to work.*\n▸ Make me a group admin so I can remove people who do not answer.');
         return;
       }
@@ -76,9 +76,9 @@ module.exports = [
       }
       if (w === 'time') {
         const n = captcha.parseSeconds(args.slice(1).join(''));
-        if (n === null) return reply(`⏳ *Time to answer*\n▸ \`${prefix}captcha time 90\` (seconds), \`${prefix}captcha time 5m\` or \`${prefix}captcha time 1h\`\n_From 30 seconds to 1 hour. New members are removed if they do not answer in time._`);
+        if (n === null) return reply(`⏳ *Time to answer*\n▸ \`${prefix}captcha time 90\` (seconds), \`${prefix}captcha time 5m\` or \`${prefix}captcha time 1h\`\n_From 30 seconds to 1 hour. Reminders are sent on the way; when the time is up the member is tagged and gets 1 extra minute, then is removed._`);
         store.update(jid, (x) => { x.captchaSeconds = n; });
-        return reply(`✅ *New members have ${captcha.words(n)} to answer.*`);
+        return reply(`✅ *New members have ${captcha.words(n)} to answer.*\n▸ Reminders: ${captcha.reminderPoints(n).map((x) => `after ${captcha.words(x)}`).join(' and ')}.\n▸ Then 1 extra minute before they are removed.`);
       }
       await reply(`🔐 *Verification*\n*Status:* ${state(g.captcha)}\n*Time to answer:* ${captcha.words(g.captchaSeconds)}\n*Message after a right answer:* ${g.captchaVerified ? 'your own' : 'default'}\n\n▸ \`${prefix}captcha on\` / \`${prefix}captcha off\`\n▸ \`${prefix}captcha time 90s\`, \`${prefix}captcha time 5m\`\n▸ \`${prefix}captcha message Well done @user!\` (your own message after a right answer)`);
     },

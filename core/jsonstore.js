@@ -34,12 +34,19 @@ function fillDefaults(saved, defaults) {
 // One copy per day of every saved file is kept in data/backups (the last 7 days). The ".bak" copy mirrors the newest save,
 // so it cannot help if a mistake in the code saved wrong data; the daily copy can.
 const SNAP_DAYS = 7;
+const snapped = new Map(); // file -> the day its daily copy was checked (saves the disk lookups on every save)
 function snapshot(file, name) {
   try {
     const day = new Date().toISOString().slice(0, 10);
+    if (snapped.get(file) === day) return;
     const dir = path.join(path.dirname(file), 'backups');
     const to = path.join(dir, `${name}.${day}.json`);
-    if (fs.existsSync(to) || !fs.existsSync(file)) return;
+    if (fs.existsSync(to)) {
+      snapped.set(file, day);
+      return;
+    }
+    if (!fs.existsSync(file)) return;
+    snapped.set(file, day);
     fs.mkdirSync(dir, { recursive: true });
     fs.copyFileSync(file, to);
     const old = fs.readdirSync(dir).filter((f) => f.startsWith(`${name}.`) && f.endsWith('.json')).sort();

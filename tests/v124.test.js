@@ -56,8 +56,8 @@ test('phone notifications: the bot goes offline after typing, and phonepush fix 
   assert.ok(sent.includes('unavailable'));
 });
 
-test('the version is 1.2.11', () => {
-  assert.strictEqual(require('../package.json').version, '1.2.11');
+test('the version is 1.3.1', () => {
+  assert.strictEqual(require('../package.json').version, '1.3.1');
 });
 
 test('delcmd: the command and the bot answers are deleted after the answer, games never', async () => {
@@ -163,4 +163,15 @@ test('delcmd list / add / remove: the owner can adjust what is cleaned', async (
   assert.strictEqual(cleanup.isCleaned({ name: 'captcha', category: 'group' }, true), true);
   store.setAuto('delcmdAdd', []);
   store.setAuto('delcmdSkip', []);
+});
+
+test('v1.3.0: the seen list spaces its writes by the cost of the last save, and is always written on stop', () => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'whatsapp', 'seen.js'), 'utf8');
+  assert.match(src, /nextAt/);
+  assert.match(src, /onFlushSync\(saveNow\)/, 'a stop writes it at once, whatever the spacing');
+  const seen = require('../whatsapp/seen');
+  assert.strictEqual(seen.check('a@g.us', 'v130-1'), false);
+  assert.strictEqual(seen.check('a@g.us', 'v130-1'), true);
+  seen.saveNow();
+  assert.ok(require('fs').readFileSync(require('path').join(process.env.TURBOFEX_DATA, 'seen.json'), 'utf8').includes('v130-1'));
 });

@@ -70,6 +70,7 @@ async function handleCalls(sock, calls) {
     console.log(`📵 Call from ${num(c.from)} rejected${mode === 'block' ? ' and blocked' : ''}`);
     if (Date.now() - (told.get(c.from) || 0) > 10 * 60 * 1000) {
       told.set(c.from, Date.now());
+      if (told.size > 5000) told.delete(told.keys().next().value);
       await sock.sendMessage(c.from, { text: '📵 *Calls are not supported.*\nThis number is a bot. Please send a text message instead.' }).catch(() => {});
     }
     if (mode === 'block') await sock.updateBlockStatus(c.from, 'block').catch(() => {});
