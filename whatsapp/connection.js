@@ -30,6 +30,7 @@ const presence = require('./presence');
 const adminguard = require('./adminguard');
 const { flushAll } = require('../core/flush');
 const perf = require('./perf');
+const placeholder = require('../core/placeholder');
 const replay = require('./replay');
 const welcome = require('./welcome');
 const status = require('./status');
@@ -197,6 +198,9 @@ async function startWhatsApp() {
     getMessage: async (key) => outbox.get(key), // lets WhatsApp ask for a message again ("Waiting for this message" fix)
     userDevicesCache: makeCache(30 * 60 * 1000), // who has which devices: remembered for 30 min (faster group replies)
     msgRetryCounterCache: makeCache(10 * 60 * 1000),
+    // stops the library from asking the phone to resend every message it cannot decrypt: each request makes the phone show
+    // "Finished syncing with WhatsApp on Google Chrome (Ubuntu)" (see core/placeholder.js)
+    placeholderResendCache: placeholder.cache,
     cachedGroupMetadata: async (jid) => {
       const t = Date.now();
       try {

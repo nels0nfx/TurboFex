@@ -1,5 +1,6 @@
 // Auto view-once, anti-delete and anti-edit. Each has a mode (off / all / dm / group) and its own destination chat.
 const store = require('./store');
+const placeholder = require('../core/placeholder');
 const cache = require('./msgcache');
 const meta = require('./metadata');
 const clock = require('../core/clock');
@@ -157,6 +158,11 @@ function recentViewOnce(id) {
 // the message came without its file: ask the phone to send it again (the answer arrives as a normal message later)
 async function askPhoneAgain(sock, msg) {
   if (typeof sock.requestPlaceholderResend !== 'function') return false;
+  // every request makes the phone show "Finished syncing with WhatsApp on Google Chrome (Ubuntu)": only a few per hour
+  if (!placeholder.allow(msg.key.id)) {
+    console.log(`👁️ Did not ask the phone for message ${String(msg.key.id).slice(0, 8)}: the limit of ${placeholder.PER_HOUR} requests per hour is used (every request shows a notice on your phone).`);
+    return false;
+  }
   try {
     await withTimeout(Promise.resolve(sock.requestPlaceholderResend(msg.key)), 10000, 'the phone did not answer');
     stats.viewOnceAsked = (stats.viewOnceAsked || 0) + 1;

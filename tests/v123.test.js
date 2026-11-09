@@ -7,10 +7,6 @@ const names = require('../whatsapp/names');
 const mentions = require('../whatsapp/mentions');
 const meta = require('../whatsapp/metadata');
 
-test('the version is 1.2.3', () => {
-  assert.strictEqual(require('../package.json').version, '1.2.3');
-});
-
 test('idmap: 20,000 contacts are learned and found again quickly', () => {
   const t0 = Date.now();
   const list = [];

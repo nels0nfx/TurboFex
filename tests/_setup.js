@@ -10,3 +10,4 @@ process.env.OWNER_NUMBER = process.env.OWNER_NUMBER || '27800000001';
 process.on('exit', () => fs.rmSync(dir, { recursive: true, force: true }));
 
 module.exports = { dir };
+process.env.PHONE_ASKS_PER_HOUR = process.env.PHONE_ASKS_PER_HOUR || '1000'; // the hourly limit of phone requests would stop the many watcher tests
