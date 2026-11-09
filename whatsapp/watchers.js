@@ -17,6 +17,12 @@ let downloading = 0; // never more than 2 downloads at once (many pictures in a 
 // shown by !status
 const stats = { editSecret: 0, editUnreadable: 0, editEvents: 0, deleteEvents: 0, viewOnce: 0, viewOnceSaved: 0, deleted: 0, edited: 0, errors: 0, lastError: null };
 
+// where a copy goes: the chosen chat, "chat" = the chat where it happened (deleted, edited or sent), else the owner's own chat
+function dest(sock, cfg, chatJid) {
+  if (cfg.to === 'chat' && chatJid) return chatJid;
+  return normalize(sock, cfg.to !== 'chat' ? cfg.to : null) || ownerChat(sock);
+}
+
 const inScope = (mode, isGroup) => mode === 'all' || (mode === 'dm' && !isGroup) || (mode === 'group' && isGroup);
 const typeIs = (t, number, name) => t === number || t === name;
 // these notices go to the owner's private chat: a tag there shows the person's name (or number); see mentions.inPrivate
@@ -231,14 +237,14 @@ async function viewOnce(sock, msg, isGroup, assume = false) {
       const thumb = vo.node.jpegThumbnail;
       if (thumb && thumb.length && vo.kind === 'image') {
         // at least the small preview WhatsApp sent along
-        await sock.sendMessage(normalize(sock, cfg.to) || ownerChat(sock), { image: Buffer.from(thumb), caption: `👁️ *View-once ${kind}* (small preview only: the full file could not be downloaded)\n👤 From ${tagOf(sender)} in ${where}` , mentions: [sender] }).catch(() => {});
+        await sock.sendMessage(dest(sock, cfg, jid), { image: Buffer.from(thumb), caption: `👁️ *View-once ${kind}* (small preview only: the full file could not be downloaded)\n👤 From ${tagOf(sender)} in ${where}` , mentions: [sender] }).catch(() => {});
       }
       return warnOwner(sock, `👁️ A view-once ${kind} from ${tagOf(sender)} arrived in ${where}, but I could not save it.\nReason: ${String(buffer.message).slice(0, 100)}\n${OPEN_ON_PHONE}`, 'viewonce', [sender]);
     }
     const header = vo.guessed
       ? `👁️ *Hidden ${kind}*\n▸ It arrived without its content, so it may have been a view-once.\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`
       : `👁️ *View-once ${kind}*\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`;
-    await sendCopy(sock, normalize(sock, cfg.to) || ownerChat(sock), { kind, buffer, mime: vo.node.mimetype, text: vo.node.caption || '', sender }, header);
+    await sendCopy(sock, dest(sock, cfg, jid), { kind, buffer, mime: vo.node.mimetype, text: vo.node.caption || '', sender }, header);
     if (id) voState.set(id, Date.now());
     stats.viewOnceSaved += 1;
   } catch (err) {
@@ -369,7 +375,7 @@ async function deletedCore(sock, { jid, id, deleter }) {
   const by = deleter && num(deleter) !== num(it.sender) ? `🧹 Deleted by ${tagOf(deleter)}` : '🧹 Deleted by the sender';
   const header = `🗑️ *Deleted message*\n👤 Sent by ${tagOf(it.sender)}\n${by}\n💬 In ${await chatName(sock, jid)}\n🕒 Sent ${it.ts ? clock.stamp(it.ts * 1000) : 'earlier'}`;
   try {
-    await sendCopy(sock, normalize(sock, cfg.to) || ownerChat(sock), { ...it, mentions: deleter ? [deleter] : [] }, header, quotedOriginal(it, id));
+    await sendCopy(sock, dest(sock, cfg, jid), { ...it, mentions: deleter ? [deleter] : [] }, header, quotedOriginal(it, id));
     stats.deleted += 1;
   } catch (err) {
     problem('Anti-delete copy', err);
@@ -392,9 +398,9 @@ async function editedCore(sock, { jid, id, after, editor }) {
   const body = { text: `${header}\n\n*Before:*\n${before}\n\n*After:*\n${after}`, mentions: [sender] };
   try {
     try {
-      await sock.sendMessage(normalize(sock, cfg.to) || ownerChat(sock), body, it ? { quoted: quotedOriginal(it, id) } : undefined);
+      await sock.sendMessage(dest(sock, cfg, jid), body, it ? { quoted: quotedOriginal(it, id) } : undefined);
     } catch (err) {
-      await sock.sendMessage(normalize(sock, cfg.to) || ownerChat(sock), body); // the reply-to-original part failed: send it plain
+      await sock.sendMessage(dest(sock, cfg, jid), body); // the reply-to-original part failed: send it plain
     }
     stats.edited += 1;
   } catch (err) {
@@ -507,4 +513,4 @@ async function onUpdate(sock, updates) {
 
 const resetWarnings = () => lastWarn.clear(); // for tests
 
-module.exports = { timing, resetWarnings, run, early, noContent, onUpdate, findViewOnce, recentViewOnce, inScope, stats, fetchMedia, OPEN_ON_PHONE };
+module.exports = { dest, timing, resetWarnings, run, early, noContent, onUpdate, findViewOnce, recentViewOnce, inScope, stats, fetchMedia, OPEN_ON_PHONE };

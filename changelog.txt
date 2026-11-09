@@ -1,3 +1,11 @@
+TurboFex v1.3.4 - save a status by replying to it, sticker commands, copies to the chat where it happened
+CHANGED IN 1.3.4
+- NEW: SAVE A STATUS BY REPLYING TO IT. `statusreply on`: when the owner replies to somebody's status (from the phone), that status (picture, video, voice note or text) is saved and sent to the chat chosen with `statusjid` (default: your own chat). Nothing is sent or reacted in the chat where the reply was written. One status is saved once. It is OFF until switched on.
+- NEW: STICKER COMMANDS. Reply to a sticker with `setstickercmd <command>`; when the owner sends that sticker, the command runs. With `vv` it is SILENT: no answer and no reaction in the chat, the view-once goes to the view-once chat (`viewoncejid`), and a problem is told in the owner's own chat, never in the chat. Other commands run normally. `stickercmds` lists them, `delstickercmd` removes one. Only the owner can use them; at most 200 stickers.
+- NEW: `viewoncejid`, `deletejid` and `editjid` accept `chat`: the copy is sent to the chat where the message was sent, deleted or edited.
+- CHANGED: a reply written with a sticker, a voice note or a file now also counts as a reply to the message it quotes (needed for sticker commands).
+- CLEAN-UP: the safety copies in `data/legacy-removed/` are deleted after 60 days. The checks for unused files and lists that grow without end found nothing else to remove.
+
 TurboFex v1.3.3 - several accounts on one server, more hosts, Termux prefix fixed
 CHANGED IN 1.3.3
 - NEW: SEVERAL ACCOUNTS. Run more than one WhatsApp number from the same folder. Each account is its own bot process with its own login, settings and data, so they cannot overwrite each other. Turn it on with a file `accounts.json` (copy `accounts.example.json`) or the variable `ACCOUNTS=main,shop`. The account called `main` keeps the old places (`data/`, `session/`, `session_id.txt`) so a running bot is not linked again; every other account has `accounts/<name>/` with its own `session_id.txt`. Per account: `prefix`, `timezone`, `number`, `sessionId` (or the variable `SESSION_ID_<NAME>`), `enabled`. Log lines start with `[name]`. One account crashing does not stop the others. The first account updates the shared files, then all accounts restart together. Without `accounts.json` or `ACCOUNTS` nothing changes.

@@ -368,4 +368,4 @@ async function handleStatus(sock, msg) {
 
 const likeToday = () => (likeDay.day === dayKey() ? likeDay.count : 0);
 
-module.exports = { handleStatus, settings, stats, markViewed, likeStatus, likeToday, history, store: js };
+module.exports = { saveStatus, handleStatus, settings, stats, markViewed, likeStatus, likeToday, history, store: js };

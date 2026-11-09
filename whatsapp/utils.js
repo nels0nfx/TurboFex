@@ -31,7 +31,7 @@ function getText(msg) {
 
 function getContextInfo(msg) {
   const m = getInner(msg);
-  const part = m.extendedTextMessage || m.imageMessage || m.videoMessage || {};
+  const part = m.extendedTextMessage || m.imageMessage || m.videoMessage || m.stickerMessage || m.audioMessage || m.documentMessage || {};
   return part.contextInfo || {};
 }
 

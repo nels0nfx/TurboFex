@@ -13,6 +13,8 @@ const sent = require('./sent');
 const replay = require('./replay');
 const idmap = require('./idmap');
 const watchers = require('./watchers');
+const stickercmd = require('./stickercmd');
+const statusreply = require('./statusreply');
 const cmdreact = require('./cmdreact');
 const { withTimeout } = require('./timeout');
 const watermark = require('./watermark');
@@ -154,7 +156,7 @@ async function handleMessageInner(sock, msg) {
     if (pn && num(pn) === config.ownerNumber) ownerInfo.remember(jid);
   }
 
-  const text = getText(msg).trim();
+  let text = getText(msg).trim();
   const isGroup = jid.endsWith('@g.us');
   const prefix = store.effectivePrefix(); // empty in "no prefix" mode
 
@@ -166,6 +168,19 @@ async function handleMessageInner(sock, msg) {
 
   let cached = null;
   const roles = () => (cached = cached || getRoles(sock, msg, jid, isGroup));
+
+  // a reply to somebody's status written by the owner: the status is saved (only when switched on, silently)
+  if (!synthetic) statusreply.maybe(sock, msg, async () => (await roles()).isOwner).catch((e) => console.error('Status reply error:', e.message));
+
+  // a sticker that the owner linked to a command: it runs that command as if the owner had typed it
+  let sticker = null;
+  if (!synthetic) {
+    const bound = stickercmd.lookup(msg);
+    if (bound && (msg.key.fromMe || (await roles()).isOwner)) {
+      sticker = bound;
+      text = stickercmd.textFor(bound, prefix);
+    }
+  }
 
   // the owner writes in a private chat: that person is not a stranger for the private message blocker
   if (!isGroup && msg.key.fromMe && !synthetic) presence.engage(jid);
@@ -228,7 +243,9 @@ async function handleMessageInner(sock, msg) {
   const [rawName, ...args] = body.split(/\s+/);
   const cmdName = (rawName || '').toLowerCase();
   const cmd = commands.get(cmdName);
-  const rawReply = (t, extra = {}) => sock.sendMessage(jid, { text: t, ...extra }, synthetic ? undefined : { quoted: msg });
+  // run by a sticker and marked silent (vv): nothing is answered or reacted in this chat; problems are told in the owner's own chat
+  const silent = !!sticker && !!cmd?.silentOnSticker;
+  const rawReply = (t, extra = {}) => sock.sendMessage(silent ? ownerInfo.ownerChat(sock) : jid, { text: t, ...extra }, synthetic || silent ? undefined : { quoted: msg });
 
   if (!cmd) {
     // a command file that failed to load: tell the owner why instead of staying silent (nobody else is answered)
@@ -307,7 +324,7 @@ async function handleMessageInner(sock, msg) {
     }
 
     // 2) ⏳ on the command while it works, ✅ when it is done
-    const react = cmd.noReact || synthetic ? { finish() {} } : cmdreact.begin(sock, msg, { since: t0 });
+    const react = cmd.noReact || synthetic || silent ? { finish() {} } : cmdreact.begin(sock, msg, { since: t0 });
 
     // 3) the command gets its own copy of "sock": results of some commands get a watermark, and we notice warnings
     const mark = watermark.applies(cmd) ? watermark.text() : null;
@@ -330,12 +347,12 @@ async function handleMessageInner(sock, msg) {
       Promise.resolve(sent).then((m) => { if (m?.key?.id && !cleanup.keeps(content) && to === jid) answers.push(m.key); }).catch(() => {}).finally(() => pending.delete(sent));
       return sent;
     };
-    const reply = (t, extra = {}) => csock.sendMessage(jid, { text: t, ...extra }, synthetic ? undefined : { quoted: msg });
+    const reply = (t, extra = {}) => csock.sendMessage(silent ? ownerInfo.ownerChat(sock) : jid, { text: t, ...extra }, synthetic || silent ? undefined : { quoted: msg });
 
     let outcome = 'ok';
     try {
       await cmd.run({
-        sock: csock, msg, jid, args, rest, reply, cmdName, prefix, config, commandList, botIds, diag, timing,
+        sock: csock, msg, jid, args, rest, reply, cmdName, prefix, silent, config, commandList, botIds, diag, timing,
         myIds: whoIds(msg, botIds), myJid: whoJid(msg, sock),
         isGroup, isAdmin, isOwner, isRealOwner, isBotAdmin, groupMetadata,
       });

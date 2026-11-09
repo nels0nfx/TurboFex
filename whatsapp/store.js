@@ -485,7 +485,7 @@ function setWelcomedFor(account) {
 // ----- WhatsApp status features (auto view / like / save) -----
 function statusCfg() {
   const b = bot();
-  const defaults = { view: false, like: false, save: false, emojis: [...DEFAULT_STATUS_EMOJIS], delayMin: 0, delayMax: 0, saveTo: null, dailyLikeLimit: 200 };
+  const defaults = { view: false, like: false, save: false, saveReply: false, emojis: [...DEFAULT_STATUS_EMOJIS], delayMin: 0, delayMax: 0, saveTo: null, dailyLikeLimit: 200 };
   b.status = { ...defaults, ...(b.status || {}) };
   // nothing chosen yet, or only the old single-heart default that was never chosen by the owner: use the default list
   const old = b.status.emojis;
@@ -496,6 +496,23 @@ function statusCfg() {
 function updateStatusCfg(fn) {
   fn(statusCfg());
   settle();
+}
+
+// ----- sticker commands: a sticker the owner chose runs a command when the owner sends it -----
+const stickerCmds = () => (bot().stickerCmds && typeof bot().stickerCmds === 'object' ? bot().stickerCmds : (bot().stickerCmds = {}));
+const getStickerCmds = () => stickerCmds();
+function setStickerCmd(key, value) {
+  const all = stickerCmds();
+  all[key] = value;
+  const keys = Object.keys(all);
+  if (keys.length > 200) delete all[keys[0]]; // the oldest goes: the list can never grow without end
+  settle();
+}
+function delStickerCmd(key) {
+  const had = key in stickerCmds();
+  delete stickerCmds()[key];
+  if (had) settle();
+  return had;
 }
 
 // ----- watchers: view-once, deleted and edited messages, each with its own destination -----
@@ -514,7 +531,7 @@ function updateWatch(name, fn) {
 }
 
 module.exports = {
-  statusCfg, updateStatusCfg, watchCfg, updateWatch,
+  statusCfg, updateStatusCfg, watchCfg, updateWatch, getStickerCmds, setStickerCmd, delStickerCmd,
   getWelcomedFor, setWelcomedFor,
   reminders, addReminder, removeReminder, getGreet, setGreet, wasGreeted, markGreeted,
   getGlobalFilters, getPrivateFilters, peekFilters, saveNow,

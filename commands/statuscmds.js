@@ -101,6 +101,23 @@ module.exports = [
   },
   {
     ...base,
+    name: 'statusreply',
+    aliases: ['savereply', 'replysave'],
+    description: 'Save a status when you reply to it: statusreply on / off (it goes to the chat from statusjid)',
+    async run({ args, reply, prefix }) {
+      const c = (args[0] || '').toLowerCase();
+      const cfg = store.statusCfg();
+      if (c !== 'on' && c !== 'off') {
+        return reply(`📥 *Save a status when you reply to it:* ${cfg.saveReply ? 'ON' : 'OFF'}\n▸ When it is on, every status you reply to (from your phone) is saved and sent to ${cfg.saveTo || 'your own chat'}. Nothing is sent or reacted in the chat where you replied.\n▸ \`${prefix}statusreply on\` / \`${prefix}statusreply off\`\n▸ Choose where with \`${prefix}statusjid\``);
+      }
+      store.updateStatusCfg((s) => {
+        s.saveReply = c === 'on';
+      });
+      return reply(c === 'on' ? `✅ *Replying to a status now saves it.*\n▸ Saved statuses go to ${cfg.saveTo || 'your own chat'} (change it with \`${prefix}statusjid\`).\n▸ WhatsApp only gives the bot the statuses of people saved as contacts.` : '✅ Replying to a status no longer saves it.');
+    },
+  },
+  {
+    ...base,
     name: 'statusjid',
     description: 'Where saved statuses are sent: statusjid here / me / a number / a group (number from gjids)',
     async run({ sock, jid, rest, reply, prefix }) {

@@ -13,9 +13,10 @@ module.exports = {
   slow: true,
   ownerOnly: true,
   needs: [],
+  silentOnSticker: true, // run by a sticker (setstickercmd vv): no answer, no reaction in the chat; the file goes to the view-once chat
   weight: 'medium',
   description: 'Open a view-once picture, video or voice note: reply to it with vv (vv me = send it to your own chat)',
-  async run({ sock, jid, msg, args, reply, prefix, botIds }) {
+  async run({ sock, jid, msg, args, reply, prefix, botIds, silent }) {
     const q = getQuoted(msg);
     if (!q) return reply(`Reply to a view-once message with *${prefix}vv*.\n*${prefix}vv me* sends the file to your own chat instead of this one.`);
 
@@ -42,12 +43,13 @@ module.exports = {
     }
 
     if (fullNode) Object.assign(node, { caption: node.caption || fullNode.caption, mimetype: node.mimetype || fullNode.mimetype, ptt: node.ptt ?? fullNode.ptt });
-    const to = (args[0] || '').toLowerCase() === 'me' ? ownerChat(sock) : jid;
+    // by sticker: to the chat chosen with viewoncejid (own chat, a chat, or the chat where it was sent); typed: here, or "me"
+    const to = silent ? watchers.dest(sock, require('../whatsapp/store').watchCfg('viewonce'), jid) : (args[0] || '').toLowerCase() === 'me' ? ownerChat(sock) : jid;
     const caption = `👁️ *View-once opened*\n🕒 ${clock.stamp(Date.now())}${node.caption ? `\n\n${node.caption}` : ''}`;
-    const opts = to === jid ? { quoted: msg } : undefined;
+    const opts = to === jid && !silent ? { quoted: msg } : undefined;
     if (kind === 'image') await sock.sendMessage(to, { image: buffer, caption }, opts);
     else if (kind === 'video') await sock.sendMessage(to, { video: buffer, caption }, opts);
     else await sock.sendMessage(to, { audio: buffer, mimetype: node.mimetype || 'audio/ogg; codecs=opus', ptt: !!node.ptt }, opts);
-    if (to !== jid) await reply('✅ Sent to your chat.');
+    if (to !== jid && !silent) await reply('✅ Sent to your chat.');
   },
 };

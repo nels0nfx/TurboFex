@@ -101,6 +101,7 @@ function run(root = path.join(__dirname, '..')) {
         // not there or not empty
       }
     }
+    pruneCopies(root);
     if (removed.length) console.log(`🧹 Cleaned ${removed.length} old file${removed.length === 1 ? '' : 's'} left over from removed features (a copy is in data/legacy-removed).`);
   } catch (err) {
     console.error('Clean-up of old files failed:', err.message);
@@ -108,4 +109,22 @@ function run(root = path.join(__dirname, '..')) {
   return removed;
 }
 
-module.exports = { run, candidates, listed };
+// the safety copies in data/legacy-removed are deleted after this many days (they are only there in case something was removed by mistake)
+function pruneCopies(root = path.join(__dirname, '..'), days = 60, now = Date.now()) {
+  const base = path.join(root, 'data', 'legacy-removed');
+  let n = 0;
+  for (const rel of walk(base, '', [])) {
+    const file = path.join(base, rel);
+    try {
+      if (now - fs.statSync(file).mtimeMs > days * 86400000) {
+        fs.rmSync(file, { force: true });
+        n += 1;
+      }
+    } catch (err) {
+      // left alone
+    }
+  }
+  return n;
+}
+
+module.exports = { run, candidates, listed, pruneCopies };

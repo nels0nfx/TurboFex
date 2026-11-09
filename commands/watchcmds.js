@@ -20,7 +20,7 @@ function modeCommand(name, aliases, key, label, description, note) {
       const cfg = store.watchCfg(key);
       if (!['off', ...Object.keys(MODES)].includes(c)) {
         return reply(
-          `${label} is *${cfg.mode === 'off' ? 'OFF' : `ON (${MODES[cfg.mode]})`}*\nCopies go to: ${cfg.to || 'your own chat'}\n\n` +
+          `${label} is *${cfg.mode === 'off' ? 'OFF' : `ON (${MODES[cfg.mode]})`}*\nCopies go to: ${cfg.to === 'chat' ? 'the same chat where it happened' : cfg.to || 'your own chat'}\n\n` +
             `${prefix}${name} all - everywhere\n${prefix}${name} dm - private chats only\n${prefix}${name} group - groups only\n${prefix}${name} off - switch off`
         );
       }
@@ -38,14 +38,20 @@ function modeCommand(name, aliases, key, label, description, note) {
 function destCommand(name, key, label) {
   return {
     name, category: 'watch', ownerOnly: true,
-    description: `Choose where the ${label} copies are sent: ${name} here / me / a number / a group (number from gjids)`,
+    description: `Choose where the ${label} copies are sent: ${name} chat (the chat where it happened) / here / me / a number / a group (number from gjids)`,
     async run({ sock, jid, rest, reply, prefix }) {
       const cfg = store.watchCfg(key);
       if (!rest) {
-        return reply(`📨 ${label} copies go to: ${cfg.to || 'your own chat (default)'}\n\nChange it:\n${prefix}${name} here  (this chat)\n${prefix}${name} me  (back to your own chat)\n${prefix}${name} 27821234567  (a person)\n${prefix}${name} 3  (group number from ${prefix}gjids)\n${prefix}${name} 1203630...@g.us  (a group id)`);
+        return reply(`📨 ${label} copies go to: ${cfg.to === 'chat' ? 'the same chat where it happened' : cfg.to || 'your own chat (default)'}\n\nChange it:\n${prefix}${name} chat  (the chat where it happened, so everybody there sees it)\n${prefix}${name} here  (this chat, always)\n${prefix}${name} me  (back to your own chat)\n${prefix}${name} 27821234567  (a person)\n${prefix}${name} 3  (group number from ${prefix}gjids)\n${prefix}${name} 1203630...@g.us  (a group id)`);
+      }
+      if (['chat', 'same', 'origin', 'source'].includes(rest.trim().toLowerCase())) {
+        store.updateWatch(key, (w) => {
+          w.to = 'chat';
+        });
+        return reply(`✅ ${label} copies will be sent to *the chat where it happened*.\n▸ Everybody in that chat will see the copy. Use \`${prefix}${name} me\` to get it back in your own chat.`);
       }
       const d = await parseDestination(sock, rest, jid);
-      if (d.error) return reply('⚠️ I could not find that chat. Use here, me, a phone number, a group id, or a group number from gjids.');
+      if (d.error) return reply('⚠️ I could not find that chat. Use chat, here, me, a phone number, a group id, or a group number from gjids.');
       store.updateWatch(key, (w) => {
         w.to = d.jid;
       });

@@ -1,4 +1,4 @@
-# ⚡ TurboFex v1.3.3
+# ⚡ TurboFex v1.3.4
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and more.
@@ -147,6 +147,12 @@ needs a city and shows `.weather Lagos`.
 - **Private mode (the default):** only the owner can use commands. Everybody else gets no reply to commands, with a few exceptions made for members
   (`.rank`, `.top`, `.rules`, `.report`, `.birthday`, `.feedback`, `.roast`). Group protections, running games and auto-replies still work.
 - **Public mode:** everybody can use the commands they are allowed to. The owner switches with `.mode public` or `.mode private`.
+
+## Owner shortcuts: saved statuses, sticker commands, where copies go
+
+- **Save a status by replying to it.** Send `.statusreply on`. From then on, every status you reply to (from your phone) is saved and sent to your own chat, or to the chat you choose with `.statusjid`. Nothing is sent or reacted in the chat where you replied. Switch it off with `.statusreply off`.
+- **Sticker commands.** Reply to any sticker with `.setstickercmd vv`. When *you* send that sticker as a reply to a view-once message, the bot opens it **silently** (no answer, no reaction in the chat) and sends it to your view-once chat. Other commands work too (`.setstickercmd ping`) and answer normally. `.stickercmds` lists them, `.delstickercmd` removes one. Only you can use them.
+- **Where copies go.** `.viewoncejid`, `.deletejid` and `.editjid` choose the chat that gets the copy of view-once, deleted and edited messages. Besides *me*, *here*, a number or a group, you can now say **`chat`**: the copy is then sent to the chat where it happened. Everybody in that chat will see it.
 
 ## Good things to know
 
