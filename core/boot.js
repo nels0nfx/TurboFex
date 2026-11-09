@@ -64,6 +64,7 @@ async function start() {
   // (only when CONSOLE_LINK=1 is set on purpose, see core/setup.js).
   const sessionid = require('./sessionid');
   const setup = require('./setup');
+  if (config.sessionIdFile) sessionid.ensureFile(config.sessionIdFile, config.pairSiteUrl); // session_id.txt is always there, ready for the ID (never overwritten)
   const restored = await sessionid.restore(config);
   if (restored === 'restored') setup.adoptLinkedNumber(config); // the number and the owner are the ones of this login
   const linkState = await setup.ensure(config);

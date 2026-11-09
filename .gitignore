@@ -2,7 +2,6 @@ node_modules/
 session/
 data/
 .env
-session_id.txt
 config.env
 # local-only files (notes, helper scripts): never published
 *.private.*

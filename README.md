@@ -1,4 +1,4 @@
-# ⚡ TurboFex v1.2.9
+# ⚡ TurboFex v1.2.11
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and more.
@@ -28,10 +28,10 @@ You need a WhatsApp number for the bot and a place where the bot can keep runnin
 
 1. **Get the bot.** Download the *hosting ZIP* (`TurboFex-hosting-...zip`) from the **Releases** page of https://github.com/nels0nfx/TurboFex and upload it to your host.
    Do not use the green *Code > Download ZIP* button: it adds an extra folder and the host cannot start the bot.
-2. **Start the bot.** The first time, it tells you it is not linked to WhatsApp yet and creates a file called `session_id.txt`.
+2. **Open `session_id.txt`.** It is already in the main folder of the ZIP, with the steps inside. (If it is ever missing, the bot makes a new one when it starts. It never overwrites yours.)
 3. **Link your WhatsApp.** Open the pairing site **https://turbofex-pair.onrender.com** and follow its steps. In WhatsApp go to
    *Linked devices > Link a device*. If the pairing code is not accepted, use the **QR code** option. When it finishes, the site gives you a **session ID** that looks like `TFX-K7M2-9QXA-4BNP`.
-4. **Give the ID to the bot.** Open `session_id.txt`, paste the ID after `SESSION_ID=`, save, and **restart the bot straight away**.
+4. **Give the ID to the bot.** Paste the ID after `SESSION_ID=` in `session_id.txt`, save, and **start (or restart) the bot straight away**.
 5. **Try it.** Add the bot to a group, make it a group admin, and send **`.ping`**, then **`.help`**.
 
 Good to know about the session ID:

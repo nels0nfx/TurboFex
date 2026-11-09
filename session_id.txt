@@ -1,0 +1,6 @@
+# TURBOFEX SESSION ID
+# 1) Open https://turbofex-pair.onrender.com and link your WhatsApp number.
+# 2) Copy the session ID (it looks like TFX-K7M2-9QXA-4BNP).
+# 3) Paste it after the = sign on the line below, SAVE this file and RESTART the bot.
+# A session ID works once and expires after 5 minutes: paste it and restart the bot right away.
+SESSION_ID=

@@ -170,3 +170,23 @@ test('an empty or missing file is not an error: nothing happens', async () => {
   sessionid.ensureFile(file, 'x');
   assert.strictEqual(await sessionid.restore({ sessionId: '', sessionIdFile: file, sessionDir: tmp() }, quiet), 'skipped');
 });
+
+test('session_id.txt is created on every start with the steps inside, and a pasted ID is never overwritten', () => {
+  const dir = tmp();
+  const file = path.join(dir, 'session_id.txt');
+  assert.strictEqual(sessionid.ensureFile(file, 'https://example.test'), true);
+  assert.match(fs.readFileSync(file, 'utf8'), /SESSION_ID=/);
+  assert.strictEqual(sessionid.readFile(file), '');
+  fs.writeFileSync(file, `SESSION_ID=${ID}\n`);
+  sessionid.ensureFile(file, 'https://example.test');
+  assert.strictEqual(sessionid.readFile(file), ID, 'the pasted ID stays');
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'core', 'boot.js'), 'utf8'), /ensureFile\(config\.sessionIdFile/, 'boot creates the file on every start');
+});
+
+test('the ZIP carries a blank session_id.txt that the bot reads as "no ID yet"', () => {
+  const file = path.join(__dirname, '..', 'session_id.txt');
+  assert.ok(fs.existsSync(file), 'session_id.txt is shipped');
+  assert.match(fs.readFileSync(file, 'utf8'), /^SESSION_ID=\s*$/m);
+  assert.strictEqual(sessionid.readFile(file), '', 'blank: nothing to restore');
+  assert.ok(!/^session_id\.txt$/m.test(fs.readFileSync(path.join(__dirname, '..', '.gitignore'), 'utf8')), 'it is no longer git-ignored');
+});

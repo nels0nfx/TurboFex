@@ -1,3 +1,12 @@
+TurboFex v1.2.11 - session_id.txt comes inside the ZIP
+CHANGED IN 1.2.11
+- NEW: `session_id.txt` is now part of the hosting ZIP (blank, with the steps inside). People open it, paste the session ID after `SESSION_ID=`, save and start the bot. No need to start the bot first to get the file. The bot still makes it by itself if it is missing and never overwrites it.
+- CHANGED: the release check (`tools/release.private.sh`) now accepts the blank `session_id.txt` and STOPS the release if a real session ID is inside it. A self-updating bot never touches the file, so a pasted ID stays.
+
+TurboFex v1.2.10 - session_id.txt is always there
+CHANGED IN 1.2.10
+- NEW: the file `session_id.txt` is now created on EVERY start (before it only appeared once the bot had no login). Open it, paste the session ID after `SESSION_ID=`, save and restart. It has the steps inside and is never overwritten, so an ID you pasted stays.
+
 TurboFex v1.2.9 - the clean-up only touches settings commands
 CHANGED IN 1.2.9
 - FIXED: `delcmd` deleted everything, also the menu. Now it only cleans SETTINGS commands (and their confirmation): antilink, antiword, antispam, captcha, welcome, setwelcome, intro, setrules, setname, slowmode, autoread, mode, setprefix, delcmd, setapi and the like, but only when something is written after the command word. Written alone they show their panel, and a panel stays so you can read it. Switches (open, close, lock, unlock, lockdown) are always cleaned. The menu, ping, rules, rank, tagall, hidetag, stickers, downloads, AI answers, moderation (kick, warn...) and every game are never deleted.
