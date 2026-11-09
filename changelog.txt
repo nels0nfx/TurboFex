@@ -1,3 +1,11 @@
+TurboFex v1.2.7 - group clean-up also deletes the bot's answers
+CHANGED IN 1.2.7
+- NEW: `delcmd` now cleans up both sides in groups: the command message AND the bot's answer to it, except for games (all of the games category, plus hotseat, storychain and pet) and polls, which are never touched. The command goes a moment after the answer; the answer stays for 60 seconds so people can read or save it. `delcmd own` (default) cleans the commands typed on the bot account (yours), `delcmd all` cleans every command (the bot must be a group admin to delete members' messages; its own answers can always be deleted), `delcmd off` stops it. `delcmd reply on / off` decides whether the bot's answers are deleted too (default ON), and `delcmd time 30s` (or 2m, 1h; 5 seconds to 1 hour) decides how long they stay. A command that failed is left in the chat. Private chats are not touched. A restart of the bot forgets answers that were still waiting to be deleted.
+
+TurboFex v1.2.6 - group games are never touched by the command cleanup
+CHANGED IN 1.2.6
+- CHANGED: `delcmd` leaves game commands alone (all commands of the games category, plus hotseat, storychain and pet). The lobby and the board answer the command message, and the quote would turn into "This message was deleted". The answers people type while a game runs are not commands, so they were never deleted.
+
 TurboFex v1.2.5 - phone notifications come back, commands cleaned up in groups
 CHANGED IN 1.2.5
 - FIXED: no message notifications on the iPhone since the bot was linked to the main number. WhatsApp sends no notifications to the phone while a linked device shows as "online", and the bot made itself "online" (the typing indicator sent "available" and never went offline again; "always online" pings every 25 seconds). Now the bot goes offline again right after a typing indicator, and says "offline" every time it connects, unless "alwaysonline" is ON.

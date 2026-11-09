@@ -314,6 +314,7 @@ async function handleMessageInner(sock, msg) {
     const styled = fmt.mode(cmd);
     let warned = false;
     const pending = new Set(); // everything the command is still sending: the ✅ waits for it, so it never comes before the answer
+    const answers = []; // the messages the command sent in the chat (cleanup.js deletes them later, when the owner wants that)
     const csock = Object.create(sock);
     csock.sendMessage = (to, content, opts) => {
       if (synthetic && opts?.quoted) opts = { ...opts, quoted: undefined }; // there is no real message to reply to
@@ -326,7 +327,7 @@ async function handleMessageInner(sock, msg) {
       if (styled && typeof content?.text === 'string' && !content.edit) content = { ...content, text: fmt.format(content.text, (n) => !!prefix && commands.has(n), prefix, styled) };
       const sent = sock.sendMessage(to, mark ? watermark.mark(content, mark) : content, opts);
       pending.add(sent);
-      Promise.resolve(sent).catch(() => {}).finally(() => pending.delete(sent));
+      Promise.resolve(sent).then((m) => { if (m?.key?.id && !cleanup.keeps(content) && to === jid) answers.push(m.key); }).catch(() => {}).finally(() => pending.delete(sent));
       return sent;
     };
     const reply = (t, extra = {}) => csock.sendMessage(jid, { text: t, ...extra }, synthetic ? undefined : { quoted: msg });
@@ -350,7 +351,7 @@ async function handleMessageInner(sock, msg) {
       gate.release();
       if (pending.size) await withTimeout(Promise.allSettled([...pending]), 8000, 'the answer is still being sent').catch(() => {}); // the ✅ comes after the answer
       react.finish(outcome);
-      if (isGroup && !synthetic && outcome !== 'fail') cleanup.afterCommand(sock, msg, { isBotAdmin });
+      if (isGroup && !synthetic && outcome !== 'fail') cleanup.afterCommand(sock, msg, { isBotAdmin, cmd, replies: answers });
       stats.record({ name: cmd.name, jid, outcome });
       const total = Date.now() - t0;
       const t = diag.timing;

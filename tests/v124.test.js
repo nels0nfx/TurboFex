@@ -56,24 +56,70 @@ test('phone notifications: the bot goes offline after typing, and phonepush fix 
   assert.ok(sent.includes('unavailable'));
 });
 
-test('delcmd: the command message in a group is deleted after the answer', async () => {
+test('the version is 1.2.7', () => {
+  assert.strictEqual(require('../package.json').version, '1.2.7');
+});
+
+test('delcmd: the command and the bot answers are deleted after the answer, games never', async () => {
   const store = require('../whatsapp/store');
   const cleanup = require('../whatsapp/cmdcleanup');
   cleanup.timing.wait = 1;
+  store.setAuto('delcmdTime', 5);
   const deleted = [];
   const sock = { sendMessage: async (jid, c) => { if (c.delete) deleted.push(c.delete); return {}; } };
   const G = '120363000000000140@g.us';
-  const wait = () => new Promise((r) => setTimeout(r, 30));
+  const own = (id) => ({ key: { remoteJid: G, id, fromMe: true } });
+  const member = (id) => ({ key: { remoteJid: G, id, fromMe: false, participant: '2781@s.whatsapp.net' } });
+  const cmd = { name: 'sticker', category: 'media' };
   store.setAuto('delcmd', 'own');
-  assert.strictEqual(cleanup.afterCommand(sock, { key: { remoteJid: G, id: 'A1', fromMe: true } }, {}), true);
-  assert.strictEqual(cleanup.afterCommand(sock, { key: { remoteJid: G, id: 'A2', fromMe: false, participant: '2781@s.whatsapp.net' } }, { isBotAdmin: true }), false, 'members are left alone in "own"');
+  store.setAuto('delcmdReply', true);
+  assert.strictEqual(cleanup.afterCommand(sock, own('A1'), { cmd, replies: [{ id: 'R1' }, { id: 'R2' }] }), true);
+  assert.strictEqual(cleanup.afterCommand(sock, member('A2'), { cmd, isBotAdmin: true, replies: [{ id: 'R3' }] }), false, 'members are left alone in "own"');
+  assert.strictEqual(cleanup.afterCommand(sock, own('A3'), { cmd: { name: 'tictactoe', category: 'games' }, replies: [{ id: 'R4' }] }), false, 'games are left alone');
+  assert.strictEqual(cleanup.afterCommand(sock, own('A4'), { cmd: { name: 'pet', category: 'fun' }, replies: [{ id: 'R5' }] }), false);
   store.setAuto('delcmd', 'all');
-  assert.strictEqual(cleanup.afterCommand(sock, { key: { remoteJid: G, id: 'A3', fromMe: false, participant: '2781@s.whatsapp.net' } }, { isBotAdmin: true }), true);
-  assert.strictEqual(cleanup.afterCommand(sock, { key: { remoteJid: G, id: 'A4', fromMe: false, participant: '2781@s.whatsapp.net' } }, { isBotAdmin: false }), false, 'a bot that is no admin cannot');
+  assert.strictEqual(cleanup.afterCommand(sock, member('A5'), { cmd, isBotAdmin: true, replies: [{ id: 'R6' }] }), true);
+  assert.strictEqual(cleanup.afterCommand(sock, member('A6'), { cmd, isBotAdmin: false, replies: [] }), false, 'a bot that is no admin cannot delete a member message');
+  store.setAuto('delcmdReply', false);
+  assert.strictEqual(cleanup.afterCommand(sock, own('A7'), { cmd, replies: [{ id: 'R7' }] }), true);
   store.setAuto('delcmd', 'off');
-  assert.strictEqual(cleanup.afterCommand(sock, { key: { remoteJid: G, id: 'A5', fromMe: true } }, {}), false);
-  await wait();
-  assert.deepStrictEqual(deleted.map((k) => k.id), ['A1', 'A3']);
-  assert.strictEqual(deleted[1].participant, '2781@s.whatsapp.net');
+  assert.strictEqual(cleanup.afterCommand(sock, own('A8'), { cmd, replies: [] }), false);
+  await new Promise((r) => setTimeout(r, 30));
+  assert.deepStrictEqual(deleted.map((k) => k.id).sort(), ['A1', 'A5', 'A7'], 'the commands go first');
+  await new Promise((r) => setTimeout(r, 5200));
+  assert.deepStrictEqual(deleted.map((k) => k.id).sort(), ['A1', 'A5', 'A7', 'R1', 'R2', 'R6'], 'the answers follow after the set time (R7: answers are kept)');
+  assert.ok(deleted.filter((k) => /^R/.test(k.id)).every((k) => k.fromMe === true));
   store.setAuto('delcmd', 'own');
+  store.setAuto('delcmdReply', true);
+  store.setAuto('delcmdTime', 60);
+});
+
+test('delcmd time: seconds, minutes and hours, 5 seconds to 1 hour; polls stay', () => {
+  const cleanup = require('../whatsapp/cmdcleanup');
+  assert.strictEqual(cleanup.parseTime('30'), 30);
+  assert.strictEqual(cleanup.parseTime('2m'), 120);
+  assert.strictEqual(cleanup.parseTime('1h'), 3600);
+  assert.strictEqual(cleanup.parseTime('4'), null);
+  assert.strictEqual(cleanup.parseTime('2h'), null);
+  assert.strictEqual(cleanup.parseTime('soon'), null);
+  assert.strictEqual(cleanup.keeps({ poll: {} }), true);
+  assert.strictEqual(cleanup.keeps({ text: 'hi' }), false);
+});
+
+test('delcmd: the command works', async () => {
+  const store = require('../whatsapp/store');
+  const cmd = require('../commands/automation').find((c) => c.name === 'delcmd');
+  const out = [];
+  const run = (rest) => cmd.run({ args: rest.split(' '), reply: async (t) => out.push(t), prefix: '.' });
+  await run('time 2m');
+  assert.strictEqual(store.getAuto('delcmdTime'), 120);
+  await run('time 1');
+  assert.match(out.at(-1), /5 seconds to 1 hour/);
+  await run('reply off');
+  assert.strictEqual(store.getAuto('delcmdReply'), false);
+  await run('reply on');
+  await run('all');
+  assert.strictEqual(store.getAuto('delcmd'), 'all');
+  await run('own');
+  store.setAuto('delcmdTime', 60);
 });

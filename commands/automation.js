@@ -1,6 +1,7 @@
 // Owner automation: autotyping, autorecording, alwaysonline, autoread, autobio, autoreact, pmblocker
 const store = require('../whatsapp/store');
 const presence = require('../whatsapp/presence');
+const cleanup = require('../whatsapp/cmdcleanup');
 
 const base = { category: 'owner', ownerOnly: true, needs: [], weight: 'light' };
 const word = (args) => (args[0] || '').toLowerCase();
@@ -67,16 +68,27 @@ module.exports = [
     ...base,
     name: 'delcmd',
     aliases: ['autodelcmd', 'cleancmd'],
-    description: 'Deletes the command message in groups after the bot answered: delcmd own / all / off',
+    description: 'Cleans groups after a command: delcmd own / all / off, delcmd reply on / off, delcmd time 60s',
     async run({ args, reply, prefix }) {
       const w = word(args);
-      const text = { own: 'only the commands typed on the bot account (yours)', all: 'every command, also the ones of members (the bot must be a group admin)', off: 'nothing is deleted' };
-      if (!text[w]) {
-        const now = store.getAuto('delcmd', 'own');
-        return reply(`🧹 *Delete commands after the answer (groups)*\n*Now:* ${now.toUpperCase()}: ${text[now] || text.own}\n\n▸ \`${prefix}delcmd own\` ${text.own}\n▸ \`${prefix}delcmd all\` ${text.all}\n▸ \`${prefix}delcmd off\` ${text.off}`);
+      const text = { own: 'the commands typed on the bot account (yours) and the answers to them', all: 'every command, also the ones of members (the bot must be a group admin, to delete their messages), and the answers', off: 'nothing is deleted' };
+      const secs = cleanup.seconds();
+      const show = () => `🧹 *Clean up groups after a command*\n*Commands:* ${cleanup.mode().toUpperCase()}: ${text[cleanup.mode()]}\n*Bot answers:* ${cleanup.replyOn() ? `deleted after ${secs} seconds` : 'kept'}\n_Games are never touched. Polls stay._\n\n▸ \`${prefix}delcmd own\` / \`${prefix}delcmd all\` / \`${prefix}delcmd off\`\n▸ \`${prefix}delcmd reply on\` / \`${prefix}delcmd reply off\`\n▸ \`${prefix}delcmd time 30s\` (5 seconds to 1 hour, also 2m or 1h)`;
+      if (w === 'reply' || w === 'replies' || w === 'answer') {
+        const v = (args[1] || '').toLowerCase();
+        if (v !== 'on' && v !== 'off') return reply(show());
+        store.setAuto('delcmdReply', v === 'on');
+        return reply(`✅ *Bot answers are ${v === 'on' ? `deleted after ${secs} seconds` : 'kept'}.*`);
       }
+      if (w === 'time' || w === 'delay') {
+        const n = cleanup.parseTime(args.slice(1).join(''));
+        if (n === null) return reply(`⏳ *How long the answer stays*\n▸ \`${prefix}delcmd time 30\` (seconds), \`${prefix}delcmd time 2m\` or \`${prefix}delcmd time 1h\`\n_From 5 seconds to 1 hour._`);
+        store.setAuto('delcmdTime', n);
+        return reply(`✅ *Bot answers are deleted ${n} seconds after they are sent.*`);
+      }
+      if (!text[w]) return reply(show());
       store.setAuto('delcmd', w);
-      return reply(`✅ *Delete commands:* ${w.toUpperCase()}\n_${text[w]}_`);
+      return reply(`✅ *Clean up:* ${w.toUpperCase()}\n_${text[w]}_`);
     },
   },
   toggle('autoread', 'read', 'Auto read', 'Marks every message the bot receives as read (blue ticks)', ['read']),
