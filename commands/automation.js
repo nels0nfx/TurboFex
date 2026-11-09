@@ -43,6 +43,42 @@ module.exports = [
     presence.apply(sock);
     if (!on) sock.sendPresenceUpdate('unavailable').catch(() => {});
   }),
+  {
+    ...base,
+    name: 'phonepush',
+    aliases: ['notifications', 'pushfix'],
+    description: 'Why the phone gets no message notifications, and fix it: phonepush / phonepush fix',
+    async run({ args, reply, prefix, sock }) {
+      const culprits = [
+        ['alwaysonline', 'online', 'Always online', 'WhatsApp sends no notifications to the phone while a linked device is online'],
+        ['autoread', 'read', 'Auto read', 'the bot marks every message as read, so the phone shows it as already read and gives no notification'],
+      ];
+      if (word(args) === 'fix') {
+        for (const [, key] of culprits) store.setAuto(key, false);
+        presence.apply(sock);
+        return reply('✅ *Done.* Always online and Auto read are OFF, and the bot shows as offline.\n▸ Notifications on the phone should come back within a few minutes.\n_Auto typing stays as you set it: it goes online only for a few seconds, then offline again._');
+      }
+      const lines = culprits.map(([name, key, label, why]) => `${store.getAuto(key) ? '🔴' : '🟢'} *${label}:* ${state(store.getAuto(key))}${store.getAuto(key) ? `\n   _${why}_` : ''}`);
+      const typing = store.getAuto('typing') || store.getAuto('recording');
+      return reply(`🔔 *Phone notifications*\n${lines.join('\n')}\n${typing ? '🟡 *Auto typing / recording:* ON\n   _goes online for a few seconds each time, then offline_\n' : ''}\n▸ \`${prefix}phonepush fix\` turns off Always online and Auto read.\n▸ Also check on the iPhone: Settings > Notifications > WhatsApp (allow notifications, Lock Screen, Banners), Focus modes, and in WhatsApp: Settings > Notifications.`);
+    },
+  },
+  {
+    ...base,
+    name: 'delcmd',
+    aliases: ['autodelcmd', 'cleancmd'],
+    description: 'Deletes the command message in groups after the bot answered: delcmd own / all / off',
+    async run({ args, reply, prefix }) {
+      const w = word(args);
+      const text = { own: 'only the commands typed on the bot account (yours)', all: 'every command, also the ones of members (the bot must be a group admin)', off: 'nothing is deleted' };
+      if (!text[w]) {
+        const now = store.getAuto('delcmd', 'own');
+        return reply(`🧹 *Delete commands after the answer (groups)*\n*Now:* ${now.toUpperCase()}: ${text[now] || text.own}\n\n▸ \`${prefix}delcmd own\` ${text.own}\n▸ \`${prefix}delcmd all\` ${text.all}\n▸ \`${prefix}delcmd off\` ${text.off}`);
+      }
+      store.setAuto('delcmd', w);
+      return reply(`✅ *Delete commands:* ${w.toUpperCase()}\n_${text[w]}_`);
+    },
+  },
   toggle('autoread', 'read', 'Auto read', 'Marks every message the bot receives as read (blue ticks)', ['read']),
   {
     ...base,

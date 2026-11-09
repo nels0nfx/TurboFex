@@ -37,6 +37,8 @@ function apply(sock) {
   clearInterval(bioTimer);
   onlineTimer = bioTimer = null;
   if (!current) return;
+  // Without "always online" the bot must not show as online: the phone gets no message notifications while a linked device is online
+  if (!store.getAuto('online')) current.sendPresenceUpdate('unavailable').catch(() => {});
   if (store.getAuto('online')) {
     const ping = () => current.sendPresenceUpdate('available').catch(() => {});
     ping();
@@ -100,6 +102,8 @@ async function indicate(sock, jid, kind, { hold = timing.hold, report = null } =
   }
   await wait(Math.min(timing.tail, hold));
   await step('stop the indicator', () => sock.sendPresenceUpdate('paused', to));
+  // While a linked device shows as "online", WhatsApp does not send notifications to the phone. So the bot goes offline again.
+  if (!store.getAuto('online')) await sock.sendPresenceUpdate('unavailable').catch(() => {});
 }
 
 function onIncoming(sock, msg, jid) {

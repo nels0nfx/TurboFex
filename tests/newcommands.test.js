@@ -162,7 +162,8 @@ test('owner automation: autoread, typing indicator, auto react and the private m
   assert.ok(sock.read >= 1, 'marked as read');
   assert.deepStrictEqual(sock.presences.filter((p) => p !== 'subscribe').slice(0, 2), ['available', 'composing'], 'typing shown');
   assert.ok(sock.presences.includes('subscribe'));
-  assert.strictEqual(sock.presence, 'paused', 'and cleared when the answer is sent');
+  assert.ok(sock.presences.includes('paused'), 'cleared when the answer is sent');
+  assert.strictEqual(sock.presence, 'unavailable', 'and the bot goes offline again, so the phone keeps its notifications');
   store.setAuto('read', false);
   store.setAuto('typing', false);
 
