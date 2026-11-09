@@ -351,7 +351,7 @@ async function handleMessageInner(sock, msg) {
       gate.release();
       if (pending.size) await withTimeout(Promise.allSettled([...pending]), 8000, 'the answer is still being sent').catch(() => {}); // the ✅ comes after the answer
       react.finish(outcome);
-      if (isGroup && !synthetic && outcome !== 'fail') cleanup.afterCommand(sock, msg, { isBotAdmin, cmd, replies: answers });
+      if (isGroup && !synthetic && outcome !== 'fail') cleanup.afterCommand(sock, msg, { isBotAdmin, cmd, hasArgs: args.length > 0, replies: answers });
       stats.record({ name: cmd.name, jid, outcome });
       const total = Date.now() - t0;
       const t = diag.timing;

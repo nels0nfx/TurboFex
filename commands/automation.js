@@ -68,27 +68,51 @@ module.exports = [
     ...base,
     name: 'delcmd',
     aliases: ['autodelcmd', 'cleancmd'],
-    description: 'Cleans groups after a command: delcmd own / all / off, delcmd reply on / off, delcmd time 60s',
-    async run({ args, reply, prefix }) {
+    description: 'Cleans up SETTINGS commands in groups (not menu, games and the like): delcmd own / all / off, reply on / off, time 1s, list / add / remove <command>',
+    async run({ args, reply, prefix, commandList }) {
       const w = word(args);
       const text = { own: 'the commands typed on the bot account (yours) and the answers to them', all: 'every command, also the ones of members (the bot must be a group admin, to delete their messages), and the answers', off: 'nothing is deleted' };
       const secs = cleanup.seconds();
-      const show = () => `🧹 *Clean up groups after a command*\n*Commands:* ${cleanup.mode().toUpperCase()}: ${text[cleanup.mode()]}\n*Bot answers:* ${cleanup.replyOn() ? `deleted after ${secs} seconds` : 'kept'}\n_Games are never touched. Polls stay._\n\n▸ \`${prefix}delcmd own\` / \`${prefix}delcmd all\` / \`${prefix}delcmd off\`\n▸ \`${prefix}delcmd reply on\` / \`${prefix}delcmd reply off\`\n▸ \`${prefix}delcmd time 30s\` (5 seconds to 1 hour, also 2m or 1h)`;
+      const secText = (n) => `${n} ${n === 1 ? 'second' : 'seconds'}`;
+      const show = () => `🧹 *Clean up groups after SETTINGS commands*\n_Only commands that change a setting (antilink on, setrules, welcome set, captcha time...) are cleaned. Menu, ping, rules, rank, tagall, downloads, stickers and every game stay._\n*Commands:* ${cleanup.mode().toUpperCase()}: ${text[cleanup.mode()]}\n*Bot answers:* ${cleanup.replyOn() ? `deleted ${secs === 1 ? 'as soon as they are sent (1 second)' : `${secText(secs)} after they are sent`}` : 'kept'}\n\n▸ \`${prefix}delcmd own\` / \`${prefix}delcmd all\` / \`${prefix}delcmd off\`\n▸ \`${prefix}delcmd reply on\` / \`${prefix}delcmd reply off\`\n▸ \`${prefix}delcmd time 30s\` (1 second to 1 hour, also 2m or 1h)\n▸ \`${prefix}delcmd list\` shows what is cleaned, \`${prefix}delcmd add menu\` / \`${prefix}delcmd remove captcha\` change it`;
+      if (w === 'list') {
+        const names = (set) => [...set].sort().map((n) => `${prefix}${n}`).join(', ');
+        return reply(`🧹 *Cleaned in groups*\n*Settings (when something is written after them):*\n${names(cleanup.SETTINGS_WITH_ARGS)}\n\n*Switches (always):* ${names(cleanup.SETTINGS_ALWAYS)}\n${cleanup.extra().length ? `\n*Added by you (always):* ${cleanup.extra().map((n) => prefix + n).join(', ')}\n` : ''}${cleanup.skipped().length ? `\n*Left alone by you:* ${cleanup.skipped().map((n) => prefix + n).join(', ')}\n` : ''}\n_Games are never cleaned._`);
+      }
+      if (w === 'add' || w === 'remove') {
+        const q = (args[1] || '').toLowerCase().replace(/^[^a-z0-9]+/, '');
+        const found = (commandList || []).find((c) => c.name === q || (c.aliases || []).includes(q));
+        if (!found) return reply(`*Usage:* \`${prefix}delcmd ${w} <command>\`, for example \`${prefix}delcmd ${w} ${w === 'add' ? 'tagall' : 'captcha'}\``);
+        if (cleanup.isGame(found)) return reply('⚠️ *Games are never cleaned up.*');
+        const add = new Set(cleanup.extra());
+        const skip = new Set(cleanup.skipped());
+        if (w === 'add') {
+          add.add(found.name);
+          skip.delete(found.name);
+        } else {
+          add.delete(found.name);
+          skip.add(found.name);
+        }
+        store.setAuto('delcmdAdd', [...add]);
+        store.setAuto('delcmdSkip', [...skip]);
+        return reply(w === 'add' ? `✅ *${prefix}${found.name} is cleaned up from now on.*` : `✅ *${prefix}${found.name} is left alone from now on.*`);
+      }
       if (w === 'reply' || w === 'replies' || w === 'answer') {
         const v = (args[1] || '').toLowerCase();
         if (v !== 'on' && v !== 'off') return reply(show());
         store.setAuto('delcmdReply', v === 'on');
-        return reply(`✅ *Bot answers are ${v === 'on' ? `deleted after ${secs} seconds` : 'kept'}.*`);
+        return reply(`✅ *Bot answers are ${v === 'on' ? `deleted ${secs === 1 ? 'right away (1 second)' : `after ${secText(secs)}`}` : 'kept'}.*`);
       }
       if (w === 'time' || w === 'delay') {
         const n = cleanup.parseTime(args.slice(1).join(''));
-        if (n === null) return reply(`⏳ *How long the answer stays*\n▸ \`${prefix}delcmd time 30\` (seconds), \`${prefix}delcmd time 2m\` or \`${prefix}delcmd time 1h\`\n_From 5 seconds to 1 hour._`);
+        if (n === null) return reply(`⏳ *How long the answer stays*\n▸ \`${prefix}delcmd time 30\` (seconds), \`${prefix}delcmd time 2m\` or \`${prefix}delcmd time 1h\`\n_From 1 second to 1 hour. The default is 1 second: right after the answer._`);
         store.setAuto('delcmdTime', n);
-        return reply(`✅ *Bot answers are deleted ${n} seconds after they are sent.*`);
+        return reply(`✅ *Bot answers are deleted ${n === 1 ? 'right away (1 second after they are sent)' : `${secText(n)} after they are sent`}.*`);
       }
       if (!text[w]) return reply(show());
       store.setAuto('delcmd', w);
-      return reply(`✅ *Clean up:* ${w.toUpperCase()}\n_${text[w]}_`);
+      if (w !== 'off') store.setAuto('delcmdReply', true); // turning the clean-up on also turns the deleting of answers on
+      return reply(`✅ *Clean up:* ${w.toUpperCase()}\n_${text[w]}_${w !== 'off' ? `\n_The bot's answers are deleted too (\`${prefix}delcmd reply off\` keeps them)._` : ''}`);
     },
   },
   toggle('autoread', 'read', 'Auto read', 'Marks every message the bot receives as read (blue ticks)', ['read']),

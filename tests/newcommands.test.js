@@ -494,29 +494,35 @@ test('tags in private chats: the phone number when known, the name otherwise, ne
 });
 
 
-test('delcmd through the handler: a command in a group and the bot answer are deleted, a game command is not', async () => {
+test('delcmd through the handler: a settings command in a group and the bot answer are deleted; ping, menu and games are not', async () => {
   const cleanup = require('../whatsapp/cmdcleanup');
   const G3 = '120363000000000099@g.us';
   cleanup.timing.wait = 5;
   store.setAuto('delcmd', 'own');
   store.setAuto('delcmdReply', true);
-  store.setAuto('delcmdTime', 5);
+  store.setAuto('delcmdTime', 1);
   store.setMode('public');
   const own = (text, id) => handler.handleMessage(sock, { key: { remoteJid: G3, participant: OWNER, id, fromMe: true }, message: { conversation: text }, messageTimestamp: Math.floor(Date.now() / 1000) });
   sent.length = 0;
-  await own('.ping', 'DEL1');
+  await own('.delcmd time 1', 'DEL1');
   await settle();
   const answer = sent.find((s) => s.c.text && !s.c.delete && s.j === G3);
   assert.ok(answer, 'the bot answered');
   await new Promise((r) => setTimeout(r, 300));
   assert.ok(sent.some((s) => s.c.delete && s.c.delete.id === 'DEL1'), 'the command message was deleted');
-  await new Promise((r) => setTimeout(r, 5200));
+  await new Promise((r) => setTimeout(r, 1300));
   const answerId = `K${sent.indexOf(answer) + 1}`;
   assert.ok(sent.some((s) => s.c.delete && s.c.delete.id === answerId && s.c.delete.fromMe === true), 'and the bot answer too');
+  sent.length = 0;
+  await own('.ping', 'DEL3');
+  await own('.menu', 'DEL4');
+  await settle();
+  await new Promise((r) => setTimeout(r, 1500));
+  assert.ok(!sent.some((s) => s.c.delete), 'ping and menu are not settings: nothing is deleted');
   sent.length = 0;
   await own('.hangman', 'DEL2');
   await settle();
   await new Promise((r) => setTimeout(r, 300));
   assert.ok(!sent.some((s) => s.c.delete && s.c.delete.id === 'DEL2'), 'a game command stays');
-  store.setAuto('delcmdTime', 60);
+  store.setAuto('delcmdTime', 1);
 });

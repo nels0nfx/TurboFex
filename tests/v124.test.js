@@ -56,50 +56,51 @@ test('phone notifications: the bot goes offline after typing, and phonepush fix 
   assert.ok(sent.includes('unavailable'));
 });
 
-test('the version is 1.2.7', () => {
-  assert.strictEqual(require('../package.json').version, '1.2.7');
+test('the version is 1.2.9', () => {
+  assert.strictEqual(require('../package.json').version, '1.2.9');
 });
 
 test('delcmd: the command and the bot answers are deleted after the answer, games never', async () => {
   const store = require('../whatsapp/store');
   const cleanup = require('../whatsapp/cmdcleanup');
   cleanup.timing.wait = 1;
-  store.setAuto('delcmdTime', 5);
+  store.setAuto('delcmdTime', 2);
   const deleted = [];
   const sock = { sendMessage: async (jid, c) => { if (c.delete) deleted.push(c.delete); return {}; } };
   const G = '120363000000000140@g.us';
   const own = (id) => ({ key: { remoteJid: G, id, fromMe: true } });
   const member = (id) => ({ key: { remoteJid: G, id, fromMe: false, participant: '2781@s.whatsapp.net' } });
-  const cmd = { name: 'sticker', category: 'media' };
+  const cmd = { name: 'antilink', category: 'group' };
   store.setAuto('delcmd', 'own');
   store.setAuto('delcmdReply', true);
-  assert.strictEqual(cleanup.afterCommand(sock, own('A1'), { cmd, replies: [{ id: 'R1' }, { id: 'R2' }] }), true);
-  assert.strictEqual(cleanup.afterCommand(sock, member('A2'), { cmd, isBotAdmin: true, replies: [{ id: 'R3' }] }), false, 'members are left alone in "own"');
+  assert.strictEqual(cleanup.afterCommand(sock, own('A1'), { cmd, hasArgs: true, replies: [{ id: 'R1' }, { id: 'R2' }] }), true);
+  assert.strictEqual(cleanup.afterCommand(sock, member('A2'), { cmd, hasArgs: true, isBotAdmin: true, replies: [{ id: 'R3' }] }), false, 'members are left alone in "own"');
   assert.strictEqual(cleanup.afterCommand(sock, own('A3'), { cmd: { name: 'tictactoe', category: 'games' }, replies: [{ id: 'R4' }] }), false, 'games are left alone');
   assert.strictEqual(cleanup.afterCommand(sock, own('A4'), { cmd: { name: 'pet', category: 'fun' }, replies: [{ id: 'R5' }] }), false);
   store.setAuto('delcmd', 'all');
-  assert.strictEqual(cleanup.afterCommand(sock, member('A5'), { cmd, isBotAdmin: true, replies: [{ id: 'R6' }] }), true);
-  assert.strictEqual(cleanup.afterCommand(sock, member('A6'), { cmd, isBotAdmin: false, replies: [] }), false, 'a bot that is no admin cannot delete a member message');
+  assert.strictEqual(cleanup.afterCommand(sock, member('A5'), { cmd, hasArgs: true, isBotAdmin: true, replies: [{ id: 'R6' }] }), true);
+  assert.strictEqual(cleanup.afterCommand(sock, member('A6'), { cmd, hasArgs: true, isBotAdmin: false, replies: [] }), false, 'a bot that is no admin cannot delete a member message');
   store.setAuto('delcmdReply', false);
-  assert.strictEqual(cleanup.afterCommand(sock, own('A7'), { cmd, replies: [{ id: 'R7' }] }), true);
+  assert.strictEqual(cleanup.afterCommand(sock, own('A7'), { cmd, hasArgs: true, replies: [{ id: 'R7' }] }), true);
   store.setAuto('delcmd', 'off');
-  assert.strictEqual(cleanup.afterCommand(sock, own('A8'), { cmd, replies: [] }), false);
+  assert.strictEqual(cleanup.afterCommand(sock, own('A8'), { cmd, hasArgs: true, replies: [] }), false);
   await new Promise((r) => setTimeout(r, 30));
   assert.deepStrictEqual(deleted.map((k) => k.id).sort(), ['A1', 'A5', 'A7'], 'the commands go first');
-  await new Promise((r) => setTimeout(r, 5200));
+  await new Promise((r) => setTimeout(r, 2300));
   assert.deepStrictEqual(deleted.map((k) => k.id).sort(), ['A1', 'A5', 'A7', 'R1', 'R2', 'R6'], 'the answers follow after the set time (R7: answers are kept)');
   assert.ok(deleted.filter((k) => /^R/.test(k.id)).every((k) => k.fromMe === true));
   store.setAuto('delcmd', 'own');
   store.setAuto('delcmdReply', true);
-  store.setAuto('delcmdTime', 60);
+  store.setAuto('delcmdTime', 1);
 });
 
-test('delcmd time: seconds, minutes and hours, 5 seconds to 1 hour; polls stay', () => {
+test('delcmd time: seconds, minutes and hours, 1 second to 1 hour; polls stay', () => {
   const cleanup = require('../whatsapp/cmdcleanup');
   assert.strictEqual(cleanup.parseTime('30'), 30);
   assert.strictEqual(cleanup.parseTime('2m'), 120);
   assert.strictEqual(cleanup.parseTime('1h'), 3600);
-  assert.strictEqual(cleanup.parseTime('4'), null);
+  assert.strictEqual(cleanup.parseTime('1'), 1);
+  assert.strictEqual(cleanup.parseTime('0'), null);
   assert.strictEqual(cleanup.parseTime('2h'), null);
   assert.strictEqual(cleanup.parseTime('soon'), null);
   assert.strictEqual(cleanup.keeps({ poll: {} }), true);
@@ -113,13 +114,53 @@ test('delcmd: the command works', async () => {
   const run = (rest) => cmd.run({ args: rest.split(' '), reply: async (t) => out.push(t), prefix: '.' });
   await run('time 2m');
   assert.strictEqual(store.getAuto('delcmdTime'), 120);
+  await run('time 0');
+  assert.match(out.at(-1), /1 second to 1 hour/);
+  assert.strictEqual(store.getAuto('delcmdTime'), 120);
   await run('time 1');
-  assert.match(out.at(-1), /5 seconds to 1 hour/);
+  assert.strictEqual(store.getAuto('delcmdTime'), 1);
   await run('reply off');
   assert.strictEqual(store.getAuto('delcmdReply'), false);
-  await run('reply on');
+  await run('off');
   await run('all');
+  assert.strictEqual(store.getAuto('delcmdReply'), true, 'turning the clean-up on also turns the answers on');
   assert.strictEqual(store.getAuto('delcmd'), 'all');
   await run('own');
-  store.setAuto('delcmdTime', 60);
+  assert.strictEqual(require('../whatsapp/cmdcleanup').DEFAULT_TIME, 1, 'as soon as possible by default');
+  store.setAuto('delcmdTime', 1);
+});
+
+test('delcmd: only settings commands are cleaned, not menu, ping, rules or a panel', () => {
+  const cleanup = require('../whatsapp/cmdcleanup');
+  const c = (name, category = 'group') => ({ name, category });
+  for (const n of ['menu', 'ping', 'rules', 'rank', 'tagall', 'hidetag', 'sticker', 'play', 'groupinfo', 'kick', 'warn', 'status', 'stats']) assert.strictEqual(cleanup.isCleaned(c(n), true), false, `${n} stays`);
+  for (const n of ['antilink', 'setrules', 'captcha', 'welcome', 'setwelcome', 'intro', 'slowmode', 'autoread', 'delcmd', 'setapi']) {
+    assert.strictEqual(cleanup.isCleaned(c(n), true), true, `${n} with text is cleaned`);
+    assert.strictEqual(cleanup.isCleaned(c(n), false), false, `${n} alone shows a panel: it stays`);
+  }
+  for (const n of ['open', 'close', 'lock', 'unlock', 'lockdown']) assert.strictEqual(cleanup.isCleaned(c(n), false), true, `${n} is a switch`);
+  assert.strictEqual(cleanup.isCleaned(c('tictactoe', 'games'), true), false);
+});
+
+test('delcmd list / add / remove: the owner can adjust what is cleaned', async () => {
+  const store = require('../whatsapp/store');
+  const cleanup = require('../whatsapp/cmdcleanup');
+  const cmds = require('fs').readdirSync(require('path').join(__dirname, '../commands')).filter((f) => f.endsWith('.js')).flatMap((f) => require(`../commands/${f}`));
+  const cmd = cmds.find((c) => c.name === 'delcmd');
+  const out = [];
+  const run = (rest) => cmd.run({ args: rest.split(' '), reply: async (t) => out.push(t), prefix: '.', commandList: cmds });
+  await run('add tagall');
+  assert.strictEqual(cleanup.isCleaned({ name: 'tagall', category: 'group' }, false), true);
+  await run('remove captcha');
+  assert.strictEqual(cleanup.isCleaned({ name: 'captcha', category: 'group' }, true), false);
+  await run('add tictactoe');
+  assert.match(out.at(-1), /Games are never cleaned/);
+  await run('list');
+  assert.match(out.at(-1), /Added by you[\s\S]*tagall/);
+  assert.match(out.at(-1), /Left alone by you[\s\S]*captcha/);
+  await run('remove tagall');
+  await run('add captcha');
+  assert.strictEqual(cleanup.isCleaned({ name: 'captcha', category: 'group' }, true), true);
+  store.setAuto('delcmdAdd', []);
+  store.setAuto('delcmdSkip', []);
 });
