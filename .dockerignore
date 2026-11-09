@@ -1,0 +1,10 @@
+node_modules
+data
+session
+accounts
+accounts.json
+config.env
+.env
+.git
+tests
+*.private.*

@@ -1,0 +1,21 @@
+# systemd service for a VPS. Change YOUR_USER and the folder, then:
+#   sudo cp hosting/turbofex.service /etc/systemd/system/turbofex.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now turbofex
+#   journalctl -u turbofex -f        (the bot's log)
+[Unit]
+Description=TurboFex WhatsApp bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/TurboFex
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

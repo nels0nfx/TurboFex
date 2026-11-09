@@ -35,7 +35,13 @@ function load(file = FILE, env = process.env) {
     return [];
   }
   const applied = [];
-  for (const [key, value] of Object.entries(parse(text))) {
+  const parsed = parse(text);
+  // an extra account (see core/accounts.js) never takes the login or the number of the main account from this file
+  const isolated = env.TURBOFEX_ISOLATED === '1';
+  // Termux has its own PREFIX (a folder path): the PREFIX of this file then becomes BOT_PREFIX so it still works
+  if (parsed.PREFIX && env.PREFIX && /[\\/\s]/.test(env.PREFIX) && !env.BOT_PREFIX) env.BOT_PREFIX = parsed.PREFIX;
+  for (const [key, value] of Object.entries(parsed)) {
+    if (isolated && /^(SESSION_ID|NUMBER|PAIRING_NUMBER|OWNER_NUMBER)$/.test(key)) continue;
     if (env[key] !== undefined && env[key] !== '') continue; // the host's own setting wins
     env[key] = value;
     applied.push(key);

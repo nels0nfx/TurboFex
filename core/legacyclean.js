@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const KEEP = new Set(['config.js', 'session_id.txt', 'config.env', 'session', 'data', 'node_modules', '.env', '.git', '.github']);
+const KEEP = new Set(['config.js', 'session_id.txt', 'config.env', 'session', 'data', 'node_modules', '.env', '.git', '.github', 'accounts', 'accounts.json']);
 const OLD_FOLDER = ['core', 'realm'].join('/'); // written in pieces so this file never matches its own search
 const LOADS_OLD_FOLDER = new RegExp(`require\\(\\s*['"][^'"]*${OLD_FOLDER.replace('/', '\\/')}/`);
 const SCAN = ['commands', 'core', 'whatsapp'];

@@ -1,4 +1,4 @@
-# ⚡ TurboFex v1.3.2
+# ⚡ TurboFex v1.3.3
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and more.
@@ -41,6 +41,83 @@ Good to know about the session ID:
 - Never share your session ID or pairing code with anyone.
 
 The number you link becomes the bot's number **and its owner**.
+
+## Hosting guides
+
+TurboFex is plain Node.js (version 20 or newer). It runs on a phone, a VPS, a hosting panel, Docker, or a normal computer. Pick one.
+Every guide ends the same way: paste your session ID in `session_id.txt` (see *Get started* above) and start the bot.
+
+### Termux (Android phone)
+
+1. Install **Termux** from F-Droid (the Play Store version is old and no longer updated).
+2. In Termux: `pkg update && pkg upgrade`, then `pkg install nodejs-lts git ffmpeg unzip nano`.
+3. Allow Termux to read your downloads: `termux-setup-storage`.
+4. Unpack the bot: `unzip ~/storage/downloads/TurboFex-hosting-*.zip -d ~/TurboFex` then `cd ~/TurboFex`.
+5. Install it: `npm install`.
+6. Open the session file, paste the session ID after `SESSION_ID=`, save (`Ctrl+O`, `Enter`, `Ctrl+X`): `nano session_id.txt`.
+7. Start: `npm start`.
+
+To keep it running when the screen is off: run `termux-wake-lock`, turn off battery optimisation for Termux in Android settings, and start the bot inside `tmux`
+(`pkg install tmux`, then `tmux new -s bot`, `npm start`, and leave with `Ctrl+B` then `D`). Or use pm2: `npm install -g pm2` then `pm2 start ecosystem.config.js`.
+*Termux note:* Termux has its own variable called `PREFIX`. TurboFex ignores it. To change the command symbol use `BOT_PREFIX=!` (or `.setprefix` in the chat).
+
+### VPS or any Linux server (Ubuntu, Debian)
+
+1. Install the tools: `sudo apt update && sudo apt install -y git ffmpeg unzip curl`.
+2. Install Node.js 20 or newer (for example `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -` then `sudo apt install -y nodejs`). Check with `node -v`.
+3. Upload the hosting ZIP to the server, then `unzip TurboFex-hosting-*.zip -d ~/TurboFex && cd ~/TurboFex && npm install`.
+4. Paste the session ID in `session_id.txt` (`nano session_id.txt`) and test: `npm start`. Stop with `Ctrl+C` once it works.
+5. Keep it running forever, with **one** of these:
+   - **pm2:** `sudo npm install -g pm2`, then `pm2 start ecosystem.config.js`, `pm2 save`, `pm2 startup` (run the command it prints). Log: `pm2 logs turbofex`.
+   - **systemd:** edit `hosting/turbofex.service` (your user name and folder), copy it to `/etc/systemd/system/`, then `sudo systemctl enable --now turbofex`. Log: `journalctl -u turbofex -f`.
+
+### Docker
+
+1. Install Docker and Docker Compose on the server.
+2. Unpack the hosting ZIP, open the folder, and create a file called `.env` with your settings: `SESSION_ID=TFX-XXXX-XXXX-XXXX` (and optionally `TIMEZONE=Africa/Lagos`, `BOT_PREFIX=.`).
+3. Start: `docker compose up -d --build`. Log: `docker compose logs -f`.
+4. The login and the settings are saved in the `data`, `session` and `accounts` folders next to `docker-compose.yml`, so they survive a rebuild.
+5. The bot can update itself, but inside Docker that only lasts until the container is rebuilt. For Docker, switch it off with `.autoupdate off` and update by unpacking a newer ZIP and running `docker compose up -d --build` again.
+
+### Hosting panels (Pterodactyl and similar)
+
+1. Create a server with a **Node.js 20 or newer** egg, then upload the hosting ZIP in the file manager and unzip it so that `index.js` is in the main folder.
+2. Set the startup command to `npm start` (or `node index.js`) and let the panel run `npm install`.
+3. Open `session_id.txt` in the file manager, paste the session ID, save, and start the server. If your panel has a *Variables* page, you can set `SESSION_ID` there instead.
+
+### Web-service hosts (Render, Railway, Koyeb, Heroku and similar)
+
+1. Deploy the repository or the unpacked ZIP. Build command: `npm install`. Start command: `npm start` (a `Procfile` is included).
+2. Add the variable `SESSION_ID` with your session ID (a host without file access cannot edit `session_id.txt`).
+3. These hosts give the bot a `PORT`. TurboFex then opens a tiny status page on it (it only says that the bot is running; no numbers, no chats), so the host does not stop the bot for having no open port.
+4. **Important:** many of these plans wipe the disk on every restart or deploy, and some put free apps to sleep. If the disk is wiped, the bot loses its login and needs a new session ID each time. Use a plan with a **persistent disk or volume**, mounted on the `data` and `session` folders, and a plan that does not sleep.
+
+### Windows or Mac
+
+Install Node.js (LTS) and Git, unpack the ZIP, open a terminal in the folder, run `npm install`, paste the session ID in `session_id.txt`, and run `npm start`. Install `ffmpeg` if you want the sticker, audio and video commands.
+
+### Updates and "does it keep running?"
+
+The bot checks for a new version when it starts and puts the old one back if an update breaks it. Nothing can promise it never stops: the host, the network and WhatsApp can all interrupt it,
+which is why pm2, systemd or Docker's `restart: unless-stopped` are worth setting up on a server.
+
+## Several accounts on the same server
+
+You can run more than one WhatsApp number (more than one bot) from the same folder. Each account is its own bot with **its own login, settings and data**; nothing is shared, so they cannot overwrite each other.
+
+1. Copy `accounts.example.json` to **`accounts.json`** and list your accounts:
+   ```json
+   { "accounts": [ { "name": "main" }, { "name": "shop", "prefix": "!", "timezone": "Africa/Lagos" } ] }
+   ```
+   (No file access? Set the variable `ACCOUNTS=main,shop` instead.) A name is 1 to 20 letters, digits, `-` or `_`. Options per account: `prefix`, `timezone`, `number`, `sessionId`, and `"enabled": false` to switch one off for now.
+2. The account called **`main`** keeps using the old places (`data/`, `session/`, `session_id.txt`), so a bot that already runs does not have to be linked again. Every other account gets its own folder `accounts/<name>/`
+   with its own `session_id.txt`, created when you start the bot.
+3. **Link each number on the pairing site**, one at a time, and paste each session ID in that account's own file (`accounts/shop/session_id.txt`), or set the variable `SESSION_ID_SHOP` (the name in capital letters).
+4. Start the bot as usual (`npm start`). The log lines start with the account name, for example `[shop] ...`. If one account has a problem, the others keep running.
+5. Updates: the first account in the list updates the shared program files, then **all accounts restart together**.
+6. Every account uses its own memory. Start with one or two accounts on a small server or phone and add more only if it stays fast.
+
+To remove an account, take it out of the list; its folder `accounts/<name>/` is kept until you delete it yourself.
 
 ## Using the bot
 

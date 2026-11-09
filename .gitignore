@@ -5,3 +5,5 @@ data/
 config.env
 # local-only files (notes, helper scripts): never published
 *.private.*
+accounts/
+accounts.json

@@ -7,6 +7,9 @@ const fs = require('fs');
 const path = require('path');
 const { DATA } = require('./core/paths');
 
+// a prefix is 1 to 3 characters, no spaces, no slash (Termux's own PREFIX is /data/data/com.termux/files/usr)
+const validPrefix = (v) => (/^[^\s/\\]{1,3}$/u.test(String(v || '')) ? String(v) : '');
+
 const digits = (v) => String(v || '').replace(/\D/g, '');
 
 // the number the owner typed when the bot was first started (see core/setup.js)
@@ -25,7 +28,8 @@ const legacyOwner = digits(process.env.OWNER_NUMBER);
 
 module.exports = {
   // Symbol that starts every command, e.g. .ping
-  prefix: process.env.PREFIX || '.',
+  // BOT_PREFIX or PREFIX. Termux sets its own PREFIX (a folder path): a value that is not a short symbol is ignored
+  prefix: validPrefix(process.env.BOT_PREFIX) || validPrefix(process.env.PREFIX) || '.',
 
   // The bot's number = the owner's number (taken from the linked login; NUMBER can set it by hand)
   number,
@@ -45,10 +49,10 @@ module.exports = {
   // session_id.txt (the bot creates it and tells you when it needs it). The SESSION_ID variable of the host works too.
   pairSiteUrl: process.env.PAIR_SITE_URL || 'https://turbofex-pair.onrender.com',
   sessionId: process.env.SESSION_ID || '',
-  sessionIdFile: path.join(__dirname, 'session_id.txt'),
+  sessionIdFile: process.env.SESSION_ID_FILE || path.join(__dirname, 'session_id.txt'), // one file per account when several accounts run (SESSION_ID_FILE)
 
   // Folder where the WhatsApp login is saved (do not delete it)
-  sessionDir: 'session',
+  sessionDir: process.env.SESSION_DIR || 'session', // one folder per account when several accounts run (SESSION_DIR)
 
   // Optional. How the bot shows up in WhatsApp > Linked devices when you link it. Leave it empty to keep the default.
   // 'android' lets the bot receive view-once pictures and videos (you must link the bot again after changing it).

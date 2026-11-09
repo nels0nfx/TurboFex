@@ -15,7 +15,7 @@ const vm = require('vm');
 const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
-const KEEP = new Set(['config.js', 'session_id.txt', 'config.env', 'session', 'data', 'node_modules', '.env', '.git', '.github']);
+const KEEP = new Set(['config.js', 'session_id.txt', 'config.env', 'session', 'data', 'node_modules', '.env', '.git', '.github', 'accounts', 'accounts.json']);
 const UA = 'TurboFex-Updater';
 const REPO_ZIP = 'turbofex-latest.zip';
 const VERSIONISH = /^v?\d+\.\d+/;
@@ -377,6 +377,7 @@ async function applyUpdate(info) {
 
 // Runs when the bot starts. Returns true if a restart is needed.
 async function autoUpdateOnStart() {
+  if (process.env.TURBOFEX_NO_UPDATE === '1') return false; // extra accounts: the first account updates the shared files, then all restart
   if (!store.getAutoUpdate()) {
     console.log('Auto-update is OFF.');
     return false;

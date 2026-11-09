@@ -157,7 +157,8 @@ test('public README: the numbers match the code and the session ID wording match
   const site = fs.readFileSync(path.join(ROOT, 'core/sessionid.js'), 'utf8') + fs.readFileSync(path.join(ROOT, 'core/setup.js'), 'utf8');
   assert.match(site, /expires after 5 minutes/);
   assert.match(readme, /5 minutes/);
-  for (const bad of ['npm install', 'config.env', 'CONSOLE_LINK', 'GitHub Actions', 'core/boot.js']) assert.ok(!readme.includes(bad), `the public README does not mention ${bad}`);
+  for (const bad of ['config.env', 'CONSOLE_LINK', 'GitHub Actions', 'core/boot.js']) assert.ok(!readme.includes(bad), `the public README does not mention ${bad}`);
+  assert.ok(readme.includes('## Hosting guides'), 'v1.3.3: the hosting guides (Termux, VPS, Docker...) need npm install, so it is allowed there');
 });
 
 test('public README: no claims the code cannot prove', () => {

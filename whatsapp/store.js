@@ -176,7 +176,7 @@ function effectivePrefix() {
   if (bot().noPrefix === true) return ''; // no prefix mode
   const saved = bot().prefix;
   if (saved) return saved;
-  const fromConfig = process.env.PREFIX || config.prefix;
+  const fromConfig = config.prefix;
   if (fromConfig && fromConfig !== '!') return fromConfig;
   return DEFAULT_PREFIX;
 }

@@ -1,0 +1,22 @@
+# Put your settings in a file called .env next to this file (Docker Compose reads it by itself), for example:
+#   SESSION_ID=TFX-K7M2-9QXA-4BNP
+#   TIMEZONE=Africa/Lagos
+#   BOT_PREFIX=.
+#   ACCOUNTS=main,shop            (only when you want several accounts; see "Several accounts" in README.md)
+#   SESSION_ID_SHOP=TFX-....      (the session ID of the account called shop)
+services:
+  turbofex:
+    build: .
+    container_name: turbofex
+    restart: unless-stopped
+    environment:
+      SESSION_ID: "${SESSION_ID:-}"
+      TIMEZONE: "${TIMEZONE:-Africa/Johannesburg}"
+      BOT_PREFIX: "${BOT_PREFIX:-.}"
+      ACCOUNTS: "${ACCOUNTS:-}"
+      SESSION_ID_SHOP: "${SESSION_ID_SHOP:-}"
+      SESSION_ID_TWO: "${SESSION_ID_TWO:-}"
+    volumes:        # the login and the settings stay on your server when the container is rebuilt
+      - ./data:/app/data
+      - ./session:/app/session
+      - ./accounts:/app/accounts

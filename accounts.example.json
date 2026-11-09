@@ -1,0 +1,6 @@
+{
+  "accounts": [
+    { "name": "main" },
+    { "name": "shop", "prefix": "!", "timezone": "Africa/Lagos" }
+  ]
+}
