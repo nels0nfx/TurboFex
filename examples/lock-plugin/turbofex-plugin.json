@@ -1,0 +1,14 @@
+{
+  "manifestVersion": 1,
+  "id": "lock-plugin",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "name": "Lock Example",
+  "description": "A tiny example: admins can close and open the group with two commands.",
+  "author": { "name": "TurboFex" },
+  "permissions": ["chat.send", "group.manage"],
+  "commands": [
+    { "name": "lockgroup", "who": "admin", "groupOnly": true, "description": "Only admins can write" },
+    { "name": "unlockgroup", "who": "admin", "groupOnly": true, "description": "Everybody can write again" }
+  ]
+}

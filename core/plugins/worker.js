@@ -38,7 +38,12 @@ const PRELUDE = `(function () {
       get: function (k) { return ask('storage.get', { key: String(k) }); },
       set: function (k, v) { return ask('storage.set', { key: String(k), value: String(v) }); }
     }),
-    group: Object.freeze({ info: function () { return ask('group.info', {}); } }),
+    group: Object.freeze({
+      info: function () { return ask('group.info', {}); },
+      kick: function (m) { return ask('group.kick', { member: String(m) }); },
+      open: function () { return ask('group.open', {}); },
+      close: function () { return ask('group.close', {}); }
+    }),
     owner: Object.freeze({ notify: function (t) { return ask('owner.notify', { text: String(t) }); } })
   };
   Object.freeze(tfx);
@@ -47,7 +52,7 @@ const PRELUDE = `(function () {
     var h = handlers[kind] && handlers[kind][name];
     if (typeof h !== 'function') { hd('fail', 'no such handler'); return; }
     var raw = JSON.parse(ctxJson);
-    var ctx = { args: raw.args, rest: raw.rest, prefix: raw.prefix, chat: raw.chat, sender: raw.sender, event: raw.event, text: raw.text, members: raw.members,
+    var ctx = { args: raw.args, rest: raw.rest, prefix: raw.prefix, chat: raw.chat, sender: raw.sender, event: raw.event, text: raw.text, members: raw.members, mentions: raw.mentions,
                 reply: function (t) { return send('chat.send', { text: String(t) }); } };
     Promise.resolve().then(function () { return h(ctx); }).then(
       function () { hd('ok', ''); },

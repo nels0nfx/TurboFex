@@ -49,7 +49,7 @@ test('manifest: bad ones are refused with a clear reason', () => {
   bad({ version: '1' }, /version/);
   bad({ apiVersion: 2 }, /apiVersion/);
   bad({ permissions: ['fs.read'] }, /unknown permission/);
-  bad({ permissions: ['group.manage'] }, /unknown permission/);
+  bad({ permissions: ['group.kick'] }, /unknown permission/);
   bad({ permissions: ['network'] }, /network needs/);
   bad({ permissions: ['chat.send'], network: { domains: ['example.com'] } }, /network.domains needs/);
   bad({ commands: [{ name: 'ping', who: 'everyone', description: 'x' }] }, /already used/);
@@ -59,7 +59,7 @@ test('manifest: bad ones are refused with a clear reason', () => {
   bad({ pricing: { model: 'paid' } }, /only free/);
   bad({ events: ['message'] }, /needs the permission events.message/);
   bad({ events: ['everything'], permissions: ['chat.send'] }, /unknown event/);
-  bad({ permissions: ['group.manage'] }, /unknown permission/);
+  bad({ permissions: ['group.kick'] }, /unknown permission/);
   bad({ commands: [] }, /at least one/);
   bad({ schedules: [{ id: 'tick', everyMinutes: 5 }] }, /schedule permission/);
 });
@@ -292,4 +292,52 @@ test('v1.3.7 app.json is valid and lists what a host needs to deploy the bot', (
   assert.strictEqual(a.env.SESSION_ID.required, true);
   for (const k of Object.keys(a.env)) assert.ok(a.env[k].description, k);
   assert.ok(!JSON.stringify(a).includes('turbofexbot@')); // no private details in a public file
+});
+
+test('v1.3.8 group management: the bot makes every safety check, a plugin cannot choose whom to remove', async () => {
+  await run('plugin on', {});
+  const G = '1203631111111@g.us'; const BOT = '2799999999@s.whatsapp.net';
+  const people = [{ id: BOT, admin: 'admin' }, { id: '27800000001@s.whatsapp.net' }, { id: '27844444444@s.whatsapp.net', admin: 'admin' }, { id: '27833333333@s.whatsapp.net' }, { id: '27855555555@s.whatsapp.net' }];
+  const calls = [];
+  const mk = (botAdmin = true) => ({ user: { id: '2799999999:7@s.whatsapp.net' }, sendMessage: async () => {}, groupMetadata: async () => ({ id: G, subject: 'Team', participants: people.map((p) => (p.id === BOT && !botAdmin ? { id: BOT } : p)) }),
+    groupParticipantsUpdate: async (jid, list, action) => { calls.push(['kick', jid, list, action]); return [{ status: '200' }]; }, groupSettingUpdate: async (jid, s) => { calls.push(['setting', jid, s]); } });
+  makePlugin('modplug', { permissions: ['chat.send', 'events.message', 'group.manage'], events: ['message'],
+    commands: [{ name: 'banmentioned', who: 'everyone', description: 'x' }, { name: 'lockit', who: 'admin', description: 'x' }, { name: 'evil', who: 'owner', description: 'x' }] },
+    `tfx.on('message', async (c) => { if (c.text === 'spam') { try { await tfx.group.kick(c.sender.id); } catch (e) { tfx.log('refused:' + e); } } });
+     tfx.command('banmentioned', async (c) => { for (const m of c.mentions) { try { await tfx.group.kick(m); } catch (e) { tfx.log('refused:' + e); } } });
+     tfx.command('lockit', async () => { await tfx.group.close(); });
+     tfx.command('evil', async () => { try { await tfx.group.kick('0123456789abcdef'); } catch (e) { tfx.log('refused:' + e); } });`);
+  const screen = await run('plugin install modplug', {}); assert.match(screen, /🔴 Remove members/);
+  await run('plugin confirm ' + screen.match(/confirm (\w{4})/)[1], {});
+  const logs = () => plugins.logOf('modplug').join('\n');
+  const speak = async (sock, from, text) => { plugins.emit('message', { sock, jid: G, text, senderJid: from, pushName: 'x' }); await new Promise((r) => setTimeout(r, 500)); };
+  // a spammer who is a normal member is removed
+  await speak(mk(), '27833333333@s.whatsapp.net', 'spam');
+  assert.deepStrictEqual(calls.pop(), ['kick', G, ['27833333333@s.whatsapp.net'], 'remove']);
+  // an admin, the owner and the bot itself are never removed, whatever the plugin does
+  for (const who of ['27844444444@s.whatsapp.net', '27800000001@s.whatsapp.net', BOT]) await speak(mk(), who, 'spam');
+  assert.strictEqual(calls.length, 0); assert.match(logs(), /refused/);
+  // when the bot is not an admin nothing happens
+  require('../whatsapp/metadata').invalidate(G); await speak(mk(false), '27855555555@s.whatsapp.net', 'spam'); assert.strictEqual(calls.length, 0);
+  require('../whatsapp/metadata').invalidate(G);
+  // a command: tag-based removal works for an admin, not for a normal member
+  const msgWith = (jid) => ({ key: { participant: '27844444444@s.whatsapp.net' }, pushName: 'Adm', message: { extendedTextMessage: { contextInfo: { mentionedJid: [jid] } } } });
+  const adm = ctxFor({ sock: mk(), jid: G, isAdmin: true, msg: msgWith('27855555555@s.whatsapp.net'), groupMetadata: { subject: 'Team', participants: people } });
+  await commands.get('banmentioned').run(adm.c); assert.deepStrictEqual(calls.pop(), ['kick', G, ['27855555555@s.whatsapp.net'], 'remove']);
+  const member = ctxFor({ sock: mk(), jid: G, isAdmin: false, msg: msgWith('27855555555@s.whatsapp.net') });
+  await commands.get('banmentioned').run(member.c); assert.strictEqual(calls.length, 0);
+  // a command that makes up an id is refused; opening and closing work for the admin
+  const own = ctxFor({ sock: mk(), jid: G, isOwner: true, isAdmin: true }); await commands.get('evil').run(own.c); assert.strictEqual(calls.length, 0);
+  const lock = ctxFor({ sock: mk(), jid: G, isAdmin: true }); await commands.get('lockit').run(lock.c); assert.deepStrictEqual(calls.pop(), ['setting', G, 'announcement']);
+  plugins.turnOff();
+});
+
+test('v1.3.8 group management is rate limited and needs the permission', async () => {
+  const env = { isPublicHost: async () => true, log() {}, fetch: async () => ({}), notifyOwner: async () => {} };
+  const mkb = (perm) => new Broker({ manifest: { permissions: perm }, grants: perm, env });
+  const b = mkb(['group.manage']); const done = []; const st = b.newCall({ chat: { id: 'x' } }, { manage: async (a, m) => { done.push([a, m]); } });
+  const r = []; for (let i = 0; i < 4; i++) { try { await b.handle('group.kick', JSON.stringify({ member: 'm' + i }), st); r.push('ok'); } catch (e) { r.push(e.code); } }
+  assert.deepStrictEqual(r, ['ok', 'ok', 'ok', 'rate_limited']);
+  const n = mkb(['chat.send']); try { await n.handle('group.close', '{}', n.newCall({ chat: { id: 'x' } }, { manage: async () => {} })); assert.fail('allowed'); } catch (e) { assert.strictEqual(e.code, 'not_declared'); }
+  const noGroup = mkb(['group.manage']); try { await noGroup.handle('group.close', '{}', noGroup.newCall({ chat: { id: 'x' } }, {})); assert.fail('allowed'); } catch (e) { assert.strictEqual(e.code, 'not_allowed'); }
 });

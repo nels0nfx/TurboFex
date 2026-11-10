@@ -24,7 +24,7 @@ const parseArgs = (json, allowed, maxChars = MAX_ARGS_CHARS) => {
 const DEFAULT_POLICY = {
   maxTextChars: 4000, sendsPerCall: 5, sendsPerMinute: 20, logsPerCall: 100, fetchesPerCall: 3, notifiesPerHour: 3, notifyChars: 500,
   fetchMs: 5000, fetchMaxChars: 256 * 1024, storageKeys: 200, storageBytes: 1024 * 1024, storageValueChars: 64 * 1024, strikeLimit: 5,
-  mediaPerCall: 3, mediaPerMinute: 6, mediaBytes: 1024 * 1024, fetchBytesMax: 1024 * 1024, captionChars: 1000,
+  kicksPerCall: 3, kicksPerHour: 20, settingsPerHour: 6, mediaPerCall: 3, mediaPerMinute: 6, mediaBytes: 1024 * 1024, fetchBytesMax: 1024 * 1024, captionChars: 1000,
 };
 
 // What a file really is, judged by its first bytes (never by its name or by what the plugin says it is)
@@ -45,7 +45,7 @@ class Broker {
     this.sendTimes = []; this.notifyTimes = []; this.strikes = 0; this.violations = [];
     this.storage = env.storage || new Map();
   }
-  newCall(ctx, extra) { return { ctx: ctx || {}, send: extra && extra.send, sendMedia: extra && extra.sendMedia, groupInfo: extra && extra.groupInfo, media: 0, sends: 0, logs: 0, fetches: 0, pending: [] }; }
+  newCall(ctx, extra) { return { ctx: ctx || {}, send: extra && extra.send, sendMedia: extra && extra.sendMedia, manage: extra && extra.manage, kicks: 0, groupInfo: extra && extra.groupInfo, media: 0, sends: 0, logs: 0, fetches: 0, pending: [] }; }
   deny(code, msg) { this.strikes++; this.violations.push(code); if (this.violations.length > 100) this.violations.shift(); throw new BrokerError(code, msg); }
   need(perm) {
     if (!(this.manifest.permissions || []).includes(perm)) this.deny('not_declared', perm + ' is not in the manifest');
@@ -61,6 +61,8 @@ class Broker {
         case 'net.fetch': this.need('network'); return await this.fetch(parseArgs(argsJson, ['url']), st);
         case 'net.fetchBytes': this.need('network'); return await this.fetchBytes(parseArgs(argsJson, ['url']), st);
         case 'media.send': this.need('media.send'); return await this.media(parseArgs(argsJson, ['kind', 'data', 'mimetype', 'fileName', 'caption'], MAX_MEDIA_ARGS_CHARS), st);
+        case 'group.kick': this.need('group.manage'); return await this.manageKick(parseArgs(argsJson, ['member']), st);
+        case 'group.open': case 'group.close': this.need('group.manage'); parseArgs(argsJson, []); return await this.manageSetting(name.slice(6), st);
         case 'group.info': this.need('group.read'); parseArgs(argsJson, []); return this.groupInfo(st);
         case 'owner.notify': this.need('owner.notify'); return await this.notify(parseArgs(argsJson, ['text']));
         default: this.deny('unknown_api', 'no such call');
@@ -140,6 +142,24 @@ class Broker {
     if (!(await this.env.isPublicHost(u.hostname))) throw new BrokerError('net_denied', 'address is not public');
     const r = await Promise.race([this.env.fetch(u.href), new Promise((_, rej) => setTimeout(() => rej(new BrokerError('net_timeout', 'request took too long')), this.p.fetchMs).unref())]);
     return JSON.stringify({ status: r.status, text: String(r.text).slice(0, this.p.fetchMaxChars) });
+  }
+  // Removing people and opening or closing the group: the bot (index.js) makes the final checks (bot is admin, the person is not the
+  // owner or an admin, the person is part of this very event); here come the rate limits.
+  hourly(key, max) {
+    const t = this.now(); const a = (this[key] || []).filter((x) => t - x < 3600000);
+    if (a.length >= max) throw new BrokerError('rate_limited', 'too many group changes this hour');
+    a.push(t); this[key] = a;
+  }
+  async manageKick(a, st) {
+    if (!st.manage) throw new BrokerError('not_allowed', 'not possible here');
+    if (++st.kicks > this.p.kicksPerCall) throw new BrokerError('rate_limited', 'too many removals in one call');
+    this.hourly('kickTimes', this.p.kicksPerHour);
+    await st.manage('kick', a.member); return 'null';
+  }
+  async manageSetting(action, st) {
+    if (!st.manage) throw new BrokerError('not_allowed', 'not possible here');
+    this.hourly('settingTimes', this.p.settingsPerHour);
+    await st.manage(action); return 'null';
   }
   groupInfo(st) {
     if (!st.groupInfo) throw new BrokerError('not_allowed', 'only inside a command in a group');

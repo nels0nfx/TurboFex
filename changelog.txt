@@ -1,3 +1,16 @@
+TurboFex v1.3.8 - plugins can manage groups (carefully)
+CHANGED IN 1.3.8
+- NEW: GROUP MANAGEMENT FOR PLUGINS. With the permission `group.manage` a plugin can remove a member and open or close the group. The install screen shows it with a red mark (🔴) in plain words. Every safety check is made by the bot, never by the plugin:
+  - it only works in a group where the bot is an admin;
+  - the plugin cannot choose anybody: it can only act on the person who sent the message, the people tagged in the command, or the members of that join or leave event;
+  - the group owner (you), sudo users, group admins and the bot itself are never removed;
+  - a command made for everybody only works when an admin or the owner used it;
+  - at most 3 removals per call, 20 per hour; 6 open or close changes per hour;
+  - every removal and change is written in the plugin log (`plugin log <name>`).
+- NEW: commands of a plugin see the people tagged in the command (as hidden codes, never phone numbers).
+- NEW: example plugin `examples/lock-plugin` (`lockgroup`, `unlockgroup`, admins only).
+- Plugins stay off until `plugin on`; a plugin that asks for more is installed again with a new confirmation.
+
 TurboFex v1.3.7 - plugins can react to events and send pictures and files; app.json for template hosts
 CHANGED IN 1.3.7
 - NEW: PLUGIN EVENTS. A plugin can listen to group messages that are not commands (`message`), and to members joining (`member.join`) or leaving (`member.leave`). It needs the permission `events.message` or `events.members` and lists the events in its manifest. Only groups are delivered, never private chats, never commands, never the bot's own messages. A group the owner switched off for the plugin is skipped. A plugin gets at most 10 events per 10 seconds and at most 3 waiting; extra events are dropped for that plugin only, so the bot is never slowed down. Plugins get opaque ids, never phone numbers.

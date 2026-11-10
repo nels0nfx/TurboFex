@@ -130,11 +130,16 @@ function onDisabled(id, why) {
 function plainCtx(id, c, extra) {
   const meta = c.groupMetadata; const o = (v) => state.opaque(id, v);
   const parts = meta && meta.participants ? meta.participants : [];
+  const people = new Map(); const senderJid = c.msg && c.msg.key && (c.msg.key.participant || c.msg.key.remoteJid) || c.jid;
+  const seen = (jid) => { const k = o(jid); people.set(k, jid); return k; };
+  let mentions = [];
+  if (c.isGroup) { try { mentions = require('../../whatsapp/utils').getTargets(c.msg || {}).slice(0, 10).map(seen); } catch (e) { mentions = []; } }
+  const senderId = seen(senderJid);
   return {
     ctx: { args: (c.args || []).slice(0, 50).map((a) => String(a).slice(0, 500)), rest: String(c.rest || '').slice(0, 4000), prefix: c.prefix || prefixOf(),
       chat: { id: o(c.jid), isGroup: !!c.isGroup, name: String(meta && meta.subject || '').slice(0, 100) },
-      sender: { id: o(c.msg && c.msg.key && (c.msg.key.participant || c.msg.key.remoteJid) || c.jid), name: String(c.msg && c.msg.pushName || '').slice(0, 40), isAdmin: !!c.isAdmin, isOwner: !!c.isOwner } },
-    extra: { send: (t) => c.reply(t), sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
+      mentions, sender: { id: senderId, name: String(c.msg && c.msg.pushName || '').slice(0, 40), isAdmin: !!c.isAdmin, isOwner: !!c.isOwner } },
+    extra: { send: (t) => c.reply(t), sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), manage: c.isGroup ? makeManage(id, { s: c.sock || sock, jid: c.jid, people, actorOk: !!(c.isAdmin || c.isOwner) }) : null, groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
   };
 }
 async function invoke(id, kind, name, c) {
@@ -150,6 +155,32 @@ async function invoke(id, kind, name, c) {
     return c.reply(`⚠️ *This command did not work.*\n▸ _Please try again in a moment._${own}`);
   }
 }
+// Removing people and opening or closing a group. Every check is made here, in the bot, never by the plugin:
+// the bot must be an admin, the person must be part of this very command or event, and never the owner, a sudo user, an admin or the bot.
+function makeManage(id, { s, jid, people, actorOk }) {
+  const { BrokerError } = require('./broker');
+  const meta = require('../../whatsapp/metadata');
+  const { num, participantIds } = require('../../whatsapp/utils');
+  return async (action, opaque) => {
+    if (!actorOk) throw new BrokerError('not_allowed', 'only admins can use this');
+    const md = await meta.getMeta(s, jid); const idx = meta.indexOf(md);
+    const botIds = [s.user && s.user.id, s.user && s.user.lid].filter(Boolean).map(num);
+    if (!botIds.some((b) => idx.admins.has(b))) throw new BrokerError('not_allowed', 'the bot is not an admin here');
+    if (action === 'kick') {
+      const target = people.get(opaque);
+      if (!target) throw new BrokerError('not_allowed', 'that person is not part of this event');
+      const p = idx.byId.get(num(target));
+      if (!p) throw new BrokerError('not_allowed', 'that person is not in the group');
+      const ids = [...participantIds(p), num(target)]; const config = require('../../config');
+      const protectedIds = [config.ownerNumber, ...botIds, ...require('../../whatsapp/store').getSudo()].filter(Boolean);
+      if (p.admin === 'admin' || p.admin === 'superadmin' || ids.some((x) => protectedIds.includes(x))) throw new BrokerError('not_allowed', 'that person is protected');
+      await s.groupParticipantsUpdate(jid, [p.id || target], 'remove'); log(id, 'removed ' + num(target) + ' from ' + jid);
+    } else {
+      await s.groupSettingUpdate(jid, action === 'close' ? 'announcement' : 'not_announcement'); log(id, action + 'd the group ' + jid);
+    }
+    meta.invalidate(jid);
+  };
+}
 const mediaMessage = (m) => (m.kind === 'sticker' ? { sticker: m.buffer } : m.kind === 'image' ? { image: m.buffer, caption: m.caption || undefined } : { document: m.buffer, mimetype: m.mimetype, fileName: m.fileName, caption: m.caption || undefined });
 
 // Events (stage 1b): a plugin can listen to group messages that are not commands, and to members joining or leaving.
@@ -163,12 +194,13 @@ function emit(event, info) {
     const t = Date.now(); const recent = (evTimes.get(id) || []).filter((x) => t - x < 10000);
     if (recent.length >= 10 || (evPending.get(id) || 0) >= 3) continue;
     recent.push(t); evTimes.set(id, recent); evPending.set(id, (evPending.get(id) || 0) + 1);
-    const o = (v) => state.opaque(id, v); const s = info.sock || sock;
+    const o = (v) => state.opaque(id, v); const s = info.sock || sock; const people = new Map();
+    const seen = (jid) => { const k = o(jid); people.set(k, jid); return k; };
     const ctx = { args: [], rest: '', prefix: prefixOf(), event, text: String(info.text || '').slice(0, 4000),
-      members: (info.members || []).slice(0, 50).map((m) => o(typeof m === 'string' ? m : (m && m.id) || '')),
+      members: (info.members || []).slice(0, 50).map((m) => seen(typeof m === 'string' ? m : (m && m.id) || '')),
       chat: { id: o(info.jid), isGroup: true, name: '' },
-      sender: info.senderJid ? { id: o(info.senderJid), name: String(info.pushName || '').slice(0, 40), isAdmin: false, isOwner: false } : null };
-    const extra = { send: (x) => s.sendMessage(info.jid, { text: x }), sendMedia: (m) => s.sendMessage(info.jid, mediaMessage(m)), groupInfo: null };
+      sender: info.senderJid ? { id: seen(info.senderJid), name: String(info.pushName || '').slice(0, 40), isAdmin: false, isOwner: false } : null };
+    const extra = { send: (x) => s.sendMessage(info.jid, { text: x }), sendMedia: (m) => s.sendMessage(info.jid, mediaMessage(m)), manage: makeManage(id, { s, jid: info.jid, people, actorOk: true }), groupInfo: null };
     Promise.resolve().then(() => getHost(id).call('event', event, ctx, extra)).catch((e) => log(id, 'event ' + event + ' failed: ' + (e.code || e.message))).finally(() => evPending.set(id, Math.max(0, (evPending.get(id) || 1) - 1)));
   }
 }
@@ -196,7 +228,8 @@ function available() { // plugin folders found in data/plugins
   return out;
 }
 const RISK = { 'chat.send': ['🟢', 'Send messages in the chat where it is used'], storage: ['🟢', 'Keep its own small saved notes'], 'group.read': ['🟢', 'See the group name and how many members and admins it has'], schedule: ['🟡', 'Run by itself on a timer'], 'owner.notify': ['🟡', 'Send you a short message now and then'], network: ['🟡', 'Connect to the internet'],
-  'events.message': ['🟡', 'Read the text of messages sent in the groups where it is allowed'], 'events.members': ['🟡', 'Know when members join or leave a group (no phone numbers)'], 'media.send': ['🟢', 'Send pictures, stickers and files in the chat where it is used'] };
+  'events.message': ['🟡', 'Read the text of messages sent in the groups where it is allowed'], 'events.members': ['🟡', 'Know when members join or leave a group (no phone numbers)'], 'media.send': ['🟢', 'Send pictures, stickers and files in the chat where it is used'],
+  'group.manage': ['🔴', 'Remove members, and open or close the group (only where I am an admin; never the owner or an admin)'] };
 function permissionLines(m) {
   const out = m.permissions.map((p) => `▸ ${RISK[p][0]} ${RISK[p][1]}` + (p === 'network' ? ': ' + m.network.domains.join(', ') : ''));
   return out.length ? out : ['▸ 🟢 Nothing special: it only answers its commands'];
