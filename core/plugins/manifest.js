@@ -1,0 +1,114 @@
+'use strict';
+// Reads and checks a plugin's turbofex-plugin.json (manifest version 1, Plugin API 1, stage 1a). A plugin is a folder:
+//   turbofex-plugin.json   what the plugin is, which commands it adds, what it asks permission for
+//   <entry file>           the plugin's JavaScript (one file, up to 1 MB)
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+
+const API_VERSION = 1;
+const MAX_ENTRY_BYTES = 1024 * 1024;
+const PERMISSIONS = ['chat.send', 'storage', 'network', 'group.read', 'schedule', 'owner.notify'];
+const WHO = ['everyone', 'admin', 'owner'];
+const reId = /^[a-z0-9-]{3,32}$/;
+const reCmd = /^[a-z0-9]{2,20}$/;
+const reSemver = /^\d+\.\d+\.\d+$/;
+const reHost = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+
+const semverParts = (v) => String(v).split('.').map((n) => parseInt(n, 10) || 0);
+const semverGte = (a, b) => { const x = semverParts(a); const y = semverParts(b); for (let i = 0; i < 3; i++) { if (x[i] !== y[i]) return x[i] > y[i]; } return true; };
+
+// taken: Set of command names/aliases already used (built-in commands or other plugins)
+function validate(folder, { botVersion, taken } = {}) {
+  const errors = [];
+  const bad = (m) => errors.push(m);
+  let raw;
+  try { raw = fs.readFileSync(path.join(folder, 'turbofex-plugin.json'), 'utf8'); } catch (e) { return { ok: false, errors: ['turbofex-plugin.json is missing'] }; }
+  if (raw.length > 64 * 1024) return { ok: false, errors: ['turbofex-plugin.json is too big'] };
+  let m;
+  try { m = JSON.parse(raw); } catch (e) { return { ok: false, errors: ['turbofex-plugin.json is not valid JSON'] }; }
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return { ok: false, errors: ['turbofex-plugin.json must be an object'] };
+
+  if (m.manifestVersion !== 1) bad('manifestVersion must be 1');
+  if (typeof m.id !== 'string' || !reId.test(m.id)) bad('id must be 3-32 characters: lowercase letters, numbers and dashes');
+  if (typeof m.version !== 'string' || !reSemver.test(m.version)) bad('version must look like 1.0.0');
+  if (m.apiVersion !== API_VERSION) bad('apiVersion must be ' + API_VERSION);
+  if (m.minBotVersion !== undefined && (typeof m.minBotVersion !== 'string' || !reSemver.test(m.minBotVersion))) bad('minBotVersion must look like 1.3.5');
+  else if (m.minBotVersion && botVersion && !semverGte(botVersion, m.minBotVersion)) bad('needs TurboFex ' + m.minBotVersion + ' or newer');
+  if (typeof m.name !== 'string' || !m.name.trim() || m.name.length > 40) bad('name is required (up to 40 characters)');
+  if (typeof m.description !== 'string' || !m.description.trim() || m.description.length > 200) bad('description is required (up to 200 characters)');
+  if (!m.author || typeof m.author.name !== 'string' || !m.author.name.trim() || m.author.name.length > 60) bad('author.name is required');
+  if (m.pricing !== undefined && !(m.pricing && m.pricing.model === 'free')) bad('only free plugins are supported');
+  if (m.events !== undefined && !(Array.isArray(m.events) && m.events.length === 0)) bad('events are not supported yet');
+
+  const perms = Array.isArray(m.permissions) ? m.permissions : (m.permissions === undefined ? [] : null);
+  if (perms === null) bad('permissions must be a list');
+  else {
+    for (const p of perms) if (!PERMISSIONS.includes(p)) bad('unknown permission: ' + String(p).slice(0, 30));
+    if (new Set(perms).size !== perms.length) bad('permissions are listed twice');
+  }
+  const domains = m.network && Array.isArray(m.network.domains) ? m.network.domains : [];
+  if (perms && perms.includes('network')) {
+    if (!domains.length || domains.length > 10) bad('network needs 1-10 domains in network.domains');
+    for (const d of domains) if (typeof d !== 'string' || !reHost.test(d)) bad('bad domain: ' + String(d).slice(0, 40));
+  } else if (domains.length) bad('network.domains needs the network permission');
+
+  const names = new Set();
+  const cmds = Array.isArray(m.commands) ? m.commands : [];
+  if (!Array.isArray(m.commands)) bad('commands must be a list');
+  if (cmds.length > 20) bad('too many commands (up to 20)');
+  for (const c of cmds.slice(0, 20)) {
+    if (!c || typeof c !== 'object') { bad('a command entry is not valid'); continue; }
+    const all = [c.name, ...(Array.isArray(c.aliases) ? c.aliases : [])];
+    if (c.aliases !== undefined && (!Array.isArray(c.aliases) || c.aliases.length > 5)) bad('aliases must be a list of up to 5');
+    for (const n of all) {
+      if (typeof n !== 'string' || !reCmd.test(n)) { bad('bad command name: ' + String(n).slice(0, 20)); continue; }
+      if (names.has(n)) bad('command name used twice: ' + n);
+      if (taken && taken.has(n)) bad('the command name "' + n + '" is already used by TurboFex or another plugin');
+      names.add(n);
+    }
+    if (!WHO.includes(c.who)) bad('command ' + c.name + ': who must be everyone, admin or owner');
+    if (typeof c.description !== 'string' || !c.description.trim() || c.description.length > 120) bad('command ' + c.name + ': description is required (up to 120 characters)');
+    if (c.usage !== undefined && (typeof c.usage !== 'string' || c.usage.length > 120)) bad('command ' + c.name + ': usage is too long');
+  }
+  const sched = Array.isArray(m.schedules) ? m.schedules : [];
+  if (m.schedules !== undefined && !Array.isArray(m.schedules)) bad('schedules must be a list');
+  if (sched.length) {
+    if (!perms || !perms.includes('schedule')) bad('schedules need the schedule permission');
+    if (sched.length > 5) bad('too many schedules (up to 5)');
+    const ids = new Set();
+    for (const s of sched.slice(0, 5)) {
+      if (!s || typeof s.id !== 'string' || !reCmd.test(s.id) || ids.has(s.id)) { bad('bad or repeated schedule id'); continue; }
+      ids.add(s.id);
+      if (!Number.isInteger(s.everyMinutes) || s.everyMinutes < 1 || s.everyMinutes > 10080) bad('schedule ' + s.id + ': everyMinutes must be 1-10080');
+    }
+  }
+  if (!cmds.length && !sched.length) bad('the plugin needs at least one command or schedule');
+
+  // the entry file stays inside the plugin folder
+  let entrySha = null; let source = null;
+  const entry = typeof m.entry === 'string' ? m.entry : 'index.js';
+  const full = path.resolve(folder, entry);
+  if (!/^[\w.\-/]{1,80}$/.test(entry) || entry.includes('..') || !full.startsWith(path.resolve(folder) + path.sep)) bad('entry must be a file inside the plugin folder');
+  else {
+    try {
+      const real = fs.realpathSync(full);
+      if (!real.startsWith(fs.realpathSync(folder) + path.sep)) bad('entry must be a file inside the plugin folder');
+      else {
+        const st = fs.statSync(real);
+        if (!st.isFile()) bad('entry is not a file');
+        else if (st.size > MAX_ENTRY_BYTES) bad('the plugin file is bigger than 1 MB');
+        else { source = fs.readFileSync(real, 'utf8'); entrySha = crypto.createHash('sha256').update(source).update(raw).digest('hex'); }
+      }
+    } catch (e) { bad('the entry file ' + entry + ' is missing'); }
+  }
+  if (errors.length) return { ok: false, errors: errors.slice(0, 8) };
+  const manifest = {
+    id: m.id, version: m.version, apiVersion: API_VERSION, name: m.name.trim(), description: m.description.trim(), author: { name: m.author.name.trim() },
+    permissions: perms || [], network: { domains }, entry,
+    commands: cmds.map((c) => ({ name: c.name, aliases: c.aliases || [], who: c.who, description: c.description.trim(), usage: c.usage || '', groupOnly: !!c.groupOnly })),
+    schedules: sched.map((s) => ({ id: s.id, everyMinutes: s.everyMinutes })),
+  };
+  return { ok: true, errors: [], manifest, source, entrySha };
+}
+module.exports = { validate, PERMISSIONS, API_VERSION, semverGte };

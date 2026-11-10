@@ -1,3 +1,14 @@
+TurboFex v1.3.5 - plugins (first stage): extra commands from other developers, running in a sealed sandbox
+CHANGED IN 1.3.5
+- NEW: PLUGINS. A plugin is a small folder (a `turbofex-plugin.json` and one JavaScript file) that adds commands. It runs in a sealed sandbox (QuickJS in WebAssembly, one worker thread per plugin): it cannot see files, passwords, the network, the bot's memory or other plugins. It can only ask the bot for a few things, and the bot checks each one against what the plugin declared and what the owner allowed.
+- OFF until the owner turns it on: `plugin on`. Nothing is loaded, created or changed while plugins are off. `plugin off` removes every plugin command at once. Owner only.
+- INSTALL: copy the plugin folder into `data/plugins/`, then `plugin list`, `plugin install <name>` (shows in plain words what it asks for and gives a 4-letter code), `plugin confirm <code>`. Also `plugin enable|disable|remove <name>`, `plugin info <name>`, `plugin log <name>`. If a plugin's files change after it was installed, it does not start until it is installed again.
+- PER GROUP: inside a group, `plugin groups <name> allow|deny|only|all`. A plugin that is not allowed in a group gets no answer there.
+- Permissions in this first stage: send messages in the chat where the command was used, its own saved notes, listed internet domains (https only, public addresses only), group name and member counts, a timer, a short note to the owner. Plugins never get real phone numbers or chat ids.
+- SAFETY: an endless loop, a memory bomb or a plugin that takes too long is stopped; a plugin that keeps failing or breaks the rules is switched off and the owner is told. A memory guard (default 96 MB per call) and the number of plugins awake at once (default 8) can be changed: `plugin set guard 96`, `plugin set max 8` (0 = no limit). Before plugins start, the bot runs a safety check on the server; if it fails, plugins stay off and the rest of the bot works as before.
+- Needs Node.js 22 or newer and the `quickjs-emscripten` package (installed as an optional package). On Node 20 or without the package, plugins stay off and TurboFex works as usual.
+- New menu category PLUGINS (shown only when plugins are installed). Not in this stage: events, pictures and files, group management by plugins, a store.
+
 TurboFex v1.3.4 - save a status by replying to it, sticker commands, copies to the chat where it happened
 CHANGED IN 1.3.4
 - NEW: SAVE A STATUS BY REPLYING TO IT. `statusreply on`: when the owner replies to somebody's status (from the phone), that status (picture, video, voice note or text) is saved and sent to the chat chosen with `statusjid` (default: your own chat). Nothing is sent or reacted in the chat where the reply was written. One status is saved once. It is OFF until switched on.

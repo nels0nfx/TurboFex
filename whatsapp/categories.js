@@ -23,6 +23,7 @@ const info = {
   owner: { title: 'OWNER', icon: '👑', symbol: '♛' },
   security: { title: 'SECURITY', icon: '🛡️', symbol: '✜' },
   lookup: { title: 'LOOKUP', icon: '🔎', symbol: '⌘' },
+  plugins: { title: 'PLUGINS', icon: '🧩', symbol: '⬡' },
   other: { title: 'OTHER', icon: '📦', symbol: '✱' },
 };
 

@@ -75,6 +75,11 @@ function loadCommands() {
   console.log(`Loaded ${commandList.length} commands.`);
 }
 loadCommands();
+try {
+  require('../core/plugins').attach(commands, commandList); // plugins add their commands later, only when the owner turned them on
+} catch (err) {
+  console.error('Plugins could not be prepared:', err.message);
+}
 const maintenanceTold = new Map(); // chat -> when it was last told about the maintenance
 const isKnownCommand = (word) => commands.has(String(word || '').toLowerCase());
 
@@ -255,6 +260,7 @@ async function handleMessageInner(sock, msg) {
     }
     return;
   }
+  if (cmd.deniedIn && cmd.deniedIn(jid)) return; // a plugin the owner switched off in this group: no answer at all
   const rest = body.slice((rawName || '').length).trim(); // everything after the command, keeps new lines
 
   let r;

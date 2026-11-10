@@ -1,0 +1,102 @@
+const plugins = require('../core/plugins');
+
+const NOT_ON = (p) => `ℹ️ *Plugins are off.*\n▸ *Turn them on:* \`${p}plugin on\``;
+const mono = (p, s) => `\`${p}plugin ${s}\``;
+
+module.exports = {
+  name: 'plugin',
+  category: 'owner',
+  description: 'Add extra commands made by other developers: on/off, list, install, remove (owner only)',
+  ownerOnly: true,
+  async run({ args, rest, reply, prefix: p, jid, isGroup }) {
+    const sub = (args[0] || '').toLowerCase();
+    const id = (args[1] || '').toLowerCase();
+    const o = plugins.overview();
+
+    if (sub === 'on') {
+      const s = await plugins.turnOn();
+      if (s.state === 'ready') return reply(`✅ *Plugins are on.*\n▸ *See what is available:* ${mono(p, 'list')}`);
+      return reply(`⚠️ *Plugins could not be turned on.*\n▸ ${s.reason || 'Please try again in a moment.'}\n_Everything else keeps working as usual._`);
+    }
+    if (sub === 'off') {
+      plugins.turnOff();
+      return reply(`✅ *Plugins are off.*\n▸ _Their commands are gone until you turn them on again._`);
+    }
+
+    if (sub === 'set') {
+      const key = (args[1] || '').toLowerCase(); const n = parseInt(args[2], 10);
+      if (!plugins.setOption(key, n)) {
+        return reply(`🧩 *Plugin limits*\n▸ *Plugins running at once:* ${o.max === 0 ? 'no limit' : o.max}\n▸ *Memory guard per call:* ${o.guardMb} MB\n▸ *Change:* ${mono(p, 'set max 8')}  (0 = no limit)\n▸ *Change:* ${mono(p, 'set guard 96')}  (16 to 1024)`);
+      }
+      return reply(key === 'max' ? `✅ *Limit saved.*\n▸ *Plugins running at once:* ${n === 0 ? 'no limit' : n}` : `✅ *Limit saved.*\n▸ *Memory guard per call:* ${n} MB`);
+    }
+
+    if (!sub || sub === 'help') {
+      return reply(
+        `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+      );
+    }
+
+    if (!o.enabled) return reply(NOT_ON(p));
+    if (!plugins.isRunning()) return reply(`⚠️ *Plugins are not running.*\n▸ ${o.status.reason || 'Please try again in a moment.'}\n_Use ${mono(p, 'on')} to try again._`);
+
+    if (sub === 'list') {
+      const lines = [];
+      for (const f of o.folders) {
+        if (!f.ok) { lines.push(`▸ ⚠️ *A folder is not a usable plugin:* ${f.errors[0]}`); continue; }
+        const m = f.manifest; const rec = o.installed[m.id];
+        const st = !rec ? 'not installed' : rec.enabled ? 'on' : `off${rec.reason ? ' (' + rec.reason + ')' : ''}`;
+        lines.push(`▸ *${m.name}* ${m.version}  _${st}_  \`${m.id}\``);
+      }
+      for (const [pid, rec] of Object.entries(o.installed)) if (!o.folders.some((f) => f.ok && f.manifest.id === pid)) lines.push(`▸ *${pid}* ${rec.version}  _folder missing_`);
+      if (!lines.length) return reply(`🧩 *No plugins yet.*\n▸ _Copy a plugin folder into the plugins folder of the bot, then use_ ${mono(p, 'list')}`);
+      return reply(`🧩 *Plugins*\n${lines.join('\n')}\n_Install one with_ ${mono(p, 'install <name>')}`);
+    }
+
+    if (sub === 'install') {
+      if (!id) return reply(`ℹ️ *Which plugin?*\n▸ ${mono(p, 'install <name>')}\n_See the names with_ ${mono(p, 'list')}`);
+      const r = plugins.prepare(id);
+      if (!r.ok && r.why === 'missing') return reply(`⚠️ *I could not find that plugin.*\n▸ _Check the name with_ ${mono(p, 'list')}`);
+      if (!r.ok && r.why === 'same') return reply(`ℹ️ *That plugin is already installed and up to date.*`);
+      if (!r.ok) return reply(`⚠️ *This plugin cannot be installed.*\n▸ ${r.errors[0]}\n_Ask its developer to fix this._`);
+      const m = r.manifest;
+      const cmds = m.commands.map((c) => `\`${p}${c.name}\``).join(', ') || 'none';
+      return reply(
+        `🧩 *${r.update ? 'Update' : 'Install'} ${m.name} ${m.version}?*\n▸ *By:* ${m.author.name}\n▸ *About:* ${m.description}\n▸ *Commands:* ${cmds}\n*It asks to:*\n${r.lines.join('\n')}\n▸ *To continue:* \`${p}plugin confirm ${r.code}\`\n_This code works for 5 minutes._`
+      );
+    }
+    if (sub === 'confirm') {
+      const r = plugins.confirm(args[1]);
+      if (!r.ok) return reply(`⚠️ *That code did not work.*\n▸ _Start again with_ ${mono(p, 'install <name>')}`);
+      return reply(`✅ *${r.manifest.name} is ready.*\n▸ *Commands:* ${r.manifest.commands.map((c) => `\`${p}${c.name}\``).join(', ') || 'none'}`);
+    }
+
+    const rec = o.installed[id];
+    if (['enable', 'disable', 'remove', 'groups', 'log', 'info'].includes(sub)) {
+      if (!id) return reply(`ℹ️ *Which plugin?*\n▸ ${mono(p, sub + ' <name>')}\n_See the names with_ ${mono(p, 'list')}`);
+      if (!rec) return reply(`⚠️ *That plugin is not installed.*\n▸ _See the names with_ ${mono(p, 'list')}`);
+    }
+    if (sub === 'enable') {
+      const r = plugins.setEnabled(id, true);
+      return reply(r.ok ? `✅ *${id} is on.*` : `⚠️ *I could not turn it on.*\n▸ ${r.reason ? 'Reason: ' + r.reason + '.' : ''}\n_Install it again with_ ${mono(p, 'install ' + id)}`);
+    }
+    if (sub === 'disable') { plugins.setEnabled(id, false); return reply(`✅ *${id} is off.*\n▸ _Turn it on again with_ ${mono(p, 'enable ' + id)}`); }
+    if (sub === 'remove') { plugins.remove(id); return reply(`✅ *${id} was removed.*\n▸ _Its saved notes were kept. The plugin folder can be deleted._`); }
+    if (sub === 'groups') {
+      const mode = (args[2] || '').toLowerCase();
+      if (!isGroup) return reply(`ℹ️ *Use this inside the group you mean.*`);
+      if (!plugins.groupRule(id, jid, mode)) return reply(`ℹ️ *Choose what to do in this group.*\n▸ ${mono(p, `groups ${id} allow`)}\n▸ ${mono(p, `groups ${id} deny`)}\n▸ ${mono(p, `groups ${id} only`)}  _(only the groups where you used it)_\n▸ ${mono(p, `groups ${id} all`)}  _(every group)_`);
+      return reply(`✅ *Saved for this group.*\n▸ *Plugin:* ${id}\n▸ *Choice:* ${mode}`);
+    }
+    if (sub === 'log') {
+      const l = plugins.logOf(id).slice(-15);
+      return reply(l.length ? `📜 *${id}*\n${l.map((x) => '▸ ' + x).join('\n')}` : `📜 *Nothing to show for ${id} yet.*`);
+    }
+    if (sub === 'info') {
+      const l = o.loaded.get(id); const g = rec.allowOnly ? `${rec.allowOnly.length} group(s) only` : 'every group';
+      return reply(`🧩 *${l ? l.manifest.name : id}*\n▸ *Version:* ${rec.version}\n▸ *Status:* ${rec.enabled ? 'on' : 'off' + (rec.reason ? ' (' + rec.reason + ')' : '')}\n▸ *Works in:* ${g}${rec.blocked && rec.blocked.length ? `, ${rec.blocked.length} blocked` : ''}\n▸ *Allowed to:* ${rec.grants.length ? rec.grants.join(', ') : 'nothing special'}`);
+    }
+    return reply(`ℹ️ *I did not understand that.*\n▸ _See what you can do with_ ${mono(p, 'help')}`);
+  },
+};

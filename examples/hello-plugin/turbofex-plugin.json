@@ -1,0 +1,13 @@
+{
+  "manifestVersion": 1,
+  "id": "hello-plugin",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "name": "Hello",
+  "description": "A tiny example: greets you and counts how many times it was used.",
+  "author": { "name": "TurboFex" },
+  "permissions": ["chat.send", "storage"],
+  "commands": [
+    { "name": "hello", "who": "everyone", "description": "Greets you and counts the greetings" }
+  ]
+}

@@ -332,6 +332,9 @@ async function startWhatsApp() {
     if (connection === 'open') {
       require('../core/chatlog').banner(`${brand.botName} is online as ${sock.user?.id}`);
       scheduler.start(sock);
+      Promise.resolve()
+        .then(() => require('../core/plugins').start(sock))
+        .catch((err) => console.error('Plugins could not start:', err.message));
       try {
         require('./captcha').resume(sock); // open verification questions continue after a restart or reconnect
       } catch (err) {
@@ -386,6 +389,11 @@ async function startWhatsApp() {
     if (connection === 'close') {
       updatewatch.stop();
       scheduler.stop();
+      try {
+        require('../core/plugins').stop();
+      } catch (err) {
+        // not important
+      }
       stopWatchdog();
       const status = lastDisconnect?.error?.output?.statusCode;
       let delay;
