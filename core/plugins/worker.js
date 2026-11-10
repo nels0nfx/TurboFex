@@ -10,14 +10,30 @@ const { limits } = workerData;
 const PRELUDE = `(function () {
   var hs = globalThis.__hostSync, ha = globalThis.__hostAsync, hd = globalThis.__hostDone;
   delete globalThis.__hostSync; delete globalThis.__hostAsync; delete globalThis.__hostDone;
-  var handlers = { command: Object.create(null), schedule: Object.create(null) };
+  var handlers = { command: Object.create(null), schedule: Object.create(null), event: Object.create(null) };
   var send = function (name, args) { return hs(name, JSON.stringify(args === undefined ? {} : args)); };
   var ask = function (name, args) { return ha(name, JSON.stringify(args === undefined ? {} : args)).then(function (s) { return JSON.parse(s); }); };
   var tfx = {
     command: function (n, f) { handlers.command[String(n)] = f; },
     schedule: function (n, f) { handlers.schedule[String(n)] = f; },
+    on: function (n, f) { handlers.event[String(n)] = f; },
     log: function (t) { send('log', { text: String(t) }); },
-    net: Object.freeze({ fetch: function (url) { return ask('net.fetch', { url: String(url) }); } }),
+    net: Object.freeze({
+      fetch: function (url) { return ask('net.fetch', { url: String(url) }); },
+      fetchBytes: function (url) { return ask('net.fetchBytes', { url: String(url) }); }
+    }),
+    media: Object.freeze({
+      send: function (o) { o = o || {}; return ask('media.send', { kind: String(o.kind || ''), data: String(o.data || ''), mimetype: String(o.mimetype || ''), fileName: String(o.fileName || ''), caption: String(o.caption || '') }); }
+    }),
+    util: Object.freeze({
+      toBase64: function (text) { // plain JavaScript: the sandbox has no Buffer or btoa
+        var s = unescape(encodeURIComponent(String(text))), k = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', o = [], i = 0;
+        for (; i + 2 < s.length; i += 3) { var n = (s.charCodeAt(i) << 16) | (s.charCodeAt(i + 1) << 8) | s.charCodeAt(i + 2); o.push(k[n >> 18], k[(n >> 12) & 63], k[(n >> 6) & 63], k[n & 63]); }
+        if (s.length - i === 1) { var a = s.charCodeAt(i) << 16; o.push(k[a >> 18], k[(a >> 12) & 63], '=', '='); }
+        else if (s.length - i === 2) { var b = (s.charCodeAt(i) << 16) | (s.charCodeAt(i + 1) << 8); o.push(k[b >> 18], k[(b >> 12) & 63], k[(b >> 6) & 63], '='); }
+        return o.join('');
+      }
+    }),
     storage: Object.freeze({
       get: function (k) { return ask('storage.get', { key: String(k) }); },
       set: function (k, v) { return ask('storage.set', { key: String(k), value: String(v) }); }
@@ -31,7 +47,7 @@ const PRELUDE = `(function () {
     var h = handlers[kind] && handlers[kind][name];
     if (typeof h !== 'function') { hd('fail', 'no such handler'); return; }
     var raw = JSON.parse(ctxJson);
-    var ctx = { args: raw.args, rest: raw.rest, prefix: raw.prefix, chat: raw.chat, sender: raw.sender,
+    var ctx = { args: raw.args, rest: raw.rest, prefix: raw.prefix, chat: raw.chat, sender: raw.sender, event: raw.event, text: raw.text, members: raw.members,
                 reply: function (t) { return send('chat.send', { text: String(t) }); } };
     Promise.resolve().then(function () { return h(ctx); }).then(
       function () { hd('ok', ''); },

@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "id": "welcome-plugin",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "name": "Welcome Example",
+  "description": "A tiny example that says hello when somebody joins a group where it is allowed.",
+  "author": { "name": "TurboFex" },
+  "permissions": ["chat.send", "events.members"],
+  "events": ["member.join"]
+}

@@ -240,6 +240,13 @@ async function handleMessageInner(sock, msg) {
   // For commands they run alongside, so they never delay the answer.
   const passive = runPassive({ sock, msg, jid, text, isGroup, isCommand, prefix, botIds });
   if (!isCommand) {
+    if (!synthetic && isGroup && !msg.key.fromMe && text) {
+      try {
+        require('../core/plugins').emit('message', { sock, jid, text, senderJid: msg.key.participant, pushName: msg.pushName }); // plugins that listen to group messages (only when the owner turned plugins on)
+      } catch (err) {
+        // a plugin problem never stops a message
+      }
+    }
     if (!synthetic && text && !require('./play').get(jid)) chatbot.maybeReply({ sock, msg, jid, text, botIds, commandList, isOwner: async () => (await roles()).isOwner, isRealOwner: async () => (await roles()).isRealOwner }).catch(() => {}); // NelsonFx chats (only when switched on)
     return passive;
   }

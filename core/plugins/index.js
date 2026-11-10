@@ -109,6 +109,7 @@ function getHost(id) {
       log: (t) => log(id, t),
       isPublicHost: async (host) => { try { await require('../safefetch').assertPublicUrl('https://' + host); return true; } catch (e) { return false; } },
       fetch: async (url) => { const r = await require('../safefetch').get(url, { timeout: 5000, maxBytes: 256 * 1024 }); return { status: r.status, text: r.body.toString('utf8') }; },
+      fetchBytes: async (url) => { const r = await require('../safefetch').get(url, { timeout: 5000, maxBytes: 1024 * 1024 + 1 }); return { status: r.status, bytes: r.body }; },
       notifyOwner: async (t) => { if (sock) await sock.sendMessage(require('../../whatsapp/owner').ownerChat(sock), { text: '🧩 *Message from ' + l.manifest.name + '*\n▸ ' + t }); },
     };
     const rec = state.open().data.installed[id];
@@ -133,7 +134,7 @@ function plainCtx(id, c, extra) {
     ctx: { args: (c.args || []).slice(0, 50).map((a) => String(a).slice(0, 500)), rest: String(c.rest || '').slice(0, 4000), prefix: c.prefix || prefixOf(),
       chat: { id: o(c.jid), isGroup: !!c.isGroup, name: String(meta && meta.subject || '').slice(0, 100) },
       sender: { id: o(c.msg && c.msg.key && (c.msg.key.participant || c.msg.key.remoteJid) || c.jid), name: String(c.msg && c.msg.pushName || '').slice(0, 40), isAdmin: !!c.isAdmin, isOwner: !!c.isOwner } },
-    extra: { send: (t) => c.reply(t), groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
+    extra: { send: (t) => c.reply(t), sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
   };
 }
 async function invoke(id, kind, name, c) {
@@ -147,6 +148,28 @@ async function invoke(id, kind, name, c) {
     if (e.code === 'disabled') return null; // the owner was already told
     const own = c.isOwner ? `\n▸ *See what happened:* \`${p}plugin log ${id}\`` : '';
     return c.reply(`⚠️ *This command did not work.*\n▸ _Please try again in a moment._${own}`);
+  }
+}
+const mediaMessage = (m) => (m.kind === 'sticker' ? { sticker: m.buffer } : m.kind === 'image' ? { image: m.buffer, caption: m.caption || undefined } : { document: m.buffer, mimetype: m.mimetype, fileName: m.fileName, caption: m.caption || undefined });
+
+// Events (stage 1b): a plugin can listen to group messages that are not commands, and to members joining or leaving.
+// It never slows the bot: nothing is waited for, a plugin gets at most 10 events per 10 seconds, and when it is busy extra events are dropped.
+const evTimes = new Map();
+const evPending = new Map();
+function emit(event, info) {
+  if (!isRunning() || !info || !info.jid || !String(info.jid).endsWith('@g.us')) return;
+  for (const [id, l] of loaded) {
+    if (!l.manifest.events.includes(event) || denied(id, info.jid)) continue;
+    const t = Date.now(); const recent = (evTimes.get(id) || []).filter((x) => t - x < 10000);
+    if (recent.length >= 10 || (evPending.get(id) || 0) >= 3) continue;
+    recent.push(t); evTimes.set(id, recent); evPending.set(id, (evPending.get(id) || 0) + 1);
+    const o = (v) => state.opaque(id, v); const s = info.sock || sock;
+    const ctx = { args: [], rest: '', prefix: prefixOf(), event, text: String(info.text || '').slice(0, 4000),
+      members: (info.members || []).slice(0, 50).map((m) => o(typeof m === 'string' ? m : (m && m.id) || '')),
+      chat: { id: o(info.jid), isGroup: true, name: '' },
+      sender: info.senderJid ? { id: o(info.senderJid), name: String(info.pushName || '').slice(0, 40), isAdmin: false, isOwner: false } : null };
+    const extra = { send: (x) => s.sendMessage(info.jid, { text: x }), sendMedia: (m) => s.sendMessage(info.jid, mediaMessage(m)), groupInfo: null };
+    Promise.resolve().then(() => getHost(id).call('event', event, ctx, extra)).catch((e) => log(id, 'event ' + event + ' failed: ' + (e.code || e.message))).finally(() => evPending.set(id, Math.max(0, (evPending.get(id) || 1) - 1)));
   }
 }
 function startTimers() {
@@ -172,7 +195,8 @@ function available() { // plugin folders found in data/plugins
   }
   return out;
 }
-const RISK = { 'chat.send': ['🟢', 'Send messages in the chat where it is used'], storage: ['🟢', 'Keep its own small saved notes'], 'group.read': ['🟢', 'See the group name and how many members and admins it has'], schedule: ['🟡', 'Run by itself on a timer'], 'owner.notify': ['🟡', 'Send you a short message now and then'], network: ['🟡', 'Connect to the internet'] };
+const RISK = { 'chat.send': ['🟢', 'Send messages in the chat where it is used'], storage: ['🟢', 'Keep its own small saved notes'], 'group.read': ['🟢', 'See the group name and how many members and admins it has'], schedule: ['🟡', 'Run by itself on a timer'], 'owner.notify': ['🟡', 'Send you a short message now and then'], network: ['🟡', 'Connect to the internet'],
+  'events.message': ['🟡', 'Read the text of messages sent in the groups where it is allowed'], 'events.members': ['🟡', 'Know when members join or leave a group (no phone numbers)'], 'media.send': ['🟢', 'Send pictures, stickers and files in the chat where it is used'] };
 function permissionLines(m) {
   const out = m.permissions.map((p) => `▸ ${RISK[p][0]} ${RISK[p][1]}` + (p === 'network' ? ': ' + m.network.domains.join(', ') : ''));
   return out.length ? out : ['▸ 🟢 Nothing special: it only answers its commands'];
@@ -240,4 +264,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { attach, start, stop, turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { attach, start, stop, emit, turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };

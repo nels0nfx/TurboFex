@@ -8,7 +8,8 @@ const crypto = require('node:crypto');
 
 const API_VERSION = 1;
 const MAX_ENTRY_BYTES = 1024 * 1024;
-const PERMISSIONS = ['chat.send', 'storage', 'network', 'group.read', 'schedule', 'owner.notify'];
+const PERMISSIONS = ['chat.send', 'storage', 'network', 'group.read', 'schedule', 'owner.notify', 'events.message', 'events.members', 'media.send'];
+const EVENTS = { message: 'events.message', 'member.join': 'events.members', 'member.leave': 'events.members' };
 const WHO = ['everyone', 'admin', 'owner'];
 const reId = /^[a-z0-9-]{3,32}$/;
 const reCmd = /^[a-z0-9]{2,20}$/;
@@ -39,7 +40,8 @@ function validate(folder, { botVersion, taken } = {}) {
   if (typeof m.description !== 'string' || !m.description.trim() || m.description.length > 200) bad('description is required (up to 200 characters)');
   if (!m.author || typeof m.author.name !== 'string' || !m.author.name.trim() || m.author.name.length > 60) bad('author.name is required');
   if (m.pricing !== undefined && !(m.pricing && m.pricing.model === 'free')) bad('only free plugins are supported');
-  if (m.events !== undefined && !(Array.isArray(m.events) && m.events.length === 0)) bad('events are not supported yet');
+  const events = Array.isArray(m.events) ? m.events : (m.events === undefined ? [] : null);
+  if (events === null) bad('events must be a list');
 
   const perms = Array.isArray(m.permissions) ? m.permissions : (m.permissions === undefined ? [] : null);
   if (perms === null) bad('permissions must be a list');
@@ -47,6 +49,11 @@ function validate(folder, { botVersion, taken } = {}) {
     for (const p of perms) if (!PERMISSIONS.includes(p)) bad('unknown permission: ' + String(p).slice(0, 30));
     if (new Set(perms).size !== perms.length) bad('permissions are listed twice');
   }
+  for (const ev of events || []) {
+    if (typeof ev !== 'string' || !EVENTS[ev]) bad('unknown event: ' + String(ev).slice(0, 30));
+    else if (!perms || !perms.includes(EVENTS[ev])) bad('the event ' + ev + ' needs the permission ' + EVENTS[ev]);
+  }
+  if (events && new Set(events).size !== events.length) bad('an event is listed twice');
   const domains = m.network && Array.isArray(m.network.domains) ? m.network.domains : [];
   if (perms && perms.includes('network')) {
     if (!domains.length || domains.length > 10) bad('network needs 1-10 domains in network.domains');
@@ -55,7 +62,7 @@ function validate(folder, { botVersion, taken } = {}) {
 
   const names = new Set();
   const cmds = Array.isArray(m.commands) ? m.commands : [];
-  if (!Array.isArray(m.commands)) bad('commands must be a list');
+  if (m.commands !== undefined && !Array.isArray(m.commands)) bad('commands must be a list');
   if (cmds.length > 20) bad('too many commands (up to 20)');
   for (const c of cmds.slice(0, 20)) {
     if (!c || typeof c !== 'object') { bad('a command entry is not valid'); continue; }
@@ -83,7 +90,7 @@ function validate(folder, { botVersion, taken } = {}) {
       if (!Number.isInteger(s.everyMinutes) || s.everyMinutes < 1 || s.everyMinutes > 10080) bad('schedule ' + s.id + ': everyMinutes must be 1-10080');
     }
   }
-  if (!cmds.length && !sched.length) bad('the plugin needs at least one command or schedule');
+  if (!cmds.length && !sched.length && !(events && events.length)) bad('the plugin needs at least one command, schedule or event');
 
   // the entry file stays inside the plugin folder
   let entrySha = null; let source = null;
@@ -107,8 +114,9 @@ function validate(folder, { botVersion, taken } = {}) {
     id: m.id, version: m.version, apiVersion: API_VERSION, name: m.name.trim(), description: m.description.trim(), author: { name: m.author.name.trim() },
     permissions: perms || [], network: { domains }, entry,
     commands: cmds.map((c) => ({ name: c.name, aliases: c.aliases || [], who: c.who, description: c.description.trim(), usage: c.usage || '', groupOnly: !!c.groupOnly })),
+    events: (events || []).slice(),
     schedules: sched.map((s) => ({ id: s.id, everyMinutes: s.everyMinutes })),
   };
   return { ok: true, errors: [], manifest, source, entrySha };
 }
-module.exports = { validate, PERMISSIONS, API_VERSION, semverGte };
+module.exports = { validate, PERMISSIONS, EVENTS, API_VERSION, semverGte };

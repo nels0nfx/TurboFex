@@ -1,0 +1,35 @@
+{
+  "name": "TurboFex",
+  "description": "TurboFex is a WhatsApp group-management bot: moderation, welcome messages, games, tools and many more commands.",
+  "repository": "https://github.com/nels0nfx/TurboFex",
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "whatsapp-bot",
+    "group-management",
+    "baileys",
+    "nodejs"
+  ],
+  "website": "https://github.com/nels0nfx/TurboFex",
+  "formation": {
+    "web": {
+      "quantity": 1
+    }
+  },
+  "env": {
+    "SESSION_ID": {
+      "description": "Your login for the bot. Get it on https://turbofex-pair.onrender.com (it looks like TFX-XXXX-XXXX-XXXX).",
+      "required": true
+    },
+    "BOT_PREFIX": {
+      "description": "The symbol that starts every command, for example a dot. One to three characters.",
+      "value": ".",
+      "required": false
+    },
+    "TIMEZONE": {
+      "description": "Your time zone, used for the menu clock and for automatic open and close, for example Africa/Lagos.",
+      "value": "Africa/Johannesburg",
+      "required": false
+    }
+  }
+}

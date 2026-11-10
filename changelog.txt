@@ -1,3 +1,12 @@
+TurboFex v1.3.7 - plugins can react to events and send pictures and files; app.json for template hosts
+CHANGED IN 1.3.7
+- NEW: PLUGIN EVENTS. A plugin can listen to group messages that are not commands (`message`), and to members joining (`member.join`) or leaving (`member.leave`). It needs the permission `events.message` or `events.members` and lists the events in its manifest. Only groups are delivered, never private chats, never commands, never the bot's own messages. A group the owner switched off for the plugin is skipped. A plugin gets at most 10 events per 10 seconds and at most 3 waiting; extra events are dropped for that plugin only, so the bot is never slowed down. Plugins get opaque ids, never phone numbers.
+- NEW: PICTURES AND FILES. With the permission `media.send` a plugin can send a picture, a sticker (WebP) or a document (PDF, PNG, JPEG, plain text, CSV, JSON) to the chat where it was used, up to 1 MB, 3 per call and 6 per minute. What a file really is is judged by its first bytes, never by its name. With `network` a plugin can download a picture (`tfx.net.fetchBytes`) from its listed domains, up to 1 MB. `tfx.util.toBase64(text)` helps a plugin make a text file.
+- The install screen explains the new permissions in plain words (🟡 for reading messages and joins).
+- The start-up safety check also tests an event.
+- NEW: `app.json` in the main folder, so hosts that create a deploy template from the repository (it asks for the session ID, the prefix and the time zone) can read it. Hosts with their own template format may need a different file.
+- NEW: example plugin `examples/welcome-plugin`. Not in this stage: group management by plugins (a later stage), a store.
+
 TurboFex v1.3.6 - the sample plugin is found without copying folders
 CHANGED IN 1.3.6
 - CHANGED: `plugin list` also shows the plugins that come with the bot (the `examples` folder), and `plugin install <name>` copies one into `data/plugins/` for you. Panels without a copy button need no extra steps. Plugins you add yourself still go in `data/plugins/`.

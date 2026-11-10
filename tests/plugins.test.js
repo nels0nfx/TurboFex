@@ -57,7 +57,9 @@ test('manifest: bad ones are refused with a clear reason', () => {
   bad({ commands: [{ name: 'okname', who: 'nobody', description: 'x' }] }, /who must be/);
   bad({ minBotVersion: '9.0.0' }, /needs TurboFex/);
   bad({ pricing: { model: 'paid' } }, /only free/);
-  bad({ events: ['message'] }, /events are not supported/);
+  bad({ events: ['message'] }, /needs the permission events.message/);
+  bad({ events: ['everything'], permissions: ['chat.send'] }, /unknown event/);
+  bad({ permissions: ['group.manage'] }, /unknown permission/);
   bad({ commands: [] }, /at least one/);
   bad({ schedules: [{ id: 'tick', everyMinutes: 5 }] }, /schedule permission/);
 });
@@ -211,4 +213,83 @@ test('v1.3.6: the sample that ships with the bot is found in examples and is cop
   const b = ctxFor(); await commands.get('hello').run(b.c); assert.match(b.replies[0], /Times used:\* 2/);
   assert.strictEqual((await run('plugin list', {})).split('hello-plugin').length - 1, 1); // listed once
   plugins.turnOff(); // stops the sandbox workers so the test run can end
+});
+
+const { Broker, sniff } = require('../core/plugins/broker');
+const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40)]);
+const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBPVP8 '), Buffer.alloc(20)]);
+const wait = async (f) => { for (let i = 0; i < 100 && !f(); i++) await new Promise((r) => setTimeout(r, 50)); };
+
+test('v1.3.7 files: only real pictures, stickers and safe documents are accepted, judged by their bytes', async () => {
+  const env = { isPublicHost: async () => true, log() {}, fetch: async () => ({}), notifyOwner: async () => {} };
+  const made = () => { const b = new Broker({ manifest: { permissions: ['media.send'] }, grants: ['media.send'], env }); const out = []; const st = b.newCall({ chat: { id: 'x' } }, { sendMedia: async (m) => { out.push(m); } }); return { b, st, out }; };
+  const go = async (o, c = made()) => { try { await c.b.handle('media.send', JSON.stringify({ kind: '', data: '', mimetype: '', fileName: '', caption: '', ...o }), c.st); return 'ok'; } catch (e) { return e.code; } };
+  const b64 = (b) => b.toString('base64');
+  assert.strictEqual(sniff(PNG).mime, 'image/png');
+  const c = made();
+  assert.strictEqual(await go({ kind: 'image', data: b64(PNG) }, c), 'ok'); assert.strictEqual(c.out[0].mimetype, 'image/png');
+  assert.strictEqual(await go({ kind: 'image', data: b64(Buffer.from('not a picture at all')) }), 'bad_file');
+  assert.strictEqual(await go({ kind: 'sticker', data: b64(PNG) }), 'bad_file');
+  assert.strictEqual(await go({ kind: 'sticker', data: b64(WEBP) }), 'ok');
+  assert.strictEqual(await go({ kind: 'document', data: b64(Buffer.from('a,b')), mimetype: 'text/csv', fileName: 'a.csv' }), 'ok');
+  assert.strictEqual(await go({ kind: 'document', data: b64(Buffer.from('MZ program')), mimetype: 'application/x-msdownload', fileName: 'a.exe' }), 'bad_file');
+  assert.strictEqual(await go({ kind: 'document', data: b64(Buffer.from('a,b')), mimetype: 'text/csv', fileName: '../a.csv' }), 'bad_args');
+  assert.strictEqual(await go({ kind: 'document', data: b64(Buffer.from([65, 0, 66])), mimetype: 'text/plain', fileName: 'a.txt' }), 'bad_file');
+  assert.strictEqual(await go({ kind: 'image', data: b64(Buffer.concat([PNG, Buffer.alloc(1024 * 1024)])) }), 'too_long');
+  assert.strictEqual(await go({ kind: 'image', data: '!!!' }), 'too_long');
+  assert.strictEqual(await go({ kind: 'video', data: b64(PNG) }), 'bad_args');
+  assert.strictEqual(await go({ kind: 'image', data: b64(PNG), caption: 'x'.repeat(1001) }), 'too_long');
+  const d = made(); const r = []; for (let i = 0; i < 4; i++) r.push(await go({ kind: 'image', data: b64(PNG) }, d));
+  assert.deepStrictEqual(r, ['ok', 'ok', 'ok', 'rate_limited']);
+  const e = new Broker({ manifest: { permissions: ['chat.send'] }, grants: ['chat.send'], env });
+  await assert.rejects(() => e.handle('media.send', JSON.stringify({ kind: 'image', data: b64(PNG), mimetype: '', fileName: '', caption: '' }), e.newCall({ chat: { id: 'x' } }, {})), /not in the manifest/);
+});
+
+test('v1.3.7 events: plugins hear joins and group messages only where allowed, never commands, never private chats', async () => {
+  await run('plugin on', {});
+  const g = '1203630000000@g.us';
+  makePlugin('listener', { permissions: ['chat.send', 'events.message'], events: ['message'], commands: [{ name: 'listen', who: 'everyone', description: 'x' }] },
+    "tfx.on('message', async (c) => { await c.reply('heard:' + c.text + ':' + c.sender.id.length + ':' + c.event); }); tfx.command('listen', (c) => c.reply('cmd'));");
+  const codeA = (await run('plugin install listener', {})).match(/confirm (\w{4})/)[1]; await run('plugin confirm ' + codeA, {});
+  const screen = await run('plugin install welcome-plugin', {});
+  assert.match(screen, /Know when members join/); // the install screen says it in plain words
+  const codeB = screen.match(/confirm (\w{4})/)[1];
+  await run('plugin confirm ' + codeB, {});
+  const out = []; const s = { sendMessage: async (to, m) => { out.push({ to, m }); } };
+  plugins.emit('message', { sock: s, jid: g, text: 'hi there', senderJid: '27811111111@s.whatsapp.net', pushName: 'Sam' });
+  await wait(() => out.length >= 1);
+  assert.strictEqual(out[0].to, g); assert.strictEqual(out[0].m.text, 'heard:hi there:16:message');
+  plugins.emit('member.join', { sock: s, jid: g, members: ['27822222222@s.whatsapp.net'] });
+  await wait(() => out.length >= 2);
+  assert.match(out[1].m.text, /Welcome to the group/);
+  const n = out.length;
+  plugins.emit('message', { sock: s, jid: '27811111111@s.whatsapp.net', text: 'private' }); // a private chat is never delivered
+  plugins.emit('member.leave', { sock: s, jid: g, members: ['x'] }); // nobody listens to leaves
+  await run('plugin groups listener deny', {}); // this group is switched off for the plugin
+  plugins.emit('message', { sock: s, jid: g, text: 'blocked' });
+  await new Promise((r) => setTimeout(r, 400));
+  assert.strictEqual(out.length, n);
+  await run('plugin groups listener all', {});
+  for (let i = 0; i < 30; i++) plugins.emit('message', { sock: s, jid: g, text: 'flood' + i }); // far too many: the extra ones are dropped
+  await new Promise((r) => setTimeout(r, 1500));
+  assert.ok(out.length - n <= 10, 'got ' + (out.length - n));
+});
+
+test('v1.3.7 a plugin can send a file it made itself, only to the chat where it was used', async () => {
+  makePlugin('docmaker', { permissions: ['chat.send', 'media.send'], commands: [{ name: 'docme', who: 'everyone', description: 'x' }] },
+    "tfx.command('docme', async (c) => { await tfx.media.send({ kind: 'document', data: tfx.util.toBase64('héllo'), mimetype: 'text/plain', fileName: 'note.txt', caption: 'here' }); });");
+  const code = (await run('plugin install docmaker', {})).match(/confirm (\w{4})/)[1]; await run('plugin confirm ' + code, {});
+  const out = []; const x = ctxFor({ sock: { sendMessage: async (to, m) => { out.push({ to, m }); } } });
+  await commands.get('docme').run(x.c);
+  assert.strictEqual(out.length, 1); assert.strictEqual(out[0].to, '1203630000000@g.us');
+  assert.strictEqual(out[0].m.document.toString('utf8'), 'héllo'); assert.strictEqual(out[0].m.fileName, 'note.txt'); assert.strictEqual(out[0].m.mimetype, 'text/plain');
+  plugins.turnOff();
+});
+
+test('v1.3.7 app.json is valid and lists what a host needs to deploy the bot', () => {
+  const a = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'app.json'), 'utf8'));
+  assert.strictEqual(a.name, 'TurboFex'); assert.match(a.repository, /^https:\/\/github.com\/nels0nfx\/TurboFex$/);
+  assert.strictEqual(a.env.SESSION_ID.required, true);
+  for (const k of Object.keys(a.env)) assert.ok(a.env[k].description, k);
+  assert.ok(!JSON.stringify(a).includes('turbofexbot@')); // no private details in a public file
 });

@@ -5,6 +5,7 @@ const { PluginHost } = require('./host');
 
 const SOURCE = `
 tfx.command('hello', async function (c) { await c.reply('hi ' + typeof process + typeof require + typeof globalThis.__hostSync); });
+tfx.on('message', async function (c) { await c.reply('ev:' + c.text); });
 tfx.command('spin', function () { while (true) {} });
 tfx.command('bomb', function () { var a = []; while (true) { a.push(new Array(100000).fill(1)); } });
 `;
@@ -17,6 +18,8 @@ async function run() {
   try {
     await h.call('command', 'hello', ctx, { send: async (t) => { sent.push(t); } });
     if (sent[0] !== 'hi undefinedundefinedundefined') return { ok: false, reason: 'the sealed engine can see things it should not' };
+    await h.call('event', 'message', { ...ctx, text: 'x' }, { send: async (t) => { sent.push(t); } });
+    if (sent[1] !== 'ev:x') return { ok: false, reason: 'events do not reach the sealed engine' };
     const stop = async (name) => { try { await h.call('command', name, ctx, { send: async () => {} }); return 'none'; } catch (e) { return e.code; } };
     if ((await stop('spin')) !== 'cpu_limit') return { ok: false, reason: 'an endless loop was not stopped' };
     const rss0 = process.memoryUsage.rss();
