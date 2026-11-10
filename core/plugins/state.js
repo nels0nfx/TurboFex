@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const jsonstore = require('../jsonstore');
-const { DATA } = require('../paths');
+const { DATA, ROOT } = require('../paths');
 
 const DEFAULTS = { enabled: false, secret: '', max: 8, guardMb: 96, installed: {} };
 let store = null;
@@ -23,7 +23,8 @@ const isEnabled = () => used() && open().data.enabled === true;
 const dataStore = (id) => jsonstore.open('plugin-data-' + id, { kv: {} });
 // the plugin never sees real chat or phone ids: it gets a short code that is different for every plugin
 const opaque = (id, value) => crypto.createHmac('sha256', open().data.secret).update(id + ':' + value).digest('hex').slice(0, 16);
-function folders() {
-  try { return fs.readdirSync(dir(), { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith('.')).map((d) => path.join(dir(), d.name)).slice(0, 50); } catch (e) { return []; }
-}
-module.exports = { open, used, isEnabled, dataStore, opaque, folders, dir };
+const examplesDir = () => path.join(ROOT, 'examples');
+const subfolders = (base) => { try { return fs.readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith('.')).map((d) => path.join(base, d.name)).slice(0, 50); } catch (e) { return []; } };
+// plugin folders in data/plugins come first; the samples that ship with the bot (examples/) are found too
+const folders = () => [...subfolders(dir()), ...subfolders(examplesDir())];
+module.exports = { open, used, isEnabled, dataStore, opaque, folders, dir, examplesDir };

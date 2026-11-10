@@ -164,7 +164,13 @@ function startTimers() {
 // ---------------------------------------------------------------- finding, installing, removing
 function findFolder(id) { for (const f of state.folders()) { try { const m = JSON.parse(fs.readFileSync(f + '/turbofex-plugin.json', 'utf8')); if (m && m.id === id) return f; } catch (e) { /* not a plugin */ } } return null; }
 function available() { // plugin folders found in data/plugins
-  return state.folders().map((f) => { const v = manifestLib.validate(f, { botVersion: botVersion(), taken: builtinNames() }); return { folder: f, ...v }; });
+  const seen = new Set(); const out = [];
+  for (const f of state.folders()) {
+    const v = manifestLib.validate(f, { botVersion: botVersion(), taken: builtinNames() });
+    if (v.ok) { if (seen.has(v.manifest.id)) continue; seen.add(v.manifest.id); }
+    out.push({ folder: f, ...v });
+  }
+  return out;
 }
 const RISK = { 'chat.send': ['🟢', 'Send messages in the chat where it is used'], storage: ['🟢', 'Keep its own small saved notes'], 'group.read': ['🟢', 'See the group name and how many members and admins it has'], schedule: ['🟡', 'Run by itself on a timer'], 'owner.notify': ['🟡', 'Send you a short message now and then'], network: ['🟡', 'Connect to the internet'] };
 function permissionLines(m) {
@@ -187,8 +193,14 @@ function confirm(code) { // step 2: the owner confirmed
   const p = pending.get(String(code || '').toUpperCase());
   if (!p || p.expires < Date.now()) return { ok: false, why: 'expired' };
   pending.delete(String(code).toUpperCase());
-  const v = manifestLib.validate(p.folder, { botVersion: botVersion(), taken: builtinNames() });
+  let v = manifestLib.validate(p.folder, { botVersion: botVersion(), taken: builtinNames() });
   if (!v.ok || v.entrySha !== p.sha) return { ok: false, why: 'changed' };
+  if (p.folder.startsWith(state.examplesDir() + require('node:path').sep)) { // a sample that came with the bot is copied into the plugins folder first
+    const to = require('node:path').join(state.dir(), p.id);
+    try { fs.rmSync(to, { recursive: true, force: true }); fs.cpSync(p.folder, to, { recursive: true }); } catch (e) { return { ok: false, why: 'changed' }; }
+    v = manifestLib.validate(to, { botVersion: botVersion(), taken: builtinNames() });
+    if (!v.ok || v.entrySha !== p.sha) return { ok: false, why: 'changed' };
+  }
   const d = state.open().data; const old = d.installed[p.id];
   deactivate(p.id);
   d.installed[p.id] = { version: v.manifest.version, sha: v.entrySha, enabled: true, grants: v.manifest.permissions.slice(), allowOnly: old ? old.allowOnly : null, blocked: old ? old.blocked : [], installedAt: Date.now() };

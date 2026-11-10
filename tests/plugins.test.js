@@ -198,3 +198,17 @@ test('the PLUGINS menu category exists and stays hidden while it is empty', () =
   assert.strictEqual(categories.info.plugins.title, 'PLUGINS');
   assert.ok(!categories.groupByCategory([{ name: 'ping', category: 'general' }], false).some((g) => g.key === 'plugins'));
 });
+
+test('v1.3.6: the sample that ships with the bot is found in examples and is copied into the plugins folder when installed', async () => {
+  const state = require('../core/plugins/state');
+  assert.ok(state.folders().some((f) => f.endsWith(path.join('examples', 'hello-plugin'))));
+  await run('plugin on', {});
+  assert.match(await run('plugin list', {}), /Hello.*hello-plugin/);
+  const code = (await run('plugin install hello-plugin', {})).match(/confirm (\w{4})/)[1];
+  assert.match(await run('plugin confirm ' + code, {}), /is ready/);
+  assert.ok(fs.existsSync(path.join(dir, 'plugins', 'hello-plugin', 'index.js')));
+  const a = ctxFor(); await commands.get('hello').run(a.c); assert.match(a.replies[0], /Times used:\* 1/);
+  const b = ctxFor(); await commands.get('hello').run(b.c); assert.match(b.replies[0], /Times used:\* 2/);
+  assert.strictEqual((await run('plugin list', {})).split('hello-plugin').length - 1, 1); // listed once
+  plugins.turnOff(); // stops the sandbox workers so the test run can end
+});

@@ -1,3 +1,7 @@
+TurboFex v1.3.6 - the sample plugin is found without copying folders
+CHANGED IN 1.3.6
+- CHANGED: `plugin list` also shows the plugins that come with the bot (the `examples` folder), and `plugin install <name>` copies one into `data/plugins/` for you. Panels without a copy button need no extra steps. Plugins you add yourself still go in `data/plugins/`.
+
 TurboFex v1.3.5 - plugins (first stage): extra commands from other developers, running in a sealed sandbox
 CHANGED IN 1.3.5
 - NEW: PLUGINS. A plugin is a small folder (a `turbofex-plugin.json` and one JavaScript file) that adds commands. It runs in a sealed sandbox (QuickJS in WebAssembly, one worker thread per plugin): it cannot see files, passwords, the network, the bot's memory or other plugins. It can only ask the bot for a few things, and the bot checks each one against what the plugin declared and what the owner allowed.
