@@ -1,4 +1,4 @@
-# ⚡ TurboFex v1.4.1
+# ⚡ TurboFex v1.4.4
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and more.
@@ -114,6 +114,21 @@ Plugins add extra commands made by other developers. They are **off** until the 
 ## Several accounts on the same server
 
 You can run more than one WhatsApp number (more than one bot) from the same folder. Each account is its own bot with **its own login, settings and data**; nothing is shared, so they cannot overwrite each other.
+
+**The easy way: just add the next session ID to `session_id.txt`.** Keep the line that is already there and put the new session ID on a **new line below it**:
+
+```
+SESSION_ID=TFX-K7M2-9QXA-4BNP
+SESSION_ID=TFX-AB2C-DE3F-GH4J
+shop=TFX-ZZ22-3344-5566
+```
+
+Save the file. The bot sees the new ID and **creates the account by itself** (its folder `accounts/<name>/`, its own login and settings) and starts it, without touching the accounts that already run.
+A line like `shop=TFX-...` gives the account that name; without a name it is called `account2`, `account3` and so on. The first line stays your main bot (it keeps its old `data/` and `session/`). Each account then remembers its login, so
+you can delete its line later and it keeps running. Old or expired IDs are best removed from the file. A host that cannot edit files can put several IDs in the `SESSION_ID` variable, separated by commas.
+(A file with just **one** new ID still replaces the login of the bot, the way it always did. Only a second ID adds an account.)
+
+**The manual way** (to choose names, prefixes and time zones):
 
 1. Copy `accounts.example.json` to **`accounts.json`** and list your accounts:
    ```json

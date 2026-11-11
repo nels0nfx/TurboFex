@@ -32,14 +32,30 @@ function readEntries(root, env) {
 
 const upper = (name) => name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
 
+const build = (root, env, name, e = {}) => {
+  const main = name === MAIN;
+  const dir = main ? root : path.join(root, 'accounts', name);
+  return {
+    name,
+    main,
+    dataDir: main ? path.join(root, 'data') : path.join(dir, 'data'),
+    sessionDir: main ? path.join(root, 'session') : path.join(dir, 'session'),
+    sessionIdFile: main ? path.join(root, 'session_id.txt') : path.join(dir, 'session_id.txt'),
+    prefix: e.prefix ? String(e.prefix) : '',
+    timezone: e.timezone ? String(e.timezone) : '',
+    number: String(e.number || '').replace(/\D/g, ''),
+    sessionId: String(e.sessionId || '').trim() || String(env[`SESSION_ID_${upper(name)}`] || '').trim(),
+  };
+};
+
 // Returns null when the person did not set up accounts (the bot then starts exactly as before).
+// Accounts come from accounts.json / ACCOUNTS, and from the session IDs in session_id.txt (see core/autoaccounts.js).
 function load(root, env = process.env) {
   const read = readEntries(root, env);
-  if (!read) return null;
-  const problems = [...read.problems];
+  const problems = read ? [...read.problems] : [];
   const seen = new Set();
   const accounts = [];
-  for (const raw of read.entries) {
+  for (const raw of read ? read.entries : []) {
     const e = typeof raw === 'string' ? { name: raw } : raw && typeof raw === 'object' ? raw : null;
     const name = String(e?.name || '').trim().toLowerCase();
     if (!e || !NAME_RE.test(name)) {
@@ -52,22 +68,28 @@ function load(root, env = process.env) {
     }
     seen.add(name);
     if (e.enabled === false) continue;
-    const main = name === MAIN;
-    const dir = main ? root : path.join(root, 'accounts', name);
-    accounts.push({
-      name,
-      main,
-      dataDir: main ? path.join(root, 'data') : path.join(dir, 'data'),
-      sessionDir: main ? path.join(root, 'session') : path.join(dir, 'session'),
-      sessionIdFile: main ? path.join(root, 'session_id.txt') : path.join(dir, 'session_id.txt'),
-      prefix: e.prefix ? String(e.prefix) : '',
-      timezone: e.timezone ? String(e.timezone) : '',
-      number: String(e.number || '').replace(/\D/g, ''),
-      sessionId: String(e.sessionId || '').trim() || String(env[`SESSION_ID_${upper(name)}`] || '').trim(),
-    });
+    accounts.push(build(root, env, name, e));
   }
+
+  // accounts made from several session IDs in session_id.txt
+  const notes = [];
+  const auto = require('./autoaccounts').resolve(root, env, seen, (n) => NAME_RE.test(n));
+  if (auto) {
+    if (!accounts.some((a) => a.main) && !seen.has(MAIN)) accounts.unshift(build(root, env, MAIN));
+    for (const name of auto.names) if (!accounts.some((a) => a.name === name) && !seen.has(name)) accounts.push(build(root, env, name));
+    for (const acc of accounts) {
+      const id = auto.assigned[acc.name];
+      if (acc.main) acc.idAssigned = true; // main must not read the other accounts' lines in the shared file
+      if (id && !acc.sessionId) {
+        acc.sessionId = id;
+        acc.autoId = !acc.main; // other accounts get it in their own session_id.txt
+      }
+    }
+    for (const name of auto.news) notes.push(`➕ New session ID found: the account "${name}" was created (folder accounts/${name}/) and is starting.`);
+  }
+  if (!read && !auto) return null;
   if (!accounts.length) problems.push('No account is switched on, so the bot starts in the normal single way.');
-  return { source: read.source, accounts: accounts.length ? accounts : null, problems };
+  return { source: read ? read.source : 'session_id.txt', accounts: accounts.length ? accounts : null, problems, notes };
 }
 
 // the environment of the bot process of one account (index = its place in the list; the first one updates the shared files)
@@ -83,12 +105,13 @@ function envFor(acc, index, base = process.env) {
   if (index > 0) env.TURBOFEX_NO_UPDATE = '1';
   if (!acc.main) {
     env.TURBOFEX_ISOLATED = '1'; // config.env must not hand this account the login or number of the main one
-    env.SESSION_ID = acc.sessionId;
+    env.SESSION_ID = acc.autoId ? '' : acc.sessionId; // an ID found in the shared file is written in the account's own file instead (prepare)
     env.NUMBER = acc.number;
     env.PAIRING_NUMBER = '';
     env.OWNER_NUMBER = '';
-  } else if (acc.sessionId) {
-    env.SESSION_ID = acc.sessionId;
+  } else {
+    if (acc.sessionId) env.SESSION_ID = acc.sessionId;
+    if (acc.idAssigned) env.TURBOFEX_ID_ASSIGNED = '1'; // the shared file has several IDs: main only uses its own
   }
   if (acc.prefix) env.BOT_PREFIX = acc.prefix;
   if (acc.timezone) env.TIMEZONE = acc.timezone;
@@ -98,7 +121,13 @@ function envFor(acc, index, base = process.env) {
 function prepare(acc) {
   for (const d of [acc.dataDir, acc.sessionDir]) fs.mkdirSync(d, { recursive: true });
   try {
-    require('./sessionid').ensureFile(acc.sessionIdFile, process.env.PAIR_SITE_URL || 'https://turbofex-pair.onrender.com');
+    const sessionid = require('./sessionid');
+    const site = process.env.PAIR_SITE_URL || 'https://turbofex-pair.onrender.com';
+    sessionid.ensureFile(acc.sessionIdFile, site);
+    // an ID that was added in the main file for this account is also written in the account's own file (if that has none)
+    if (acc.autoId && acc.sessionId && !sessionid.readFile(acc.sessionIdFile)) {
+      fs.writeFileSync(acc.sessionIdFile, sessionid.TEMPLATE(site).replace(/^SESSION_ID=$/m, `SESSION_ID=${acc.sessionId}`));
+    }
   } catch (err) {
     // the bot makes the file itself when it starts
   }

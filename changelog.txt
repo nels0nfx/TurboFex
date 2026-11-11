@@ -1,3 +1,23 @@
+TurboFex v1.4.4 - a menu header that looks like a header
+CHANGED IN 1.4.4
+- CHANGED: the menu header is now a banner of its own, drawn with a DOUBLE-line frame (`╔ ║ ╠ ╚`), so it no longer looks like the single-line category boxes (`┏ ┃ ┗`) or like other messages. The bot name sits in the top bar, and the lines are in three groups split by a thin line: who (owner name, your role), the bot (prefix, mode, commands, version) and live status (speed, uptime, and for the owner host, memory and RAM).
+- Unchanged: the category headings (`┏ ❏ NAME ❏`), the command lines and their symbols, the emoji before every header name (the bot name has none) and no emoji below the header.
+
+TurboFex v1.4.3 - the menu header shows the owner name from WhatsApp
+CHANGED IN 1.4.3
+- NEW: the menu header has a line `👑 Owner ▸ <name>` right under the title. The name is detected from WhatsApp, nothing to type: when the bot runs on the owner's own number it is the profile name of that account (and the name that comes with the owner's own messages); when the bot runs on another number it is the name the owner uses on WhatsApp (his profile name, or the name saved in the phone). The name of the bot number is never shown as the owner.
+- The last name found is saved, so the menu keeps showing it. Until WhatsApp has told the name the line is left out (never a phone number). The first message the owner sends from his phone (for example `.menu`) is enough for the bot to learn it.
+- NEW: `ownername` (owner only): shows the name, `ownername set <name>` chooses another one, `ownername auto` goes back to the name from WhatsApp. Each account has its own owner name.
+
+TurboFex v1.4.2 - add another session ID and the account is made by itself
+CHANGED IN 1.4.2
+- NEW: ACCOUNTS FROM SESSION IDs. Keep the first session ID in `session_id.txt` and add the next one on a NEW line below it (`SESSION_ID=TFX-...`, or `shop=TFX-...` to name the account). The bot creates the account by itself (folder `accounts/<name>/`, its own login, settings and `session_id.txt`) and starts it. No `accounts.json` is needed. The first line stays the main bot and keeps its old `data/` and `session/`.
+- NEW: the new account is started while the bot runs (the file is checked every few seconds); the accounts that already run are not restarted. A bot that ran as one account restarts once to become several.
+- Each account is remembered in `accounts/registry.json`: the same ID never makes a second account, and the account keeps running with its own login even when its line is removed from the file.
+- The main account only uses its own ID: a new ID in the file can never replace the main login. A file with only ONE new ID still replaces the login, as before.
+- Hosts without file access: the `SESSION_ID` variable may hold several IDs separated by commas. `accounts.json` / `ACCOUNTS` still work and are combined with this.
+- The `session_id.txt` template explains how to add another number.
+
 TurboFex v1.4.1 - the store's public key is in the bot
 CHANGED IN 1.4.1
 - The public key of the TurboFex plugin registry is now part of the bot, so the store (`plugin store`) can open as soon as the registry has its first signed plugin. Until then it shows an empty store. No other change.

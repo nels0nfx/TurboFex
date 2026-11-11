@@ -1033,14 +1033,15 @@ test('menu header: every line name starts with a matching emoji, the bot name ha
   m.ctx.args = [];
   await cmd('menu').run(m.ctx);
   const text = m.out[0];
-  const header = text.split('┗✦')[0].split('\n');
-  assert.match(header[0], /^┏✦ ◈ \*[A-Z ]+\* ◈$/, 'the bot name line has no emoji');
-  const rows = header.slice(1).filter((l) => l.startsWith('┃'));
+  const header = text.split('╚═')[0].split('\n');
+  assert.match(header[0], /^╔═+$/, 'the header is framed with double lines');
+  assert.match(header[1], /^║ +✦ ◈ \*[A-Z ]+\* ◈ ✦$/, 'the bot name line has no emoji');
+  const rows = header.slice(2).filter((l) => l.startsWith('║'));
   assert.ok(rows.length >= 7);
   const want = { User: '👤', Prefix: '⌨️', Mode: /^(🔒|🌍)$/, Commands: '📋', Version: '🏷️', Speed: '⚡', Uptime: '⏱️' };
   const names = { ᴜꜱᴇʀ: 'User', ᴘʀᴇꜰɪx: 'Prefix', ᴍᴏᴅᴇ: 'Mode', ᴄᴏᴍᴍᴀɴᴅꜱ: 'Commands', ᴠᴇʀꜱɪᴏɴ: 'Version', ꜱᴘᴇᴇᴅ: 'Speed', ᴜᴘᴛɪᴍᴇ: 'Uptime' };
   for (const row of rows) {
-    const [, icon, label] = /^┃ (\S+) \*(\S+)\*/.exec(row);
+    const [, icon, label] = /^║ (\S+) \*(\S+)\*/.exec(row);
     const key = names[label];
     assert.ok(key, `known name ${label}`);
     assert.ok(want[key] instanceof RegExp ? want[key].test(icon) : icon === want[key], `${key} has ${icon}`);
@@ -1051,9 +1052,9 @@ test('menu header: every line name starts with a matching emoji, the bot name ha
   o.ctx.isOwner = true;
   o.ctx.args = [];
   await cmd('menu').run(o.ctx);
-  assert.match(o.out[0], /┃ 🖥️ \*ʜᴏꜱᴛ\*[\s\S]*┃ 💾 \*ᴜꜱᴀɢᴇ\*[\s\S]*┃ 📊 \*ʀᴀᴍ\*/);
+  assert.match(o.out[0], /║ 🖥️ \*ʜᴏꜱᴛ\*[\s\S]*║ 💾 \*ᴜꜱᴀɢᴇ\*[\s\S]*║ 📊 \*ʀᴀᴍ\*/);
   // below the header: no emoji at all
-  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(text.split('┗✦').slice(1).join('')));
+  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(text.split('╚═').slice(1).join('')));
 });
 
 // ---------------------------------------------------------------- fast downloads

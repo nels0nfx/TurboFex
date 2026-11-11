@@ -5,9 +5,15 @@ const { smallcaps: sc } = require('../core/fonts');
 const store = require('../whatsapp/store');
 const capacity = require('../core/capacity');
 const { groupByCategory } = require('../whatsapp/categories');
+const ownername = require('../whatsapp/ownername');
 
 const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
 const RULE = '────────────────'; // short on purpose: long lines wrap on phones
+// the menu header frame (double lines; the category boxes below use single lines)
+const TOP = '╔═══════════════════';
+const MID = '╠═══════════════════';
+const SPLIT = '╟───────────────────';
+const END = '╚═══════════════════';
 
 // a block of aligned lines in WhatsApp monospace
 const mono = (rows) => {
@@ -67,20 +73,33 @@ module.exports = {
     const mem = capacity.memory();
     const pct = mem.limitMB ? Math.min(100, Math.round((mem.usedMB / mem.limitMB) * 100)) : 0;
     const ms = timing && timing.receivedAt ? Math.max(0, Date.now() - timing.receivedAt) : 0;
-    // every name in the header starts with an emoji that fits it (the bot name above them has none)
-    const rows = [
-      ['👤', 'User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member'],
+    // The header is a banner of its own: a DOUBLE-line frame (╔ ║ ╠ ╚), so it never looks like the single-line category boxes (┏ ┃ ┗)
+    // below it. Every name in it starts with an emoji that fits it; the bot name has none. Three groups, split by thin lines.
+    const owner = ownername.get(sock); // the owner's name from WhatsApp (the line is left out until WhatsApp has told it)
+    const who = [...(owner ? [['👑', 'Owner', owner]] : []), ['👤', 'User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member']];
+    const info = [
       ['⌨️', 'Prefix', `[ ${prefix || 'none'} ]`],
       [store.getMode() === 'private' ? '🔒' : '🌍', 'Mode', store.getMode() === 'private' ? 'Private' : 'Public'],
       ['📋', 'Commands', String(all.length)],
       ['🏷️', 'Version', `v${pkg.version}`],
-      ['⚡', 'Speed', `${ms} ms`],
-      ['⏱️', 'Uptime', clock.uptime()],
     ];
+    const live = [['⚡', 'Speed', `${ms} ms`], ['⏱️', 'Uptime', clock.uptime()]];
     if (isOwner) {
-      rows.push(['🖥️', 'Host', host()], ['💾', 'Usage', `${size(mem.usedMB)} of ${size(mem.limitMB)}`], ['📊', 'RAM', `[${'█'.repeat(Math.round(pct / 10))}${'░'.repeat(10 - Math.round(pct / 10))}] ${pct}%`]);
+      live.push(['🖥️', 'Host', host()], ['💾', 'Usage', `${size(mem.usedMB)} of ${size(mem.limitMB)}`], ['📊', 'RAM', `[${'█'.repeat(Math.round(pct / 10))}${'░'.repeat(10 - Math.round(pct / 10))}] ${pct}%`]);
     }
-    const head = `┏✦ ◈ *${title}* ◈\n${custom.subtitle ? `┃ _${custom.subtitle}_\n` : ''}${rows.map(([icon, k, v]) => `┃ ${icon} *${sc(k)}* ▸ ${v}`).join('\n')}\n┗✦`;
+    const line = ([icon, k, v]) => `║ ${icon} *${sc(k)}* ▸ ${v}`;
+    const head = [
+      TOP,
+      `║   ✦ ◈ *${title}* ◈ ✦`,
+      ...(custom.subtitle ? [`║   _${custom.subtitle}_`] : []),
+      MID,
+      ...who.map(line),
+      SPLIT,
+      ...info.map(line),
+      SPLIT,
+      ...live.map(line),
+      END,
+    ].join('\n');
     const body = sections.map((s) => block(s, s.cmds.map((c) => sc(c.name)))).join('\n\n');
     const tips =
       `> ${prefix}menu <category>  details of a category\n` +

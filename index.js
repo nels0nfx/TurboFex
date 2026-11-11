@@ -47,26 +47,85 @@ if (process.env.FLASH_CHILD === '1') {
     });
 } else {
   const accountsMod = require('./core/accounts');
-  const plan = accountsMod.load(ROOT, process.env);
   const brand = require('./core/brand');
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  let current = null; // what is running now: { kind: 'one' | 'many', halt(sig), has(name), add(accounts) }
   let count = 1;
+  let shuttingDown = false;
+  let reloading = false;
 
-  if (plan && plan.accounts) {
-    count = plan.accounts.length;
-    for (const p of plan.problems) console.log(`⚠️ ${p}`);
-    startMany(plan.accounts);
-  } else {
-    if (plan) for (const p of plan.problems) console.log(`⚠️ ${p}`);
-    startOne();
-  }
+  const begin = () => {
+    const plan = accountsMod.load(ROOT, process.env);
+    if (plan) {
+      for (const p of plan.problems) console.log(`⚠️ ${p}`);
+      for (const n of plan.notes || []) console.log(n);
+    }
+    if (plan && plan.accounts) {
+      count = plan.accounts.length;
+      current = startMany(plan.accounts);
+    } else {
+      count = 1;
+      current = startOne();
+    }
+  };
+  begin();
 
   // hosts that need an open port (PORT is set): a tiny status page, nothing else
   require('./core/hostport').start({ info: () => ({ bot: brand.botName, version: require('./package.json').version, accounts: count }) });
 
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    process.on(sig, () => {
+      shuttingDown = true;
+      current.halt(sig).then(() => process.exit(0));
+    });
+  }
+
+  // A new session ID added to session_id.txt (or a new accounts.json) is picked up while the bot runs: the new account is
+  // started at once and the running ones are not touched. (A bot that ran as ONE account restarts once to become several.)
+  const watched = [path.join(ROOT, 'session_id.txt'), path.join(ROOT, 'accounts.json')];
+  const stamp = () => watched.map((f) => { try { return fs.statSync(f).mtimeMs; } catch (err) { return 0; } }).join('|');
+  let lastStamp = stamp();
+  const watcher = setInterval(async () => {
+    if (shuttingDown || reloading) return;
+    const now = stamp();
+    if (now === lastStamp) return;
+    lastStamp = now;
+    try {
+      const plan = accountsMod.load(ROOT, process.env);
+      if (!plan || !plan.accounts) return;
+      for (const n of plan.notes || []) console.log(n);
+      if (current.kind === 'many') {
+        const fresh = plan.accounts.filter((a) => !current.has(a.name));
+        if (fresh.length) {
+          count += fresh.length;
+          current.add(fresh);
+        }
+      } else if (plan.accounts.length > 1 || plan.notes?.length) {
+        reloading = true;
+        console.log('\n🔄 Several accounts now: restarting once to start them all...\n');
+        await current.halt('SIGTERM');
+        begin();
+        reloading = false;
+      }
+    } catch (err) {
+      reloading = false;
+      console.error('Checking for new accounts failed:', err.message);
+    }
+  }, 5000);
+  if (watcher.unref) watcher.unref();
+
+  // stops a list of child processes and waits for them (15 seconds, then they are forced)
+  async function stopChildren(children, sig) {
+    const waits = children.map((c) => new Promise((r) => c.once('exit', r)));
+    for (const c of children) c.kill(sig);
+    await Promise.race([Promise.all(waits), sleep(15000)]);
+    for (const c of children) if (c.exitCode === null && c.signalCode === null) c.kill('SIGKILL');
+  }
+
   // ---------- one account: exactly as before ----------
   function startOne() {
     let child = null;
-    let stopping = false;
+    let halted = false;
     const restarts = [];
 
     const restartSoon = () => {
@@ -78,7 +137,7 @@ if (process.env.FLASH_CHILD === '1') {
         process.exit(1);
       }
       console.log('\n🔄 Restarting the bot...\n');
-      setTimeout(run, 1000);
+      setTimeout(() => !halted && run(), 1000);
     };
 
     const run = () => {
@@ -89,7 +148,7 @@ if (process.env.FLASH_CHILD === '1') {
 
       child.on('exit', (code) => {
         child = null;
-        if (stopping) process.exit(0);
+        if (halted) return;
         if (code === 43) process.exit(43); // the bot name was changed: stop (no restart, no rollback)
         if (code === RESTART_CODE) return restartSoon();
         if (code !== 0 && tryRollback()) return restartSoon();
@@ -97,30 +156,23 @@ if (process.env.FLASH_CHILD === '1') {
       });
     };
 
-    for (const sig of ['SIGINT', 'SIGTERM']) {
-      process.on(sig, () => {
-        stopping = true;
-        if (child) child.kill(sig);
-        else process.exit(0);
-      });
-    }
-
     run();
+    return {
+      kind: 'one',
+      has: () => true,
+      async halt(sig = 'SIGTERM') {
+        halted = true;
+        if (child) await stopChildren([child], sig);
+      },
+    };
   }
 
   // ---------- several accounts: one bot process each ----------
   function startMany(accounts) {
-    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const state = new Map(); // name -> { acc, index, child, expected, restarts: [], gaveUp }
     let stopping = false;
     let restartingAll = false;
-    const prefixed = accounts.length > 1;
-
-    accounts.forEach((acc, index) => {
-      accountsMod.prepare(acc);
-      state.set(acc.name, { acc, index, child: null, expected: false, restarts: [], gaveUp: false });
-    });
-    console.log(`👥 ${accounts.length} account${accounts.length === 1 ? '' : 's'}: ${accounts.map((a) => a.name).join(', ')}`);
+    let prefixed = accounts.length > 1;
 
     const pipeLines = (stream, out, tag) => {
       let buf = '';
@@ -139,14 +191,17 @@ if (process.env.FLASH_CHILD === '1') {
       stream.on('end', () => buf && out.write(`${tag}${buf}\n`));
     };
 
-    const stopAll = (sig) => {
-      stopping = true;
-      let any = false;
-      for (const st of state.values()) if (st.child) { st.expected = true; st.child.kill(sig); any = true; }
-      if (!any) process.exit(0);
+    const allDone = () => [...state.values()].every((st) => !st.child && (st.gaveUp || st.stoppedClean));
+    const afterExit = () => {
+      if (!stopping && !restartingAll && allDone()) process.exit(1);
     };
 
-    const allDone = () => [...state.values()].every((st) => !st.child && (st.gaveUp || st.stoppedClean));
+    const add = (acc) => {
+      const st = { acc, index: state.size, child: null, expected: false, restarts: [], gaveUp: false, stoppedClean: false };
+      accountsMod.prepare(acc);
+      state.set(acc.name, st);
+      return st;
+    };
 
     function startAccount(st) {
       st.expected = false;
@@ -159,11 +214,9 @@ if (process.env.FLASH_CHILD === '1') {
       }
       child.on('exit', (code) => {
         st.child = null;
-        if (st.expected) return afterExpected();
-        if (stopping) return afterExpected();
+        if (st.expected || stopping) return afterExit();
         if (code === 43) { // the bot name was changed: stop everything
-          stopAll('SIGTERM');
-          setTimeout(() => process.exit(43), 3000).unref?.();
+          halt('SIGTERM').then(() => process.exit(43));
           return;
         }
         if (code === RESTART_CODE) return restartAll(); // an update or a restart changes the shared files: every account restarts
@@ -171,7 +224,7 @@ if (process.env.FLASH_CHILD === '1') {
         if (code === 0) { // that account was stopped on purpose; the others keep running
           st.stoppedClean = true;
           console.log(`[${st.acc.name}] stopped.`);
-          return afterExpected();
+          return afterExit();
         }
         const now = Date.now();
         st.restarts.push(now);
@@ -179,31 +232,20 @@ if (process.env.FLASH_CHILD === '1') {
         if (st.restarts.length > 5) {
           st.gaveUp = true;
           console.error(`[${st.acc.name}] stopped after too many restarts in a row. The other accounts keep running.`);
-          return afterExpected();
+          return afterExit();
         }
         console.log(`\n🔄 Restarting account ${st.acc.name}...\n`);
         setTimeout(() => !stopping && !restartingAll && startAccount(st), 1000);
       });
     }
 
-    function afterExpected() {
-      if (stopping && [...state.values()].every((s) => !s.child)) process.exit(0);
-      if (!stopping && !restartingAll && allDone()) process.exit(1);
-    }
-
     async function restartAll() {
       if (restartingAll || stopping) return;
       restartingAll = true;
       console.log('\n🔄 Restarting all accounts...\n');
-      const waits = [];
-      for (const st of state.values()) {
-        if (!st.child) continue;
-        st.expected = true;
-        waits.push(new Promise((r) => st.child.once('exit', r)));
-        st.child.kill('SIGTERM');
-      }
-      await Promise.race([Promise.all(waits), sleep(15000)]);
-      for (const st of state.values()) if (st.child) st.child.kill('SIGKILL');
+      const kids = [];
+      for (const st of state.values()) if (st.child) { st.expected = true; kids.push(st.child); }
+      await stopChildren(kids, 'SIGTERM');
       await sleep(1000);
       restartingAll = false;
       for (const st of state.values()) {
@@ -213,13 +255,35 @@ if (process.env.FLASH_CHILD === '1') {
       }
     }
 
-    for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => stopAll(sig));
+    async function halt(sig = 'SIGTERM') {
+      stopping = true;
+      const kids = [];
+      for (const st of state.values()) if (st.child) { st.expected = true; kids.push(st.child); }
+      if (kids.length) await stopChildren(kids, sig);
+    }
+
+    console.log(`👥 ${accounts.length} account${accounts.length === 1 ? '' : 's'}: ${accounts.map((a) => a.name).join(', ')}`);
+    accounts.forEach(add);
     // the accounts start one after the other, so they do not all load at the same moment on a small server
     (async () => {
-      for (const st of state.values()) {
+      for (const st of [...state.values()]) {
+        if (stopping) return;
         startAccount(st);
         await sleep(st.index === 0 ? 4000 : 2500);
       }
     })();
+
+    return {
+      kind: 'many',
+      has: (name) => state.has(name),
+      halt,
+      add(list) { // new accounts join while the others keep running (their log lines get the account name from now on)
+        prefixed = true;
+        for (const acc of list) {
+          console.log(`👥 Starting the new account ${acc.name}...`);
+          startAccount(add(acc));
+        }
+      },
+    };
   }
 }

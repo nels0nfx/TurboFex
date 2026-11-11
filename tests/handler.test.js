@@ -34,7 +34,7 @@ test('the menu lists categories alphabetically without emojis (only the header l
   const heads = [...menu.matchAll(/┏ ❏ ([A-Z ]+) ❏/g)].map((m) => m[1]).slice(1); // (the first one is the header)
   assert.ok(heads.length > 5, 'the category headings are found');
   assert.deepStrictEqual(heads, [...heads].sort());
-  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(menu.split('┗✦')[1]), 'no emoji below the header');
+  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(menu.split('╚═')[1]), 'no emoji below the header');
 });
 test('public mode: everybody can use commands', async () => {
   store.setMode('public');

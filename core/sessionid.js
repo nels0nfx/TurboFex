@@ -32,6 +32,8 @@ const TEMPLATE = (site) =>
     '# 2) Copy the session ID (it looks like TFX-K7M2-9QXA-4BNP).',
     '# 3) Paste it after the = sign on the line below, SAVE this file and RESTART the bot.',
     '# A session ID works once and expires after 5 minutes: paste it and restart the bot right away.',
+    '# MORE THAN ONE NUMBER? Keep the line below as it is and add the next session ID on a NEW line under it',
+    '# (the same kind of line again, or with a name first: shop=TFX-XXXX-XXXX-XXXX). The bot makes the new account by itself.',
     'SESSION_ID=',
     '',
   ].join('\n');
@@ -50,6 +52,38 @@ function readFile(file) {
   }
   return '';
 }
+
+// every session ID in a text, in order, without doubles: [{ id, label }]. A line can be  SESSION_ID=TFX-..., just the ID,
+// or  name=TFX-...  (the name becomes the name of that account). Lines starting with # are notes.
+function parseIds(text) {
+  const out = [];
+  const seen = new Set();
+  for (const line of String(text || '').split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const m = /^(?:export\s+)?([A-Za-z0-9_-]+)\s*[=:]\s*(.+)$/.exec(t);
+    const id = normalize(m ? m[2].replace(/^["'`]+|["'`]+$/g, '').trim() : t);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    let label = '';
+    if (m) {
+      const key = m[1].toLowerCase();
+      const fromVar = /^session_id_([a-z0-9_-]+)$/.exec(key);
+      if (fromVar) label = fromVar[1];
+      else if (key !== 'session_id' && key !== 'sessionid' && key !== 'id') label = key;
+    }
+    out.push({ id, label });
+  }
+  return out;
+}
+
+const readAll = (file) => {
+  try {
+    return parseIds(fs.readFileSync(file, 'utf8'));
+  } catch (err) {
+    return [];
+  }
+};
 
 // creates the file with the steps inside, so the person only has to paste the ID. Never overwrites.
 function ensureFile(file, site) {
@@ -131,7 +165,8 @@ async function download(url, fetchFn, log, { timeoutMs, tries, pauseMs }) {
 //   restored = a login from the site was saved      skipped = nothing to do (no ID, or this ID was already used)
 //   failed   = an ID is set but could not be used (the caller shows what to do)
 async function restore(config, log = console.log, fetchFn = globalThis.fetch, opts = {}) {
-  const raw = String(config.sessionId || '').trim() || (config.sessionIdFile ? readFile(config.sessionIdFile) : ''); // the host variable first, then the file
+  // the host variable first, then the file. When several accounts share the file, the launcher gives each its own ID (TURBOFEX_ID_ASSIGNED)
+  const raw = String(config.sessionId || '').trim() || (config.sessionIdFile && process.env.TURBOFEX_ID_ASSIGNED !== '1' ? readFile(config.sessionIdFile) : '');
   if (!raw) return 'skipped';
 
   const id = normalize(raw);
@@ -197,4 +232,4 @@ async function restore(config, log = console.log, fetchFn = globalThis.fetch, op
   return 'restored';
 }
 
-module.exports = { restore, normalize, forget, alreadyLinked, readFile, ensureFile, TEMPLATE };
+module.exports = { restore, normalize, forget, alreadyLinked, readFile, readAll, parseIds, hashOf, ensureFile, TEMPLATE };

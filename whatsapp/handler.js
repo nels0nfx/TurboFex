@@ -14,6 +14,7 @@ const replay = require('./replay');
 const idmap = require('./idmap');
 const watchers = require('./watchers');
 const stickercmd = require('./stickercmd');
+const ownername = require('./ownername');
 const statusreply = require('./statusreply');
 const cmdreact = require('./cmdreact');
 const { withTimeout } = require('./timeout');
@@ -155,6 +156,7 @@ async function handleMessageInner(sock, msg) {
   const t0 = Date.now();
   idmap.learnKey(msg.key);
   names.learnMessage(msg); // the name people use on WhatsApp, so notices can say the name instead of a number
+  ownername.learn(sock, msg); // the owner's own name, for the menu header
   // remember how WhatsApp addresses the owner, so notifications to him can always be opened
   if (!jid.endsWith('@g.us') && !msg.key.fromMe && config.ownerNumber && !jid.endsWith('@broadcast')) {
     const pn = idmap.isPn(jid) ? jid : msg.key.remoteJidAlt || idmap.pnSync(jid);

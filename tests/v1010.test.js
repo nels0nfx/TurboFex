@@ -327,7 +327,7 @@ test('the menu is ONE text message with the header and the commands, and sends n
   await menu.run({ reply: async (t) => texts.push(t), commandList, prefix: '.', args: [], isOwner: false, isAdmin: false, sock: { sendMessage: async (j, c) => media.push(c) }, jid: 'a@s.whatsapp.net', msg: { key: {} } });
   assert.strictEqual(media.length, 0, 'nothing but the text menu');
   assert.strictEqual(texts.length, 1);
-  assert.ok(texts[0].includes('┏✦ ◈') && texts[0].includes('┏ ❏'), 'header and commands together');
+  assert.ok(texts[0].includes('╔═') && texts[0].includes('┏ ❏'), 'header and commands together');
   assert.ok(!fs.existsSync(path.join(root, 'assets')), 'no picture or video files');
   assert.ok(!fs.existsSync(path.join(root, 'whatsapp', 'menumedia.js')));
 });
