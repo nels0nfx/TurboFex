@@ -1,3 +1,7 @@
+TurboFex v1.4.1 - the store's public key is in the bot
+CHANGED IN 1.4.1
+- The public key of the TurboFex plugin registry is now part of the bot, so the store (`plugin store`) can open as soon as the registry has its first signed plugin. Until then it shows an empty store. No other change.
+
 TurboFex v1.4.0 - the plugin store (first part): signed plugins from the TurboFex-Registry
 CHANGED IN 1.4.0
 - NEW: PLUGIN STORE inside the bot. `plugin store` lists approved plugins, `plugin store <name>` shows details and what a plugin asks for, `plugin install <name>` downloads and installs it (you still confirm with a code), `plugin updates` and `plugin update <name>` keep store plugins current. Your own plugin folders always come first.

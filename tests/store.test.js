@@ -29,11 +29,18 @@ const run = async (line, over) => { const r = []; await pluginCmd.run({ args: li
 const serve = () => registry._test.setFetcher(async (url) => { const f = path.join(reg, url.slice(registry.BASE.length)); if (!fs.existsSync(f)) throw new Error('404'); return fs.readFileSync(f); });
 const resign = () => { const b = fs.readFileSync(path.join(reg, 'index.json')); fs.writeFileSync(path.join(reg, 'index.json.sig'), crypto.sign(null, b, crypto.createPrivateKey(fs.readFileSync(path.join(process.env.TFX_REGISTRY_KEYDIR, 'key.pem')))).toString('base64')); };
 
-test('the store is closed until a public key is set, and the bot says so', async () => {
+test('the store is closed when no public key is set, and the bot says so', async () => {
+  registry._test.setKey(''); // pretend no key is installed
   assert.strictEqual(registry.configured(), false);
   await run('plugin on', {});
   assert.match(await run('plugin store', {}), /not open yet/);
   assert.match(await run('plugin install nothing-here', {}), /not open yet|could not find/);
+});
+
+test('the public key that ships with the bot is a valid signing key', () => {
+  const pem = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'core', 'plugins', 'registry-key.json'), 'utf8')).publicKey;
+  assert.strictEqual(crypto.createPublicKey(pem).asymmetricKeyType, 'ed25519');
+  assert.ok(!/PRIVATE/.test(pem));
 });
 
 test('tool: keygen, backup and restore of the signing key', () => {

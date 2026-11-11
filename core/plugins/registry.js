@@ -17,7 +17,7 @@ let fetcher = null; // tests can replace the download function
 let keyOverride = null;
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
-const publicKeyPem = () => keyOverride || (() => { try { return require('./registry-key.json').publicKey || ''; } catch (e) { return ''; } })();
+const publicKeyPem = () => (keyOverride !== null ? keyOverride : (() => { try { return require('./registry-key.json').publicKey || ''; } catch (e) { return ''; } })());
 const configured = () => !!publicKeyPem();
 const download = async (rel, maxBytes) => {
   if (fetcher) return fetcher(BASE + rel, maxBytes);
