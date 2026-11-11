@@ -1,3 +1,9 @@
+TurboFex v1.4.5 - registry tool: collect approved plugins from the pair site
+CHANGED IN 1.4.5
+- NEW: `node tools/registry.js pull <registry-folder>` downloads the plugins you approved in the pair site's admin dashboard (Developer Centre, pair site v2.28.0), checks each one AGAIN with the bot's own plugin check (fingerprints must match what the site announced, the plugin id must not belong to another developer, a published version never changes), adds and signs them. Plugins that fail are skipped with the reason; the others still go through.
+- NEW: `node tools/registry.js published` tells the pair site that those plugins are now in the registry (run it after you pushed the registry folder to GitHub).
+- It needs `TFX_SITE_TOKEN` (the same long secret as REGISTRY_PULL_TOKEN on the pair site). `TFX_SITE_URL` is optional. The signing key never leaves your phone. Nothing changes in the bot itself (menu, accounts and everything from 1.4.2 to 1.4.4 are untouched).
+
 TurboFex v1.4.4 - a menu header that looks like a header
 CHANGED IN 1.4.4
 - CHANGED: the menu header is now a banner of its own, drawn with a DOUBLE-line frame (`╔ ║ ╠ ╚`), so it no longer looks like the single-line category boxes (`┏ ┃ ┗`) or like other messages. The bot name sits in the top bar, and the lines are in three groups split by a thin line: who (owner name, your role), the bot (prefix, mode, commands, version) and live status (speed, uptime, and for the owner host, memory and RAM).

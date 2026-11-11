@@ -8,6 +8,9 @@
 //   node tools/registry.js add <plugin-folder> <registry-folder>   approve one plugin version (checks it, copies it, signs the index)
 //   node tools/registry.js revoke <id> <version|all> <reason> <registry-folder>   withdraw a plugin (bots switch it off)
 //   node tools/registry.js verify <registry-folder>  check that everything in the registry is intact and signed
+//   node tools/registry.js pull <registry-folder>    download the plugins you approved on the pair site, check them again, add and sign them
+//                                                    (needs TFX_SITE_TOKEN; TFX_SITE_URL is optional)
+//   node tools/registry.js published                 after you pushed the registry: tell the pair site those plugins are now published
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -101,7 +104,61 @@ function verify(reg) {
   }
   return n;
 }
-module.exports = { keygen, backup, restore, init, add, revoke, build, verify, publicPem };
+
+// ---- the pair site's Developer Centre: approved plugins are collected here and signed on this phone ----
+const pendingFile = () => path.join(keyDir(), 'pending-published.json');
+const siteUrl = () => String(process.env.TFX_SITE_URL || 'https://turbofex-pair.onrender.com').replace(/\/+$/, '');
+async function siteCall(method, route, body, fetchImpl) {
+  const token = process.env.TFX_SITE_TOKEN;
+  if (!token || token.length < 24) throw new Error('Set TFX_SITE_TOKEN first (the same value as REGISTRY_PULL_TOKEN on the pair site).');
+  const r = await (fetchImpl || fetch)(siteUrl() + route, { method, headers: { authorization: 'Bearer ' + token, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(20000) });
+  if (r.status === 401) throw new Error('The pair site did not accept the token. Check TFX_SITE_TOKEN.');
+  if (r.status === 404) throw new Error('The pair site has no download set up (REGISTRY_PULL_TOKEN is missing there).');
+  if (!r.ok) throw new Error('The pair site answered ' + r.status);
+  return r.json();
+}
+async function pull(reg, fetchImpl) {
+  const out = { added: [], skipped: [] };
+  const list = (await siteCall('GET', '/api/registry/approved', null, fetchImpl)).plugins || [];
+  const ownersFile = path.join(reg, 'owners.json'); const owners = readJson(ownersFile, {});
+  const pending = readJson(pendingFile(), []);
+  for (const p of list) {
+    const tag = `${p.id} ${p.version}`; const skip = (why) => out.skipped.push({ id: p.id, version: p.version, reason: why });
+    try {
+      if (typeof p.manifestRaw !== 'string' || typeof p.entrySource !== 'string') { skip('incomplete download'); continue; }
+      if (sha(Buffer.from(p.manifestRaw)) !== p.manifestSha || sha(Buffer.from(p.entrySource)) !== p.entrySha) { skip('the fingerprints do not match what the site announced'); continue; }
+      if (owners[p.id] !== undefined && owners[p.id] !== p.githubId) { skip('this plugin id already belongs to another developer'); continue; }
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tfx-pull-'));
+      try {
+        fs.writeFileSync(path.join(tmp, 'turbofex-plugin.json'), p.manifestRaw);
+        let m; try { m = JSON.parse(p.manifestRaw); } catch (e) { skip('the manifest is not valid JSON'); continue; }
+        const entry = typeof m.entry === 'string' ? m.entry : 'index.js';
+        if (!/^[\w.-]{1,80}$/.test(entry) || entry.includes('..')) { skip('bad entry name'); continue; }
+        fs.writeFileSync(path.join(tmp, entry), p.entrySource);
+        const v = manifestLib.validate(tmp, {});
+        if (!v.ok) { skip('the bot\'s own check refused it: ' + v.errors[0]); continue; }
+        if (v.manifest.id !== p.id || v.manifest.version !== p.version) { skip('id or version differs from what the site announced'); continue; }
+        const there = path.join(reg, 'plugins', p.id, p.version);
+        if (fs.existsSync(there)) {   // an earlier pull already added it (for example the push failed): only continue if it is the very same code
+          if (sha(fs.readFileSync(path.join(there, 'turbofex-plugin.json'))) === p.manifestSha && sha(fs.readFileSync(path.join(there, v.manifest.entry))) === p.entrySha) { if (!pending.includes(p.submission)) pending.push(p.submission); out.added.push(tag + ' (already in the folder)'); } else skip('this version is already published with different code');
+          continue;
+        }
+        add(tmp, reg);
+        owners[p.id] = p.githubId; if (!pending.includes(p.submission)) pending.push(p.submission); out.added.push(tag);
+      } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+    } catch (e) { skip(e.message); }
+  }
+  fs.writeFileSync(ownersFile, JSON.stringify(owners, null, 1) + '\n');
+  fs.mkdirSync(keyDir(), { recursive: true, mode: 0o700 }); fs.writeFileSync(pendingFile(), JSON.stringify(pending));
+  return out;
+}
+async function markPublished(fetchImpl) {
+  const ids = readJson(pendingFile(), []);
+  if (!ids.length) return 0;
+  const r = await siteCall('POST', '/api/registry/published', { ids }, fetchImpl);
+  fs.writeFileSync(pendingFile(), '[]'); return r.marked || 0;
+}
+module.exports = { keygen, backup, restore, init, add, revoke, build, verify, publicPem, pull, markPublished };
 
 if (require.main === module) {
   const [cmd, a, b, c, d] = process.argv.slice(2);
@@ -113,6 +170,13 @@ if (require.main === module) {
     else if (cmd === 'add' && a && b) { const i = add(a, b); console.log('✅ Approved and signed. Plugins in the registry: ' + Object.keys(i.plugins).length + '\nNow push the registry folder to GitHub.'); }
     else if (cmd === 'revoke' && a && b && d) { revoke(a, b, c, d); console.log('✅ Withdrawn and signed. Push the registry folder to GitHub; bots switch the plugin off within a few hours.'); }
     else if (cmd === 'verify' && a) { console.log('✅ All good: signature valid, ' + verify(a) + ' plugin version(s) intact.'); }
+    else if (cmd === 'pull' && a) {
+      pull(a).then((o) => {
+        console.log(o.added.length ? '✅ Added and signed:\n  ' + o.added.join('\n  ') + '\nNow push the registry folder to GitHub, then run:  node tools/registry.js published' : 'Nothing new to add.');
+        if (o.skipped.length) console.log('⚠️ Skipped:\n  ' + o.skipped.map((x) => x.id + ' ' + x.version + ': ' + x.reason).join('\n  '));
+      }).catch((e) => { console.error('⚠️ ' + e.message); process.exitCode = 1; });
+    }
+    else if (cmd === 'published') { markPublished().then((n) => console.log(n ? '✅ The pair site now shows ' + n + ' plugin(s) as published.' : 'Nothing was waiting to be marked.')).catch((e) => { console.error('⚠️ ' + e.message); process.exitCode = 1; }); }
     else { console.log(fs.readFileSync(__filename, 'utf8').split('\n').filter((l) => l.startsWith('//')).map((l) => l.slice(3)).join('\n')); process.exitCode = 1; }
   } catch (e) { console.error('⚠️ ' + e.message); process.exitCode = 1; }
 }
