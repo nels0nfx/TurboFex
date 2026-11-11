@@ -2,6 +2,18 @@ const plugins = require('../core/plugins');
 
 const NOT_ON = (p) => `ℹ️ *Plugins are off.*\n▸ *Turn them on:* \`${p}plugin on\``;
 const mono = (p, s) => `\`${p}plugin ${s}\``;
+const STORE_WHY = (p, why) => ({
+  store_off: '▸ _The store is not open yet._',
+  unreachable: '▸ _I could not reach the store. Check the internet connection and try again._',
+  tampered: '▸ _The files from the store did not pass the safety check, so nothing was installed._',
+  unknown: `▸ _I could not find that plugin. See what is there with_ ${mono(p, 'store')}`,
+  revoked: '▸ _This plugin was withdrawn for safety and cannot be installed._',
+  conflict: '▸ _A different plugin with that name is already in your plugins folder._',
+}[why] || '▸ _Please try again in a moment._');
+const showInstall = (p, r) => {
+  const m = r.manifest; const cmds = m.commands.map((c) => `\`${p}${c.name}\``).join(', ') || 'none';
+  return `🧩 *${r.update ? 'Update' : 'Install'} ${m.name} ${m.version}?*\n▸ *By:* ${m.author.name}\n▸ *About:* ${m.description}\n▸ *Commands:* ${cmds}\n*It asks to:*\n${r.lines.join('\n')}\n▸ *To continue:* \`${p}plugin confirm ${r.code}\`\n_This code works for 5 minutes._`;
+};
 
 module.exports = {
   name: 'plugin',
@@ -34,7 +46,7 @@ module.exports = {
     if (!sub || sub === 'help') {
       return reply(
         `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
@@ -54,17 +66,39 @@ module.exports = {
       return reply(`🧩 *Plugins*\n${lines.join('\n')}\n_Install one with_ ${mono(p, 'install <name>')}`);
     }
 
-    if (sub === 'install') {
-      if (!id) return reply(`ℹ️ *Which plugin?*\n▸ ${mono(p, 'install <name>')}\n_See the names with_ ${mono(p, 'list')}`);
-      const r = plugins.prepare(id);
-      if (!r.ok && r.why === 'missing') return reply(`⚠️ *I could not find that plugin.*\n▸ _Check the name with_ ${mono(p, 'list')}`);
-      if (!r.ok && r.why === 'same') return reply(`ℹ️ *That plugin is already installed and up to date.*`);
-      if (!r.ok) return reply(`⚠️ *This plugin cannot be installed.*\n▸ ${r.errors[0]}\n_Ask its developer to fix this._`);
-      const m = r.manifest;
-      const cmds = m.commands.map((c) => `\`${p}${c.name}\``).join(', ') || 'none';
-      return reply(
-        `🧩 *${r.update ? 'Update' : 'Install'} ${m.name} ${m.version}?*\n▸ *By:* ${m.author.name}\n▸ *About:* ${m.description}\n▸ *Commands:* ${cmds}\n*It asks to:*\n${r.lines.join('\n')}\n▸ *To continue:* \`${p}plugin confirm ${r.code}\`\n_This code works for 5 minutes._`
-      );
+    if (sub === 'store') {
+      try {
+        const d = id ? await plugins.storeInfo(id) : null; // an exact name shows its details, anything else is a search
+        if (d) {
+          const perms = d.permissions.length ? d.permissions.join(', ') : 'nothing special';
+          return reply(`🧩 *${d.name} ${d.version}*\n▸ *By:* ${d.author}\n▸ *About:* ${d.description}\n▸ *Asks for:* ${perms}\n▸ *Install:* ${mono(p, 'install ' + d.id)}`);
+        }
+        const list = (await plugins.storeList(rest.replace(/^store\s*/i, ''))).slice(0, 15);
+        if (!list.length) return reply(`🧩 *Nothing in the store matches.*\n▸ _Try a different word, or just_ ${mono(p, 'store')}`);
+        return reply(`🧩 *Plugin store*\n${list.map((x) => `▸ *${x.name}* ${x.version}  \`${x.id}\`\n   _${x.description}_`).join('\n')}\n_See details with_ ${mono(p, 'store <name>')}`);
+      } catch (e) {
+        return reply(`⚠️ *The store is not available.*\n${STORE_WHY(p, e.code)}`);
+      }
+    }
+    if (sub === 'updates') {
+      try {
+        const u = await plugins.updatesAvailable();
+        if (!u.length) return reply('✅ *Your store plugins are up to date.*');
+        return reply(`🧩 *Updates available*\n${u.map((x) => `▸ *${x.id}* ${x.from} → ${x.to}`).join('\n')}\n_Update one with_ ${mono(p, 'update <name>')}`);
+      } catch (e) {
+        return reply(`⚠️ *I could not check for updates.*\n${STORE_WHY(p, e.code)}`);
+      }
+    }
+    if (sub === 'install' || sub === 'update') {
+      if (!id) return reply(`ℹ️ *Which plugin?*\n▸ ${mono(p, sub + ' <name>')}\n_See the names with_ ${mono(p, 'list')} or ${mono(p, 'store')}`);
+      if (sub === 'update' && !(o.installed[id] && o.installed[id].store)) return reply(`ℹ️ *Only plugins from the store can be updated this way.*\n▸ _For your own plugin, replace its files and use_ ${mono(p, 'install ' + id)}`);
+      let r = sub === 'update' ? { ok: false, why: 'missing' } : plugins.prepare(id);
+      if (!r.ok && r.why === 'missing') r = await plugins.prepareStore(id);
+      if (!r.ok && ['same'].includes(r.why)) return reply(`ℹ️ *That plugin is already installed and up to date.*`);
+      if (!r.ok && r.why === 'invalid') return reply(`⚠️ *This plugin cannot be installed.*\n▸ ${r.errors[0]}\n_Ask its developer to fix this._`);
+      if (!r.ok && r.why === 'missing') return reply(`⚠️ *I could not find that plugin.*\n▸ _Check the name with_ ${mono(p, 'list')} or ${mono(p, 'store')}`);
+      if (!r.ok) return reply(`⚠️ *I could not install that plugin.*\n${STORE_WHY(p, r.why)}`);
+      return reply(showInstall(p, r));
     }
     if (sub === 'confirm') {
       const r = plugins.confirm(args[1]);

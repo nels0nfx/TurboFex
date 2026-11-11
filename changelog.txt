@@ -1,3 +1,12 @@
+TurboFex v1.4.0 - the plugin store (first part): signed plugins from the TurboFex-Registry
+CHANGED IN 1.4.0
+- NEW: PLUGIN STORE inside the bot. `plugin store` lists approved plugins, `plugin store <name>` shows details and what a plugin asks for, `plugin install <name>` downloads and installs it (you still confirm with a code), `plugin updates` and `plugin update <name>` keep store plugins current. Your own plugin folders always come first.
+- SAFE BY DESIGN: the store is a public GitHub repository of plain files (TurboFex-Registry). Only plugins that the registry owner approved and SIGNED are accepted. The bot checks the signature of the index, the fingerprint of every downloaded file, and that the plugin asks for exactly the permissions the store announced. If anything does not match, nothing is installed. Published versions never change. Nothing about you or your bot is sent anywhere: the bot only downloads public files.
+- WITHDRAW: if the registry owner withdraws a plugin version for safety, bots switch it off within a few hours (and when the bot starts) and tell the owner; it cannot be turned on again. If the store cannot be reached, installed plugins keep running as they are.
+- NEW: `tools/registry.js`, the registry owner's tool (`keygen`, `backup`, `restore`, `init`, `add`, `revoke`, `verify`). It runs on the owner's own phone; the signing key never leaves it and has an encrypted backup. No GitHub Actions.
+- The store stays closed ("not open yet") until the registry's public key is placed in the bot (`core/plugins/registry-key.json`). Nothing changes for bots that never use it.
+- Not in this version: the marketplace pages on the pair site and the Developer Centre (next parts).
+
 TurboFex v1.3.8 - plugins can manage groups (carefully)
 CHANGED IN 1.3.8
 - NEW: GROUP MANAGEMENT FOR PLUGINS. With the permission `group.manage` a plugin can remove a member and open or close the group. The install screen shows it with a red mark (🔴) in plain words. Every safety check is made by the bot, never by the plugin:

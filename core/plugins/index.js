@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const crypto = require('node:crypto');
 const manifestLib = require('./manifest');
 const state = require('./state');
+const registry = require('./registry');
 
 const MIN_NODE = 22;
 const CONFIRM_MS = 5 * 60 * 1000;
@@ -13,6 +14,7 @@ const botVersion = () => { try { return require('../../package.json').version; }
 let commands = null; let commandList = null; let sock = null;
 let status = { state: 'off', reason: '' }; // off | unsupported | failed | ready
 let selftested = false;
+let revTimer = null;
 const loaded = new Map(); // plugin id -> { manifest, source, cmds: [command objects] }
 const hosts = new Map();
 const timers = new Map();
@@ -24,7 +26,7 @@ function attach(cmds, list) { commands = cmds; commandList = list; }
 
 const WHY = {
   timeout: 'took too long to answer', memory_guard: 'used too much memory', memory_limit: 'used too much memory', cpu_limit: 'used too much processing time',
-  stack_limit: 'got stuck in itself', faults: 'kept failing', rules: 'tried things it was not allowed to do', worker_memory: 'used too much memory',
+  stack_limit: 'got stuck in itself', withdrawn: 'was withdrawn from the store for safety', faults: 'kept failing', rules: 'tried things it was not allowed to do', worker_memory: 'used too much memory',
 };
 const plainWhy = (c) => WHY[c] || 'stopped working';
 
@@ -48,9 +50,12 @@ async function start(s) {
   status = { state: 'ready', reason: '' };
   for (const [id, rec] of Object.entries(state.open().data.installed)) if (rec.enabled && !loaded.has(id)) activate(id, rec);
   startTimers();
+  if (!revTimer) { revTimer = setInterval(() => checkWithdrawn(), 6 * 3600 * 1000); if (revTimer.unref) revTimer.unref(); }
+  setTimeout(() => checkWithdrawn(), 15000).unref();
   return status;
 }
-function stop() { for (const t of timers.values()) clearInterval(t); timers.clear(); for (const h of hosts.values()) h.stop(); hosts.clear(); }
+function stop() {
+  if (revTimer) { clearInterval(revTimer); revTimer = null; } for (const t of timers.values()) clearInterval(t); timers.clear(); for (const h of hosts.values()) h.stop(); hosts.clear(); }
 async function turnOn() { state.open().data.enabled = true; state.open().touch(); return start(sock); }
 function turnOff() {
   state.open().data.enabled = false; state.open().touch();
@@ -260,15 +265,46 @@ function confirm(code) { // step 2: the owner confirmed
   }
   const d = state.open().data; const old = d.installed[p.id];
   deactivate(p.id);
-  d.installed[p.id] = { version: v.manifest.version, sha: v.entrySha, enabled: true, grants: v.manifest.permissions.slice(), allowOnly: old ? old.allowOnly : null, blocked: old ? old.blocked : [], installedAt: Date.now() };
+  d.installed[p.id] = { version: v.manifest.version, sha: v.entrySha, enabled: true, grants: v.manifest.permissions.slice(), allowOnly: old ? old.allowOnly : null, blocked: old ? old.blocked : [], installedAt: Date.now(), ...(registry.storeVersionOf(p.folder) ? { store: { version: registry.storeVersionOf(p.folder) } } : {}) };
   state.open().touch();
   if (isRunning()) { if (!activate(p.id, d.installed[p.id])) return { ok: false, why: 'changed' }; startTimers(); }
   return { ok: true, manifest: v.manifest, update: !!old };
+}
+// the store (see registry.js)
+async function prepareStore(id) {
+  const f = await registry.fetchPlugin(id);
+  if (!f.ok) return f;
+  return prepare(id);
+}
+async function storeList(text) { return registry.list(await registry.getIndex(), text); }
+async function storeInfo(id) {
+  const index = await registry.getIndex(); const p = index.plugins[id]; const v = registry.latestOf(index, id);
+  if (!p || !v) return null;
+  const e = p.versions[v];
+  return { id, name: p.name, description: p.description, author: p.author, version: v, permissions: e.permissions || [], domains: e.domains || [] };
+}
+async function updatesAvailable() {
+  const index = await registry.getIndex(true); const out = [];
+  for (const [id, rec] of Object.entries(state.open().data.installed)) {
+    if (!rec.store) continue; const v = registry.latestOf(index, id);
+    if (v && registry.semverCmp(v, rec.store.version) > 0) out.push({ id, from: rec.store.version, to: v });
+  }
+  return out;
+}
+// A plugin the store withdrew (for safety) is switched off on this bot and the owner is told. If the store cannot be reached, nothing changes.
+async function checkWithdrawn() {
+  try {
+    if (!isRunning() || !registry.configured()) return;
+    const mine = Object.entries(state.open().data.installed).filter(([, r]) => r.store && r.enabled); if (!mine.length) return;
+    const index = await registry.getIndex(true);
+    for (const [id, rec] of mine) if (registry.isRevoked(index, id, rec.store.version)) onDisabled(id, 'withdrawn');
+  } catch (e) { /* offline or no store: keep running */ }
 }
 function setEnabled(id, on) {
   const d = state.open().data; const rec = d.installed[id]; if (!rec) return { ok: false, why: 'missing' };
   if (!on) { rec.enabled = false; rec.reason = ''; deactivate(id); state.open().touch(); return { ok: true }; }
   if (!isRunning()) return { ok: false, why: 'off' };
+  if (rec.store && /withdrawn/.test(rec.reason || '')) return { ok: false, why: 'changed', reason: rec.reason };
   rec.enabled = true; delete rec.reason;
   if (!activate(id, rec)) return { ok: false, why: 'changed', reason: rec.reason };
   state.open().touch(); startTimers(); return { ok: true };
@@ -297,4 +333,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { attach, start, stop, emit, turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
