@@ -21,7 +21,7 @@ const mk = (id, version, o = {}, code) => {
 };
 function site(plugins, status = 200) {
   const calls = [];
-  const f = async (url, o) => { calls.push({ url, o }); if (o.headers.authorization !== 'Bearer ' + process.env.TFX_SITE_TOKEN) return { ok: false, status: 401, json: async () => ({}) }; if (status !== 200) return { ok: false, status, json: async () => ({}) }; return { ok: true, status: 200, json: async () => (url.endsWith('approved') ? { plugins } : { ok: true, marked: JSON.parse(o.body).ids.length }) }; };
+  const f = async (url, o) => { calls.push({ url, o }); if (o.headers.authorization !== 'Bearer ' + process.env.TFX_SITE_TOKEN) return { ok: false, status: 401, json: async () => ({}) }; if (status !== 200) return { ok: false, status, json: async () => ({}) }; return { ok: true, status: 200, json: async () => (url.endsWith('approved') ? { plugins, revocations: f.revocations || [] } : { ok: true, marked: JSON.parse(o.body).ids.length, revoked: (JSON.parse(o.body).revoked || []).length }) }; };
   f.calls = calls; return f;
 }
 
@@ -59,4 +59,18 @@ test('pull explains a missing or wrong token and a site without the download', a
   await assert.rejects(() => tool.pull(reg, async () => ({ ok: false, status: 401, json: async () => ({}) })), /did not accept the token/);
   process.env.TFX_SITE_TOKEN = 'short'; await assert.rejects(() => tool.pull(reg, site([])), /Set TFX_SITE_TOKEN/);
   process.env.TFX_SITE_TOKEN = t;
+});
+
+test('pull also signs the withdrawals you asked for, and "published" reports them', async () => {
+  const a = mk('pull-wd', '1.0.0'); await tool.pull(reg, site([a])); await tool.markPublished(site([]));
+  const f = site([]); f.revocations = [{ submission: 'aaaa1111', id: 'pull-wd', version: '1.0.0', reason: 'Found a problem' }, { submission: 'bbbb2222', id: 'not-there', version: '1.0.0', reason: 'x' }, { submission: 'cccc3333', id: 'BAD ID', version: '1', reason: 'x' }];
+  const o = await tool.pull(reg, f);
+  assert.deepStrictEqual(o.revoked, ['pull-wd 1.0.0']); assert.strictEqual(o.skipped.length, 2);
+  const idx = JSON.parse(fs.readFileSync(path.join(reg, 'index.json'), 'utf8'));
+  assert.ok(idx.revoked.some((r) => r.id === 'pull-wd' && r.version === '1.0.0' && r.reason === 'Found a problem'), 'the withdrawal is in the signed index');
+  assert.strictEqual(tool.verify(reg) > 0, true);
+  const again = await tool.pull(reg, f); assert.match(again.revoked[0], /already withdrawn/);
+  assert.strictEqual(idx.revoked.filter((r) => r.id === 'pull-wd').length, 1);
+  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(reg, 'index.json'), 'utf8')).revoked.filter((r) => r.id === 'pull-wd').length, 1, 'not written twice');
+  assert.strictEqual(await tool.markPublished(site([])), 1, 'one withdrawal reported');
 });

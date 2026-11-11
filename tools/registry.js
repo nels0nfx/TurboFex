@@ -10,7 +10,7 @@
 //   node tools/registry.js verify <registry-folder>  check that everything in the registry is intact and signed
 //   node tools/registry.js pull <registry-folder>    download the plugins you approved on the pair site, check them again, add and sign them
 //                                                    (needs TFX_SITE_TOKEN; TFX_SITE_URL is optional)
-//   node tools/registry.js published                 after you pushed the registry: tell the pair site those plugins are now published
+//   node tools/registry.js published                 after you pushed the registry: tell the pair site those plugins are now published (or withdrawn)
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -107,6 +107,7 @@ function verify(reg) {
 
 // ---- the pair site's Developer Centre: approved plugins are collected here and signed on this phone ----
 const pendingFile = () => path.join(keyDir(), 'pending-published.json');
+const pendingRevFile = () => path.join(keyDir(), 'pending-revoked.json');
 const siteUrl = () => String(process.env.TFX_SITE_URL || 'https://turbofex-pair.onrender.com').replace(/\/+$/, '');
 async function siteCall(method, route, body, fetchImpl) {
   const token = process.env.TFX_SITE_TOKEN;
@@ -118,8 +119,9 @@ async function siteCall(method, route, body, fetchImpl) {
   return r.json();
 }
 async function pull(reg, fetchImpl) {
-  const out = { added: [], skipped: [] };
-  const list = (await siteCall('GET', '/api/registry/approved', null, fetchImpl)).plugins || [];
+  const out = { added: [], skipped: [], revoked: [] };
+  const resp = await siteCall('GET', '/api/registry/approved', null, fetchImpl);
+  const list = resp.plugins || [];
   const ownersFile = path.join(reg, 'owners.json'); const owners = readJson(ownersFile, {});
   const pending = readJson(pendingFile(), []);
   for (const p of list) {
@@ -148,15 +150,29 @@ async function pull(reg, fetchImpl) {
       } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
     } catch (e) { skip(e.message); }
   }
+  // plugins you withdrew in the admin dashboard
+  const pendingRev = readJson(pendingRevFile(), []);
+  for (const r of resp.revocations || []) {
+    try {
+      if (!/^[a-z0-9-]{3,32}$/.test(String(r.id)) || !/^\d+\.\d+\.\d+$/.test(String(r.version))) { out.skipped.push({ id: r.id, version: r.version, reason: 'bad withdrawal request' }); continue; }
+      const already = readJson(path.join(reg, 'revoked.json'), []).some((x) => x && x.id === r.id && x.version === r.version);
+      if (!already) {
+        if (!fs.existsSync(path.join(reg, 'plugins', r.id, r.version))) { out.skipped.push({ id: r.id, version: r.version, reason: 'withdrawal asked for, but this version is not in your registry folder' }); continue; }
+        revoke(r.id, r.version, r.reason, reg);
+      }
+      if (!pendingRev.includes(r.submission)) pendingRev.push(r.submission);
+      out.revoked.push(r.id + ' ' + r.version + (already ? ' (already withdrawn)' : ''));
+    } catch (e) { out.skipped.push({ id: r.id, version: r.version, reason: e.message }); }
+  }
   fs.writeFileSync(ownersFile, JSON.stringify(owners, null, 1) + '\n');
-  fs.mkdirSync(keyDir(), { recursive: true, mode: 0o700 }); fs.writeFileSync(pendingFile(), JSON.stringify(pending));
+  fs.mkdirSync(keyDir(), { recursive: true, mode: 0o700 }); fs.writeFileSync(pendingFile(), JSON.stringify(pending)); fs.writeFileSync(pendingRevFile(), JSON.stringify(pendingRev));
   return out;
 }
 async function markPublished(fetchImpl) {
-  const ids = readJson(pendingFile(), []);
-  if (!ids.length) return 0;
-  const r = await siteCall('POST', '/api/registry/published', { ids }, fetchImpl);
-  fs.writeFileSync(pendingFile(), '[]'); return r.marked || 0;
+  const ids = readJson(pendingFile(), []), revoked = readJson(pendingRevFile(), []);
+  if (!ids.length && !revoked.length) return 0;
+  const r = await siteCall('POST', '/api/registry/published', { ids, revoked }, fetchImpl);
+  fs.writeFileSync(pendingFile(), '[]'); fs.writeFileSync(pendingRevFile(), '[]'); return (r.marked || 0) + (r.revoked || 0);
 }
 module.exports = { keygen, backup, restore, init, add, revoke, build, verify, publicPem, pull, markPublished };
 
@@ -172,11 +188,13 @@ if (require.main === module) {
     else if (cmd === 'verify' && a) { console.log('✅ All good: signature valid, ' + verify(a) + ' plugin version(s) intact.'); }
     else if (cmd === 'pull' && a) {
       pull(a).then((o) => {
-        console.log(o.added.length ? '✅ Added and signed:\n  ' + o.added.join('\n  ') + '\nNow push the registry folder to GitHub, then run:  node tools/registry.js published' : 'Nothing new to add.');
+        console.log(o.added.length ? '✅ Added and signed:\n  ' + o.added.join('\n  ') : 'Nothing new to add.');
+        if (o.revoked.length) console.log('✅ Withdrawn and signed:\n  ' + o.revoked.join('\n  '));
+        if (o.added.length || o.revoked.length) console.log('Now push the registry folder to GitHub, then run:  node tools/registry.js published');
         if (o.skipped.length) console.log('⚠️ Skipped:\n  ' + o.skipped.map((x) => x.id + ' ' + x.version + ': ' + x.reason).join('\n  '));
       }).catch((e) => { console.error('⚠️ ' + e.message); process.exitCode = 1; });
     }
-    else if (cmd === 'published') { markPublished().then((n) => console.log(n ? '✅ The pair site now shows ' + n + ' plugin(s) as published.' : 'Nothing was waiting to be marked.')).catch((e) => { console.error('⚠️ ' + e.message); process.exitCode = 1; }); }
+    else if (cmd === 'published') { markPublished().then((n) => console.log(n ? '✅ The pair site is up to date (' + n + ' plugin change(s) recorded).' : 'Nothing was waiting to be marked.')).catch((e) => { console.error('⚠️ ' + e.message); process.exitCode = 1; }); }
     else { console.log(fs.readFileSync(__filename, 'utf8').split('\n').filter((l) => l.startsWith('//')).map((l) => l.slice(3)).join('\n')); process.exitCode = 1; }
   } catch (e) { console.error('⚠️ ' + e.message); process.exitCode = 1; }
 }

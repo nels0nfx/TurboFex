@@ -1,3 +1,8 @@
+TurboFex v1.4.6 - registry tool: withdrawals from the admin dashboard
+CHANGED IN 1.4.6
+- NEW: when you withdraw a published plugin in the pair site's admin dashboard (Plugins), `node tools/registry.js pull <registry-folder>` now also signs that withdrawal (it is written into the registry's signed `revoked` list). Push the registry folder, then run `node tools/registry.js published`. Bots switch the plugin off within a few hours (and when they start), as for any withdrawal. Running `pull` twice never writes a withdrawal twice. A withdrawal for a version that is not in your registry folder is skipped with a message.
+- Nothing changes in the bot itself.
+
 TurboFex v1.4.5 - registry tool: collect approved plugins from the pair site
 CHANGED IN 1.4.5
 - NEW: `node tools/registry.js pull <registry-folder>` downloads the plugins you approved in the pair site's admin dashboard (Developer Centre, pair site v2.28.0), checks each one AGAIN with the bot's own plugin check (fingerprints must match what the site announced, the plugin id must not belong to another developer, a published version never changes), adds and signs them. Plugins that fail are skipped with the reason; the others still go through.
