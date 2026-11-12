@@ -76,6 +76,13 @@ async function fetchPlugin(id, wanted) {
     const chk = manifestLib.validate(tmp, {});
     const same = chk.ok && chk.manifest.id === id && chk.manifest.version === version && JSON.stringify([...chk.manifest.permissions].sort()) === JSON.stringify([...(v.permissions || [])].sort());
     if (!same) { fs.rmSync(tmp, { recursive: true, force: true }); return { ok: false, why: 'tampered' }; }
+    try { // keep a copy of the version that is running now, so the owner can go back to it
+      const rec = state.open().data.installed[id], active = rec && rec.store && rec.store.version;
+      if (active && active !== version && fs.existsSync(to) && storeVersionOf(to) === active) {
+        const keep = path.join(state.previousDir(id), active);
+        if (!fs.existsSync(keep)) { fs.mkdirSync(path.dirname(keep), { recursive: true }); fs.cpSync(to, keep, { recursive: true }); }
+      }
+    } catch (e) { /* no copy: no rollback for this update, the update itself still works */ }
     fs.rmSync(to, { recursive: true, force: true }); fs.renameSync(tmp, to);
   } catch (e) { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (x) { /* ignore */ } return { ok: false, why: 'unreachable' }; }
   return { ok: true, version, folder: to };

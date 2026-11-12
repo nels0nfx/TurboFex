@@ -27,4 +27,6 @@ const examplesDir = () => path.join(ROOT, 'examples');
 const subfolders = (base) => { try { return fs.readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith('.')).map((d) => path.join(base, d.name)).slice(0, 50); } catch (e) { return []; } };
 // plugin folders in data/plugins come first; the samples that ship with the bot (examples/) are found too
 const folders = () => [...subfolders(dir()), ...subfolders(examplesDir())];
-module.exports = { open, used, isEnabled, dataStore, opaque, folders, dir, examplesDir };
+// the copies of earlier versions of store plugins (for rollback) live beside, never inside, the folder the bot scans for plugins
+const previousDir = (id) => path.join(path.dirname(dir()), 'plugins-previous', String(id).replace(/[^\w.-]/g, '_'));
+module.exports = { open, used, isEnabled, dataStore, opaque, folders, dir, examplesDir, previousDir };

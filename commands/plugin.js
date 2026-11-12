@@ -46,7 +46,7 @@ module.exports = {
     if (!sub || sub === 'help') {
       return reply(
         `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
@@ -107,9 +107,20 @@ module.exports = {
     }
 
     const rec = o.installed[id];
-    if (['enable', 'disable', 'remove', 'groups', 'log', 'info'].includes(sub)) {
+    if (['enable', 'disable', 'remove', 'groups', 'log', 'info', 'rollback', 'updatemode'].includes(sub)) {
       if (!id) return reply(`ℹ️ *Which plugin?*\n▸ ${mono(p, sub + ' <name>')}\n_See the names with_ ${mono(p, 'list')}`);
       if (!rec) return reply(`⚠️ *That plugin is not installed.*\n▸ _See the names with_ ${mono(p, 'list')}`);
+    }
+    if (sub === 'rollback') {
+      const r = plugins.rollback(id);
+      if (r.ok) return reply(`✅ *${r.name} is back on version ${r.to}.*\n▸ *Was:* ${r.from}\n▸ _This version will not be updated automatically again._`);
+      return reply(r.why === 'none' ? `ℹ️ *There is no earlier version to go back to.*\n▸ _Only plugins from the store that were updated can go back, one version._` : `⚠️ *I could not go back.*\n▸ _The saved copy is missing or changed. Install it again with_ ${mono(p, 'install ' + id)}`);
+    }
+    if (sub === 'updatemode') {
+      const m = (args[2] || '').toLowerCase(); const r = plugins.setUpdateMode(id, m);
+      if (r.ok) return reply(`✅ *Saved.*\n▸ *Plugin:* ${id}\n▸ *Updates:* ${m === 'automatic' ? 'automatic (only when it asks for the same permissions and websites)' : m === 'manual' ? 'manual (I will not tell you)' : 'notify (I tell you, you decide)'}`);
+      if (r.why === 'nostore') return reply(`ℹ️ *Only plugins from the store have update modes.*`);
+      return reply(`ℹ️ *Choose how updates work.*\n▸ ${mono(p, `updatemode ${id} notify`)}  _(I tell you, you decide)_\n▸ ${mono(p, `updatemode ${id} automatic`)}  _(only when nothing new is asked)_\n▸ ${mono(p, `updatemode ${id} manual`)}  _(I stay quiet)_`);
     }
     if (sub === 'enable') {
       const r = plugins.setEnabled(id, true);
@@ -129,7 +140,7 @@ module.exports = {
     }
     if (sub === 'info') {
       const l = o.loaded.get(id); const g = rec.allowOnly ? `${rec.allowOnly.length} group(s) only` : 'every group';
-      return reply(`🧩 *${l ? l.manifest.name : id}*\n▸ *Version:* ${rec.version}\n▸ *Status:* ${rec.enabled ? 'on' : 'off' + (rec.reason ? ' (' + rec.reason + ')' : '')}\n▸ *Works in:* ${g}${rec.blocked && rec.blocked.length ? `, ${rec.blocked.length} blocked` : ''}\n▸ *Allowed to:* ${rec.grants.length ? rec.grants.join(', ') : 'nothing special'}`);
+      return reply(`🧩 *${l ? l.manifest.name : id}*\n▸ *Version:* ${rec.version}\n▸ *Status:* ${rec.enabled ? 'on' : 'off' + (rec.reason ? ' (' + rec.reason + ')' : '')}\n${rec.store ? `▸ *Updates:* ${rec.updateMode || 'notify'}${rec.previous ? ' (can go back to ' + rec.previous.version + ')' : ''}\n` : ''}▸ *Works in:* ${g}${rec.blocked && rec.blocked.length ? `, ${rec.blocked.length} blocked` : ''}\n▸ *Allowed to:* ${rec.grants.length ? rec.grants.join(', ') : 'nothing special'}`);
     }
     return reply(`ℹ️ *I did not understand that.*\n▸ _See what you can do with_ ${mono(p, 'help')}`);
   },

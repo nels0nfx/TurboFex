@@ -1,3 +1,11 @@
+TurboFex v1.4.9 - plugins: update modes, one-command rollback, and automatic return after failures
+CHANGED IN 1.4.9
+- NEW: update modes for plugins from the store. `.plugin updatemode <name> notify|automatic|manual`. Notify (the default): the bot tells you once about each new version and you decide. Automatic: the bot installs the new version by itself, but ONLY when it asks for exactly the same permissions and websites; anything that asks for more is never installed by itself, you are told and you must approve. Manual: the bot stays quiet (you can still use `.plugin updates`). The bot checks every 6 hours (with a random delay). Your choice is kept when the plugin updates.
+- NEW: `.plugin rollback <name>` goes back to the version before the last update (one version back). The old version was already approved by you, so nothing new is asked. A copy of it is kept in the new folder data/plugins-previous (never inside data/plugins). After a rollback that version is not installed automatically again.
+- NEW: if a new version keeps failing (the same rule as before: it gets switched off) within a day of its update, the bot goes back to the old version by itself and tells you, instead of just switching the plugin off.
+- FIXED: if you started an update (`.plugin update <name>`) but never confirmed it, the new files were already in the folder and after a restart the plugin was switched off ("its files changed"). Now the saved copy of the version you approved is put back automatically.
+- Plugins you copied in by hand are not affected (only store plugins have updates).
+
 TurboFex v1.4.8 - plugins: reactions, and delete/list for saved notes
 CHANGED IN 1.4.8
 - NEW (for plugin makers): a plugin that asks for the new permission "chat.react" can react with ONE emoji to the message that used its command (or the message its listener heard). It cannot pick another message, 1 per call, 10 per minute, one emoji only. When you install such a plugin, the screen lists it as a low-risk permission.

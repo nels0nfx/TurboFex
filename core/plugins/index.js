@@ -2,6 +2,7 @@
 // Plugin manager: turns plugins on and off, installs the ones the owner approves, adds their commands to the bot and runs
 // every call in a sealed sandbox (see host.js). Light on purpose: nothing heavy is loaded while plugins are off.
 const fs = require('node:fs');
+const path = require('node:path');
 const crypto = require('node:crypto');
 const manifestLib = require('./manifest');
 const state = require('./state');
@@ -50,8 +51,9 @@ async function start(s) {
   status = { state: 'ready', reason: '' };
   for (const [id, rec] of Object.entries(state.open().data.installed)) if (rec.enabled && !loaded.has(id)) activate(id, rec);
   startTimers(); try { purgeOldNotes(); } catch (e) { /* never stops the bot */ }
-  if (!revTimer) { revTimer = setInterval(() => { checkWithdrawn(); try { purgeOldNotes(); } catch (e) { /* ignore */ } }, 6 * 3600 * 1000); if (revTimer.unref) revTimer.unref(); }
+  if (!revTimer) { revTimer = setInterval(() => { checkWithdrawn(); setTimeout(() => checkUpdates(), Math.floor(Math.random() * 600000)).unref(); try { purgeOldNotes(); } catch (e) { /* ignore */ } }, 6 * 3600 * 1000); if (revTimer.unref) revTimer.unref(); }
   setTimeout(() => checkWithdrawn(), 15000).unref();
+  setTimeout(() => checkUpdates(), 60000 + Math.floor(Math.random() * 300000)).unref();
   return status;
 }
 function stop() {
@@ -65,8 +67,20 @@ function turnOff() {
 const isRunning = () => status.state === 'ready';
 
 // ---------------------------------------------------------------- commands
+// the files in the plugin folder are not the ones the owner approved (for example a store update was fetched but never confirmed):
+// put back the saved copy of the approved version, if there is one
+function healFromPrevious(id, rec) {
+  try {
+    if (!rec.store) return false;
+    const src = path.join(state.previousDir(id), rec.store.version);
+    const v = manifestLib.validate(src, { botVersion: botVersion(), taken: builtinNames() });
+    if (!v.ok || v.entrySha !== rec.sha) return false;
+    const to = path.join(state.dir(), id); fs.rmSync(to, { recursive: true, force: true }); fs.cpSync(src, to, { recursive: true }); return true;
+  } catch (e) { return false; }
+}
 function activate(id, rec) {
-  const v = manifestLib.validate(findFolder(id) || '/nonexistent', { botVersion: botVersion(), taken: builtinNames() });
+  let v = manifestLib.validate(findFolder(id) || '/nonexistent', { botVersion: botVersion(), taken: builtinNames() });
+  if ((!v.ok || v.entrySha !== rec.sha) && healFromPrevious(id, rec)) v = manifestLib.validate(findFolder(id) || '/nonexistent', { botVersion: botVersion(), taken: builtinNames() });
   if (!v.ok || v.entrySha !== rec.sha) { rec.enabled = false; rec.reason = 'its files changed'; state.open().touch(); return false; }
   for (const c of v.manifest.commands) for (const n of [c.name, ...c.aliases]) { const o = commands.get(n); if (o && o.pluginId !== id) { rec.enabled = false; rec.reason = 'a command name is already used'; state.open().touch(); return false; } }
   const cmds = v.manifest.commands.map((c) => standIn(id, v.manifest, c));
@@ -125,6 +139,11 @@ function getHost(id) {
 }
 function onDisabled(id, why) {
   const rec = state.open().data.installed[id]; const l = loaded.get(id); const name = l ? l.manifest.name : id;
+  // a new version that keeps failing within a day of its update: return to the version before (the same rule as three faults in ten minutes)
+  if (why !== 'withdrawn' && rec && rec.previous && Date.now() - (rec.installedAt || 0) < 86400000) {
+    const bad = rec.version; const r = rollback(id);
+    if (r.ok) { tellOwner(`⚠️ *${name} ${bad} kept failing, so I went back to ${r.to}.*\n▸ *Reason:* it ${plainWhy(why)}.\n▸ _That version will not be installed automatically again._`); return; }
+  }
   if (rec) { rec.enabled = false; rec.reason = plainWhy(why); state.open().touch(); }
   deactivate(id);
   if (sock) {
@@ -267,6 +286,15 @@ function confirm(code) { // step 2: the owner confirmed
   deactivate(p.id);
   if (d.removed) delete d.removed[p.id];
   d.installed[p.id] = { version: v.manifest.version, sha: v.entrySha, enabled: true, grants: v.manifest.permissions.slice(), allowOnly: old ? old.allowOnly : null, blocked: old ? old.blocked : [], installedAt: Date.now(), ...(registry.storeVersionOf(p.folder) ? { store: { version: registry.storeVersionOf(p.folder) } } : {}) };
+  const cur = d.installed[p.id];
+  if (old && old.updateMode) cur.updateMode = old.updateMode;   // the owner's update choice survives an update
+  if (old && old.store && cur.store && cur.store.version !== old.store.version && fs.existsSync(path.join(state.previousDir(p.id), old.store.version))) {
+    cur.previous = { version: old.version, sha: old.sha, grants: (old.grants || []).slice(), store: { version: old.store.version } };   // the version the owner had approved before: one command back
+  }
+  try { // only the running version and the one before it are kept
+    const keepV = new Set([cur.store && cur.store.version, cur.previous && cur.previous.store.version]);
+    for (const n of fs.readdirSync(state.previousDir(p.id))) if (!keepV.has(n)) fs.rmSync(path.join(state.previousDir(p.id), n), { recursive: true, force: true });
+  } catch (e) { /* nothing saved yet */ }
   state.open().touch();
   if (isRunning()) { if (!activate(p.id, d.installed[p.id])) return { ok: false, why: 'changed' }; startTimers(); }
   return { ok: true, manifest: v.manifest, update: !!old };
@@ -300,6 +328,52 @@ async function checkWithdrawn() {
     const index = await registry.getIndex(true);
     for (const [id, rec] of mine) if (registry.isRevoked(index, id, rec.store.version)) onDisabled(id, 'withdrawn');
   } catch (e) { /* offline or no store: keep running */ }
+}
+
+// ---------------------------------------------------------------- update modes and rollback
+const MODES = ['notify', 'automatic', 'manual'];
+function tellOwner(text) { try { if (sock) Promise.resolve(sock.sendMessage(require('../../whatsapp/owner').ownerChat(sock), { text })).catch(() => {}); } catch (e) { /* never stops the bot */ } }
+function setUpdateMode(id, mode) {
+  const rec = state.open().data.installed[id]; mode = String(mode || '').toLowerCase();
+  if (!rec || !rec.store) return { ok: false, why: 'nostore' };
+  if (!MODES.includes(mode)) return { ok: false, why: 'mode' };
+  rec.updateMode = mode; state.open().touch(); return { ok: true, mode };
+}
+// go back to the version the owner had before the last update. The old version was approved by the owner already, so nothing new is asked.
+function rollback(id) {
+  const d = state.open().data; const rec = d.installed[id];
+  if (!rec || !rec.previous) return { ok: false, why: 'none' };
+  const pv = rec.previous; const src = path.join(state.previousDir(id), pv.store.version);
+  const v = manifestLib.validate(src, { botVersion: botVersion(), taken: builtinNames() });
+  if (!v.ok || v.entrySha !== pv.sha) return { ok: false, why: 'changed' };
+  const to = path.join(state.dir(), id); const from = rec.version; const failed = rec.store && rec.store.version;
+  deactivate(id);
+  try { fs.rmSync(to, { recursive: true, force: true }); fs.cpSync(src, to, { recursive: true }); } catch (e) { return { ok: false, why: 'changed' }; }
+  d.installed[id] = { ...rec, version: pv.version, sha: pv.sha, grants: pv.grants.slice(), store: { version: pv.store.version }, enabled: true, reason: '', previous: null, skip: failed, installedAt: Date.now() };
+  state.open().touch();
+  if (isRunning()) { if (!activate(id, d.installed[id])) { d.installed[id].enabled = false; d.installed[id].reason = 'a command name is already used'; state.open().touch(); return { ok: false, why: 'changed' }; } startTimers(); }
+  return { ok: true, from, to: pv.version, name: v.manifest.name };
+}
+const sameSet = (a, b) => a.length === b.length && [...a].sort().join('|') === [...b].sort().join('|');
+// Notify (default): tell the owner once about each new version. Automatic: install it by itself, but only when it asks for the very same permissions and websites. Manual: say nothing.
+async function checkUpdates() {
+  try {
+    if (!isRunning() || !registry.configured()) return;
+    const mine = Object.entries(state.open().data.installed).filter(([, r]) => r.store && r.enabled && (r.updateMode || 'notify') !== 'manual'); if (!mine.length) return;
+    const index = await registry.getIndex(true);
+    for (const [id, rec] of mine) {
+      const v = registry.latestOf(index, id);
+      if (!v || registry.isRevoked(index, id, v) || registry.semverCmp(v, rec.store.version) <= 0) continue;
+      const e = index.plugins[id].versions[v] || {}; const l = loaded.get(id); const name = l ? l.manifest.name : id;
+      const same = sameSet(e.permissions || [], rec.grants || []) && sameSet(e.domains || [], (l && l.manifest.network && l.manifest.network.domains) || []);
+      if ((rec.updateMode || 'notify') === 'automatic' && same && rec.skip !== v) {
+        const from = rec.version; const f = await registry.fetchPlugin(id, v);
+        if (f.ok) { const pr = prepare(id); if (pr.ok) { const c = confirm(pr.code); if (c.ok) { tellOwner(`🧩 *${name} was updated automatically.*\n▸ *Version:* ${from} → ${c.manifest.version}\n▸ *Go back with:* \`${prefixOf()}plugin rollback ${id}\``); continue; } } }
+      }
+      if (rec.notified === v) continue; rec.notified = v; state.open().touch();
+      tellOwner(`🧩 *Update available for ${name}*\n▸ *Version:* ${rec.version} → ${v}\n${same ? '' : '▸ It asks for different permissions or websites, so only you can approve it.\n'}▸ *Update:* \`${prefixOf()}plugin update ${id}\``);
+    }
+  } catch (e) { /* offline or no store: nothing changes */ }
 }
 function setEnabled(id, on) {
   const d = state.open().data; const rec = d.installed[id]; if (!rec) return { ok: false, why: 'missing' };
@@ -350,4 +424,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, setUpdateMode, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
