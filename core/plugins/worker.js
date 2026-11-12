@@ -44,7 +44,10 @@ const PRELUDE = `(function () {
       info: function () { return ask('group.info', {}); },
       kick: function (m) { return ask('group.kick', { member: String(m) }); },
       open: function () { return ask('group.open', {}); },
-      close: function () { return ask('group.close', {}); }
+      close: function () { return ask('group.close', {}); },
+      promote: function (m) { return ask('group.promote', { member: String(m) }); },
+      demote: function (m) { return ask('group.demote', { member: String(m) }); },
+      rename: function (n) { return ask('group.rename', { name: String(n) }); }
     }),
     owner: Object.freeze({ notify: function (t) { return ask('owner.notify', { text: String(t) }); } })
   };

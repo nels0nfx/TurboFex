@@ -163,7 +163,7 @@ function plainCtx(id, c, extra) {
     ctx: { args: (c.args || []).slice(0, 50).map((a) => String(a).slice(0, 500)), rest: String(c.rest || '').slice(0, 4000), prefix: c.prefix || prefixOf(),
       chat: { id: o(c.jid), isGroup: !!c.isGroup, name: String(meta && meta.subject || '').slice(0, 100) },
       settings: settingsFor(id, c.isGroup ? c.jid : null), mentions, sender: { id: senderId, name: String(c.msg && c.msg.pushName || '').slice(0, 40), isAdmin: !!c.isAdmin, isOwner: !!c.isOwner } },
-    extra: { send: (t) => c.reply(t), react: c.msg && c.msg.key ? (e) => (c.sock || sock).sendMessage(c.jid, { react: { text: e, key: c.msg.key } }) : null, sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), manage: c.isGroup ? makeManage(id, { s: c.sock || sock, jid: c.jid, people, actorOk: !!(c.isAdmin || c.isOwner) }) : null, groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
+    extra: { send: (t) => c.reply(t), react: c.msg && c.msg.key ? (e) => (c.sock || sock).sendMessage(c.jid, { react: { text: e, key: c.msg.key } }) : null, sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), manage: c.isGroup ? makeManage(id, { s: c.sock || sock, jid: c.jid, people, actorOk: !!(c.isAdmin || c.isOwner), fromCommand: true }) : null, groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
   };
 }
 async function invoke(id, kind, name, c) {
@@ -181,7 +181,7 @@ async function invoke(id, kind, name, c) {
 }
 // Removing people and opening or closing a group. Every check is made here, in the bot, never by the plugin:
 // the bot must be an admin, the person must be part of this very command or event, and never the owner, a sudo user, an admin or the bot.
-function makeManage(id, { s, jid, people, actorOk }) {
+function makeManage(id, { s, jid, people, actorOk, fromCommand }) {
   const { BrokerError } = require('./broker');
   const meta = require('../../whatsapp/metadata');
   const { num, participantIds } = require('../../whatsapp/utils');
@@ -190,7 +190,21 @@ function makeManage(id, { s, jid, people, actorOk }) {
     const md = await meta.getMeta(s, jid); const idx = meta.indexOf(md);
     const botIds = [s.user && s.user.id, s.user && s.user.lid].filter(Boolean).map(num);
     if (!botIds.some((b) => idx.admins.has(b))) throw new BrokerError('not_allowed', 'the bot is not an admin here');
-    if (action === 'kick') {
+    if (action === 'promote' || action === 'demote' || action === 'rename') {
+      // changing who the admins are, or the group name: only through a command used by an admin or the owner, never from a listener or a timer
+      if (!fromCommand) throw new BrokerError('not_allowed', 'only inside a command used by an admin');
+      if (action === 'rename') { await s.groupUpdateSubject(jid, opaque); log(id, 'renamed the group ' + jid); meta.invalidate(jid); return; }
+      const target = people.get(opaque);
+      if (!target) throw new BrokerError('not_allowed', 'that person is not part of this event');
+      const p = idx.byId.get(num(target));
+      if (!p) throw new BrokerError('not_allowed', 'that person is not in the group');
+      const ids = [...participantIds(p), num(target)]; const config = require('../../config');
+      const protectedIds = [config.ownerNumber, ...botIds, ...require('../../whatsapp/store').getSudo()].filter(Boolean);
+      if (ids.some((x) => protectedIds.includes(x))) throw new BrokerError('not_allowed', 'that person is protected');
+      if (action === 'promote') { if (p.admin === 'admin' || p.admin === 'superadmin') throw new BrokerError('not_allowed', 'that person is already an admin'); }
+      else if (p.admin !== 'admin') throw new BrokerError('not_allowed', p.admin === 'superadmin' ? 'the group creator cannot be demoted' : 'that person is not an admin');
+      await s.groupParticipantsUpdate(jid, [p.id || target], action); log(id, action + 'd ' + num(target) + ' in ' + jid);
+    } else if (action === 'kick') {
       const target = people.get(opaque);
       if (!target) throw new BrokerError('not_allowed', 'that person is not part of this event');
       const p = idx.byId.get(num(target));
@@ -253,7 +267,8 @@ function available() { // plugin folders found in data/plugins
 }
 const RISK = { 'chat.react': ['🟢', 'React to the message that used it with an emoji'], 'chat.send': ['🟢', 'Send messages in the chat where it is used'], storage: ['🟢', 'Keep its own small saved notes'], 'group.read': ['🟢', 'See the group name and how many members and admins it has'], schedule: ['🟡', 'Run by itself on a timer'], 'owner.notify': ['🟡', 'Send you a short message now and then'], network: ['🟡', 'Connect to the internet'],
   'events.message': ['🟡', 'Read the text of messages sent in the groups where it is allowed'], 'events.members': ['🟡', 'Know when members join or leave a group (no phone numbers)'], 'media.send': ['🟢', 'Send pictures, stickers and files in the chat where it is used'],
-  'group.manage': ['🔴', 'Remove members, and open or close the group (only where I am an admin; never the owner or an admin)'] };
+  'group.admins': ['🔴', 'Make a member an admin or take admin away (only through a command used by a group admin, where the bot is an admin; never the owner or the group creator)'],
+  'group.manage': ['🔴', 'Remove members, open or close the group, and rename it (only where I am an admin; never the owner or an admin)'] };
 function permissionLines(m) {
   const out = m.permissions.map((p) => `▸ ${RISK[p][0]} ${RISK[p][1]}` + (p === 'network' ? ': ' + m.network.domains.join(', ') : ''));
   return out.length ? out : ['▸ 🟢 Nothing special: it only answers its commands'];

@@ -1,3 +1,8 @@
+TurboFex v1.5.1 - plugins: promote, demote and rename
+CHANGED IN 1.5.1
+- NEW (for plugin makers): a plugin with the new permission "group.admins" can make a member an admin or take admin away, and a plugin with "group.manage" can now also rename the group. The bot keeps full control: this only works inside a command used by a group admin or you (never from something a plugin does on its own), only where the bot is an admin, on one person per call that was part of that command, 6 times an hour at most. You, the bot and your sudo users are never changed, the group creator is never demoted. The install screen shows "group.admins" as a red (high risk) permission.
+- Installed plugins are not affected. Use together with pair site v2.39.0.
+
 TurboFex v1.5.0 - plugins: options the owner can change
 CHANGED IN 1.5.0
 - NEW: a plugin can come with options (text, number, on/off or a choice from a list). You see them with `.plugin options <name>` and change one with `.plugin option <name> <option> <value>` (use the value `reset` to go back to the default). If the plugin marks an option "per group", using the command inside a group changes only that group. The plugin gets the values by itself, so plugin makers need no extra code, and no new permission is asked. Your choices are kept when the plugin updates, and `.plugin info` shows when a plugin has options.
