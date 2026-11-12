@@ -24,7 +24,7 @@ const parseArgs = (json, allowed, maxChars = MAX_ARGS_CHARS) => {
 const DEFAULT_POLICY = {
   maxTextChars: 4000, sendsPerCall: 5, sendsPerMinute: 20, logsPerCall: 100, fetchesPerCall: 3, notifiesPerHour: 3, notifyChars: 500,
   fetchMs: 5000, fetchMaxChars: 256 * 1024, storageKeys: 200, storageBytes: 1024 * 1024, storageValueChars: 64 * 1024, strikeLimit: 5,
-  kicksPerCall: 3, kicksPerHour: 20, settingsPerHour: 6, mediaPerCall: 3, mediaPerMinute: 6, mediaBytes: 1024 * 1024, fetchBytesMax: 1024 * 1024, captionChars: 1000,
+  kicksPerCall: 3, kicksPerHour: 20, settingsPerHour: 6, reactsPerCall: 1, reactsPerMinute: 10, mediaPerCall: 3, mediaPerMinute: 6, mediaBytes: 1024 * 1024, fetchBytesMax: 1024 * 1024, captionChars: 1000,
 };
 
 // What a file really is, judged by its first bytes (never by its name or by what the plugin says it is)
@@ -45,7 +45,7 @@ class Broker {
     this.sendTimes = []; this.notifyTimes = []; this.strikes = 0; this.violations = [];
     this.storage = env.storage || new Map();
   }
-  newCall(ctx, extra) { return { ctx: ctx || {}, send: extra && extra.send, sendMedia: extra && extra.sendMedia, manage: extra && extra.manage, kicks: 0, groupInfo: extra && extra.groupInfo, media: 0, sends: 0, logs: 0, fetches: 0, pending: [] }; }
+  newCall(ctx, extra) { return { ctx: ctx || {}, send: extra && extra.send, sendMedia: extra && extra.sendMedia, react: extra && extra.react, manage: extra && extra.manage, kicks: 0, reacts: 0, groupInfo: extra && extra.groupInfo, media: 0, sends: 0, logs: 0, fetches: 0, pending: [] }; }
   deny(code, msg) { this.strikes++; this.violations.push(code); if (this.violations.length > 100) this.violations.shift(); throw new BrokerError(code, msg); }
   need(perm) {
     if (!(this.manifest.permissions || []).includes(perm)) this.deny('not_declared', perm + ' is not in the manifest');
@@ -57,6 +57,9 @@ class Broker {
         case 'log': return this.log(parseArgs(argsJson, ['text']), st);
         case 'chat.send': this.need('chat.send'); return await this.send(parseArgs(argsJson, ['text']), st);
         case 'storage.get': this.need('storage'); return this.sget(parseArgs(argsJson, ['key']));
+        case 'storage.list': this.need('storage'); parseArgs(argsJson, []); return JSON.stringify([...this.storage.keys()].sort().slice(0, this.p.storageKeys));
+        case 'storage.delete': this.need('storage'); return this.sdel(parseArgs(argsJson, ['key']));
+        case 'chat.react': this.need('chat.react'); return await this.react(parseArgs(argsJson, ['emoji']), st);
         case 'storage.set': this.need('storage'); return this.sset(parseArgs(argsJson, ['key', 'value']));
         case 'net.fetch': this.need('network'); return await this.fetch(parseArgs(argsJson, ['url']), st);
         case 'net.fetchBytes': this.need('network'); return await this.fetchBytes(parseArgs(argsJson, ['url']), st);
@@ -92,6 +95,19 @@ class Broker {
     if ((!this.storage.has(a.key) && this.storage.size >= this.p.storageKeys) || total > this.p.storageBytes) throw new BrokerError('quota', 'storage is full');
     this.storage.set(a.key, a.value);
     if (this.env.persist) this.env.persist(this.storage);
+    return 'null';
+  }
+  sdel(a) { this.key(a.key); if (this.storage.delete(a.key) && this.env.persist) this.env.persist(this.storage); return 'null'; }
+  // a reaction goes ONLY to the message that triggered the call; the plugin chooses just the emoji
+  async react(a, st) {
+    if (!st.ctx.chat || !st.react) this.deny('not_allowed', 'there is no message to react to');
+    const e = a.emoji;
+    if (e !== '' && !(e.length <= 16 && /^\p{Extended_Pictographic}[\ufe0f\u{1F3FB}-\u{1F3FF}]?(?:\u200d\p{Extended_Pictographic}[\ufe0f\u{1F3FB}-\u{1F3FF}]?)*$/u.test(e))) throw new BrokerError('bad_args', 'only one emoji');
+    if (++st.reacts > this.p.reactsPerCall) throw new BrokerError('rate_limited', 'too many reactions in one call');
+    const t = this.now(); this.reactTimes = (this.reactTimes || []).filter((x) => t - x < 60000);
+    if (this.reactTimes.length >= this.p.reactsPerMinute) throw new BrokerError('rate_limited', 'too many reactions per minute');
+    this.reactTimes.push(t);
+    await st.react(e);
     return 'null';
   }
   key(k) { if (!/^[a-z0-9._-]{1,64}$/i.test(k)) throw new BrokerError('bad_args', 'bad key'); }

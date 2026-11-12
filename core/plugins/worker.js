@@ -36,7 +36,9 @@ const PRELUDE = `(function () {
     }),
     storage: Object.freeze({
       get: function (k) { return ask('storage.get', { key: String(k) }); },
-      set: function (k, v) { return ask('storage.set', { key: String(k), value: String(v) }); }
+      set: function (k, v) { return ask('storage.set', { key: String(k), value: String(v) }); },
+      delete: function (k) { return ask('storage.delete', { key: String(k) }); },
+      list: function () { return ask('storage.list', {}); }
     }),
     group: Object.freeze({
       info: function () { return ask('group.info', {}); },
@@ -53,7 +55,8 @@ const PRELUDE = `(function () {
     if (typeof h !== 'function') { hd('fail', 'no such handler'); return; }
     var raw = JSON.parse(ctxJson);
     var ctx = { args: raw.args, rest: raw.rest, prefix: raw.prefix, chat: raw.chat, sender: raw.sender, event: raw.event, text: raw.text, members: raw.members, mentions: raw.mentions,
-                reply: function (t) { return send('chat.send', { text: String(t) }); } };
+                reply: function (t) { return send('chat.send', { text: String(t) }); },
+                react: function (e) { return send('chat.react', { emoji: String(e) }); } };
     Promise.resolve().then(function () { return h(ctx); }).then(
       function () { hd('ok', ''); },
       function (e) { hd('fail', String(e && e.message ? e.message : e)); });

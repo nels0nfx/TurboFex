@@ -49,8 +49,8 @@ async function start(s) {
   }
   status = { state: 'ready', reason: '' };
   for (const [id, rec] of Object.entries(state.open().data.installed)) if (rec.enabled && !loaded.has(id)) activate(id, rec);
-  startTimers();
-  if (!revTimer) { revTimer = setInterval(() => checkWithdrawn(), 6 * 3600 * 1000); if (revTimer.unref) revTimer.unref(); }
+  startTimers(); try { purgeOldNotes(); } catch (e) { /* never stops the bot */ }
+  if (!revTimer) { revTimer = setInterval(() => { checkWithdrawn(); try { purgeOldNotes(); } catch (e) { /* ignore */ } }, 6 * 3600 * 1000); if (revTimer.unref) revTimer.unref(); }
   setTimeout(() => checkWithdrawn(), 15000).unref();
   return status;
 }
@@ -144,7 +144,7 @@ function plainCtx(id, c, extra) {
     ctx: { args: (c.args || []).slice(0, 50).map((a) => String(a).slice(0, 500)), rest: String(c.rest || '').slice(0, 4000), prefix: c.prefix || prefixOf(),
       chat: { id: o(c.jid), isGroup: !!c.isGroup, name: String(meta && meta.subject || '').slice(0, 100) },
       mentions, sender: { id: senderId, name: String(c.msg && c.msg.pushName || '').slice(0, 40), isAdmin: !!c.isAdmin, isOwner: !!c.isOwner } },
-    extra: { send: (t) => c.reply(t), sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), manage: c.isGroup ? makeManage(id, { s: c.sock || sock, jid: c.jid, people, actorOk: !!(c.isAdmin || c.isOwner) }) : null, groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
+    extra: { send: (t) => c.reply(t), react: c.msg && c.msg.key ? (e) => (c.sock || sock).sendMessage(c.jid, { react: { text: e, key: c.msg.key } }) : null, sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), manage: c.isGroup ? makeManage(id, { s: c.sock || sock, jid: c.jid, people, actorOk: !!(c.isAdmin || c.isOwner) }) : null, groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
   };
 }
 async function invoke(id, kind, name, c) {
@@ -205,7 +205,7 @@ function emit(event, info) {
       members: (info.members || []).slice(0, 50).map((m) => seen(typeof m === 'string' ? m : (m && m.id) || '')),
       chat: { id: o(info.jid), isGroup: true, name: '' },
       sender: info.senderJid ? { id: seen(info.senderJid), name: String(info.pushName || '').slice(0, 40), isAdmin: false, isOwner: false } : null };
-    const extra = { send: (x) => s.sendMessage(info.jid, { text: x }), sendMedia: (m) => s.sendMessage(info.jid, mediaMessage(m)), manage: makeManage(id, { s, jid: info.jid, people, actorOk: true }), groupInfo: null };
+    const extra = { send: (x) => s.sendMessage(info.jid, { text: x }), react: info.key ? (e) => s.sendMessage(info.jid, { react: { text: e, key: info.key } }) : null, sendMedia: (m) => s.sendMessage(info.jid, mediaMessage(m)), manage: makeManage(id, { s, jid: info.jid, people, actorOk: true }), groupInfo: null };
     Promise.resolve().then(() => getHost(id).call('event', event, ctx, extra)).catch((e) => log(id, 'event ' + event + ' failed: ' + (e.code || e.message))).finally(() => evPending.set(id, Math.max(0, (evPending.get(id) || 1) - 1)));
   }
 }
@@ -232,7 +232,7 @@ function available() { // plugin folders found in data/plugins
   }
   return out;
 }
-const RISK = { 'chat.send': ['🟢', 'Send messages in the chat where it is used'], storage: ['🟢', 'Keep its own small saved notes'], 'group.read': ['🟢', 'See the group name and how many members and admins it has'], schedule: ['🟡', 'Run by itself on a timer'], 'owner.notify': ['🟡', 'Send you a short message now and then'], network: ['🟡', 'Connect to the internet'],
+const RISK = { 'chat.react': ['🟢', 'React to the message that used it with an emoji'], 'chat.send': ['🟢', 'Send messages in the chat where it is used'], storage: ['🟢', 'Keep its own small saved notes'], 'group.read': ['🟢', 'See the group name and how many members and admins it has'], schedule: ['🟡', 'Run by itself on a timer'], 'owner.notify': ['🟡', 'Send you a short message now and then'], network: ['🟡', 'Connect to the internet'],
   'events.message': ['🟡', 'Read the text of messages sent in the groups where it is allowed'], 'events.members': ['🟡', 'Know when members join or leave a group (no phone numbers)'], 'media.send': ['🟢', 'Send pictures, stickers and files in the chat where it is used'],
   'group.manage': ['🔴', 'Remove members, and open or close the group (only where I am an admin; never the owner or an admin)'] };
 function permissionLines(m) {
@@ -265,6 +265,7 @@ function confirm(code) { // step 2: the owner confirmed
   }
   const d = state.open().data; const old = d.installed[p.id];
   deactivate(p.id);
+  if (d.removed) delete d.removed[p.id];
   d.installed[p.id] = { version: v.manifest.version, sha: v.entrySha, enabled: true, grants: v.manifest.permissions.slice(), allowOnly: old ? old.allowOnly : null, blocked: old ? old.blocked : [], installedAt: Date.now(), ...(registry.storeVersionOf(p.folder) ? { store: { version: registry.storeVersionOf(p.folder) } } : {}) };
   state.open().touch();
   if (isRunning()) { if (!activate(p.id, d.installed[p.id])) return { ok: false, why: 'changed' }; startTimers(); }
@@ -311,7 +312,23 @@ function setEnabled(id, on) {
 }
 function remove(id) {
   const d = state.open().data; if (!d.installed[id]) return false;
-  deactivate(id); delete d.installed[id]; state.open().touch(); stores.delete(id); logs.delete(id); return true;
+  deactivate(id); delete d.installed[id];
+  d.removed = d.removed || {}; d.removed[id] = Date.now();   // its saved notes are kept for 30 days in case the owner installs it again
+  state.open().touch(); stores.delete(id); logs.delete(id); return true;
+}
+const KEEP_DAYS = 30;
+// after 30 days the saved notes of a removed plugin are erased (a plugin that was installed again keeps them)
+function purgeOldNotes(now = Date.now()) {
+  if (!state.used()) return 0;
+  const d = state.open().data; let n = 0;
+  for (const [id, at] of Object.entries(d.removed || {})) {
+    if (d.installed[id]) { delete d.removed[id]; continue; }
+    if (now - at < KEEP_DAYS * 86400000) continue;
+    try { const st = stores.get(id) || state.dataStore(id); st.data.kv = {}; st.touch(); stores.delete(id); } catch (e) { continue; }
+    delete d.removed[id]; n++;
+  }
+  if (n) state.open().touch();
+  return n;
 }
 function groupRule(id, jid, mode) { // inside one group: allow, deny, only, all
   const rec = state.open().data.installed[id]; if (!rec) return false;
@@ -333,4 +350,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };

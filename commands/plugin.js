@@ -116,7 +116,7 @@ module.exports = {
       return reply(r.ok ? `✅ *${id} is on.*` : `⚠️ *I could not turn it on.*\n▸ ${r.reason ? 'Reason: ' + r.reason + '.' : ''}\n_Install it again with_ ${mono(p, 'install ' + id)}`);
     }
     if (sub === 'disable') { plugins.setEnabled(id, false); return reply(`✅ *${id} is off.*\n▸ _Turn it on again with_ ${mono(p, 'enable ' + id)}`); }
-    if (sub === 'remove') { plugins.remove(id); return reply(`✅ *${id} was removed.*\n▸ _Its saved notes were kept. The plugin folder can be deleted._`); }
+    if (sub === 'remove') { plugins.remove(id); return reply(`✅ *${id} was removed.*\n▸ _Its saved notes are kept for 30 days in case you install it again, then erased. The plugin folder can be deleted._`); }
     if (sub === 'groups') {
       const mode = (args[2] || '').toLowerCase();
       if (!isGroup) return reply(`ℹ️ *Use this inside the group you mean.*`);

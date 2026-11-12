@@ -244,7 +244,7 @@ async function handleMessageInner(sock, msg) {
   if (!isCommand) {
     if (!synthetic && isGroup && !msg.key.fromMe && text) {
       try {
-        require('../core/plugins').emit('message', { sock, jid, text, senderJid: msg.key.participant, pushName: msg.pushName }); // plugins that listen to group messages (only when the owner turned plugins on)
+        require('../core/plugins').emit('message', { sock, jid, text, senderJid: msg.key.participant, pushName: msg.pushName, key: msg.key }); // plugins that listen to group messages (only when the owner turned plugins on)
       } catch (err) {
         // a plugin problem never stops a message
       }

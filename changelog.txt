@@ -1,3 +1,14 @@
+TurboFex v1.4.8 - plugins: reactions, and delete/list for saved notes
+CHANGED IN 1.4.8
+- NEW (for plugin makers): a plugin that asks for the new permission "chat.react" can react with ONE emoji to the message that used its command (or the message its listener heard). It cannot pick another message, 1 per call, 10 per minute, one emoji only. When you install such a plugin, the screen lists it as a low-risk permission.
+- NEW (for plugin makers): plugins can now delete a saved note and list their saved note names (same "storage" permission as before, nothing new to approve).
+- Installed plugins are not affected. Use together with pair site v2.37.0 (so the site accepts "chat.react").
+
+TurboFex v1.4.7 - plugins: saved notes of a removed plugin are erased after 30 days
+CHANGED IN 1.4.7
+- NEW: when you remove a plugin (`.plugin remove <name>`), its saved notes are now kept for 30 days in case you install it again, then erased automatically (checked at start and every 6 hours while plugins are on). Installing it again within 30 days keeps the notes. Before this, the notes were kept forever. The `.plugin remove` reply says so.
+- Nothing else changes.
+
 TurboFex v1.4.6 - registry tool: withdrawals from the admin dashboard
 CHANGED IN 1.4.6
 - NEW: when you withdraw a published plugin in the pair site's admin dashboard (Plugins), `node tools/registry.js pull <registry-folder>` now also signs that withdrawal (it is written into the registry's signed `revoked` list). Push the registry folder, then run `node tools/registry.js published`. Bots switch the plugin off within a few hours (and when they start), as for any withdrawal. Running `pull` twice never writes a withdrawal twice. A withdrawal for a version that is not in your registry folder is skipped with a message.
