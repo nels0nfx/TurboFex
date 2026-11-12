@@ -56,6 +56,10 @@ function init(reg) {
 }
 const versionsOf = (reg) => { const out = []; const base = path.join(reg, 'plugins'); if (!fs.existsSync(base)) return out; for (const id of fs.readdirSync(base)) { const d = path.join(base, id); if (!fs.statSync(d).isDirectory()) continue; for (const v of fs.readdirSync(d)) if (fs.statSync(path.join(d, v)).isDirectory()) out.push({ id, version: v, dir: path.join(d, v) }); } return out; };
 
+// optional documents of a plugin version: README.md and CHANGELOG.md, plain text up to 16 KB (shown on the Plugins page; never run)
+const DOCS = { readme: 'README.md', changelog: 'CHANGELOG.md' };
+const DOC_MAX = 16 * 1024;
+const docOk = (buf) => buf.length > 0 && buf.length <= DOC_MAX && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(buf.toString('utf8')) && Buffer.from(buf.toString('utf8')).equals(buf);
 function build(reg) {
   const old = readJson(path.join(reg, 'index.json'), { plugins: {} });
   const plugins = {};
@@ -64,10 +68,12 @@ function build(reg) {
     if (!v.ok) throw new Error(`${id} ${version} is not a valid plugin: ${v.errors[0]}`);
     if (v.manifest.id !== id || v.manifest.version !== version) throw new Error(`${id}/${version}: the folder name must match the plugin id and version`);
     const manifestSha = sha(fs.readFileSync(path.join(dir, 'turbofex-plugin.json'))); const entrySha = sha(fs.readFileSync(path.join(dir, v.manifest.entry)));
+    const docSha = {};
+    for (const [k, f] of Object.entries(DOCS)) { const fp = path.join(dir, f); if (fs.existsSync(fp)) { const b = fs.readFileSync(fp); if (!docOk(b)) throw new Error(`${id} ${version}: ${f} must be plain text up to 16 KB`); docSha[k + 'Sha'] = sha(b); } }
     const before = old.plugins && old.plugins[id] && old.plugins[id].versions && old.plugins[id].versions[version];
-    if (before && (before.manifestSha !== manifestSha || before.entrySha !== entrySha)) throw new Error(`${id} ${version} was changed after it was published. Published versions never change: publish a new version instead.`);
+    if (before && (before.manifestSha !== manifestSha || before.entrySha !== entrySha || (before.readmeSha || null) !== (docSha.readmeSha || null) || (before.changelogSha || null) !== (docSha.changelogSha || null))) throw new Error(`${id} ${version} was changed after it was published. Published versions never change: publish a new version instead.`);
     const p = plugins[id] || (plugins[id] = { versions: {} });
-    p.versions[version] = { manifestSha, entrySha, entry: v.manifest.entry, permissions: v.manifest.permissions, domains: v.manifest.network.domains, publishedAt: before ? before.publishedAt : new Date().toISOString() };
+    p.versions[version] = { manifestSha, entrySha, entry: v.manifest.entry, permissions: v.manifest.permissions, domains: v.manifest.network.domains, publishedAt: before ? before.publishedAt : new Date().toISOString(), ...docSha };
     const latest = Object.keys(p.versions).sort(semverCmp).pop();
     if (latest === version) { p.name = v.manifest.name; p.description = v.manifest.description; p.author = v.manifest.author.name; }
   }
@@ -77,6 +83,7 @@ function build(reg) {
   fs.writeFileSync(path.join(reg, 'index.json.sig'), crypto.sign(null, bytes, privateKey()).toString('base64') + '\n');
   return index;
 }
+const dropVersion = (to) => { fs.rmSync(to, { recursive: true, force: true }); try { fs.rmdirSync(path.dirname(to)); } catch (e) { /* other versions are still there */ } };
 function add(pluginFolder, reg) {
   const v = manifestLib.validate(pluginFolder, {});
   if (!v.ok) throw new Error('This plugin is not valid: ' + v.errors.join('; '));
@@ -85,7 +92,12 @@ function add(pluginFolder, reg) {
   fs.mkdirSync(to, { recursive: true });
   fs.copyFileSync(path.join(pluginFolder, 'turbofex-plugin.json'), path.join(to, 'turbofex-plugin.json'));
   fs.copyFileSync(path.join(pluginFolder, v.manifest.entry), path.join(to, v.manifest.entry));
-  try { return build(reg); } catch (e) { fs.rmSync(to, { recursive: true, force: true }); throw e; }
+  for (const f of Object.values(DOCS)) {
+    const fp = path.join(pluginFolder, f); if (!fs.existsSync(fp)) continue;
+    const b = fs.readFileSync(fp); if (!docOk(b)) { dropVersion(to); throw new Error(`${f} must be plain text up to 16 KB`); }
+    fs.copyFileSync(fp, path.join(to, f));
+  }
+  try { return build(reg); } catch (e) { dropVersion(to); throw e; }
 }
 function revoke(id, version, reason, reg) {
   const list = readJson(path.join(reg, 'revoked.json'), []);
@@ -137,6 +149,14 @@ async function pull(reg, fetchImpl) {
         const entry = typeof m.entry === 'string' ? m.entry : 'index.js';
         if (!/^[\w.-]{1,80}$/.test(entry) || entry.includes('..')) { skip('bad entry name'); continue; }
         fs.writeFileSync(path.join(tmp, entry), p.entrySource);
+        let docBad = null;
+        for (const [k, f] of Object.entries(DOCS)) {
+          const t = p[k]; if (t === undefined || t === null || t === '') { if (p[k + 'Sha']) docBad = f + ' is missing'; continue; }
+          const b = typeof t === 'string' ? Buffer.from(t) : null;
+          if (!b || !docOk(b) || sha(b) !== p[k + 'Sha']) { docBad = f + ' does not match what the site announced'; break; }
+          fs.writeFileSync(path.join(tmp, f), b);
+        }
+        if (docBad) { skip(docBad); continue; }
         const v = manifestLib.validate(tmp, {});
         if (!v.ok) { skip('the bot\'s own check refused it: ' + v.errors[0]); continue; }
         if (v.manifest.id !== p.id || v.manifest.version !== p.version) { skip('id or version differs from what the site announced'); continue; }

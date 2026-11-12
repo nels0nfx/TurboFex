@@ -1,3 +1,8 @@
+TurboFex v1.5.2 - registry tool: README and CHANGELOG of plugins
+CHANGED IN 1.5.2
+- NEW (your phone only, `node tools/registry.js`): when a plugin comes with README.md and CHANGELOG.md, `pull` checks them against the fingerprints from the site, `add` keeps them with the plugin version, and the signed index lists their fingerprints. A document must be plain text up to 16 KB. A published version can never get, lose or change a document afterwards (same rule as its code). Plugins without documents work exactly as before.
+- Nothing changes for the running bot or for installed plugins. Use together with pair site v2.40.0.
+
 TurboFex v1.5.1 - plugins: promote, demote and rename
 CHANGED IN 1.5.1
 - NEW (for plugin makers): a plugin with the new permission "group.admins" can make a member an admin or take admin away, and a plugin with "group.manage" can now also rename the group. The bot keeps full control: this only works inside a command used by a group admin or you (never from something a plugin does on its own), only where the bot is an admin, on one person per call that was part of that command, 6 times an hour at most. You, the bot and your sudo users are never changed, the group creator is never demoted. The install screen shows "group.admins" as a red (high risk) permission.
