@@ -162,7 +162,7 @@ function plainCtx(id, c, extra) {
   return {
     ctx: { args: (c.args || []).slice(0, 50).map((a) => String(a).slice(0, 500)), rest: String(c.rest || '').slice(0, 4000), prefix: c.prefix || prefixOf(),
       chat: { id: o(c.jid), isGroup: !!c.isGroup, name: String(meta && meta.subject || '').slice(0, 100) },
-      mentions, sender: { id: senderId, name: String(c.msg && c.msg.pushName || '').slice(0, 40), isAdmin: !!c.isAdmin, isOwner: !!c.isOwner } },
+      settings: settingsFor(id, c.isGroup ? c.jid : null), mentions, sender: { id: senderId, name: String(c.msg && c.msg.pushName || '').slice(0, 40), isAdmin: !!c.isAdmin, isOwner: !!c.isOwner } },
     extra: { send: (t) => c.reply(t), react: c.msg && c.msg.key ? (e) => (c.sock || sock).sendMessage(c.jid, { react: { text: e, key: c.msg.key } }) : null, sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), manage: c.isGroup ? makeManage(id, { s: c.sock || sock, jid: c.jid, people, actorOk: !!(c.isAdmin || c.isOwner) }) : null, groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
   };
 }
@@ -222,7 +222,7 @@ function emit(event, info) {
     const seen = (jid) => { const k = o(jid); people.set(k, jid); return k; };
     const ctx = { args: [], rest: '', prefix: prefixOf(), event, text: String(info.text || '').slice(0, 4000),
       members: (info.members || []).slice(0, 50).map((m) => seen(typeof m === 'string' ? m : (m && m.id) || '')),
-      chat: { id: o(info.jid), isGroup: true, name: '' },
+      chat: { id: o(info.jid), isGroup: true, name: '' }, settings: settingsFor(id, info.jid),
       sender: info.senderJid ? { id: seen(info.senderJid), name: String(info.pushName || '').slice(0, 40), isAdmin: false, isOwner: false } : null };
     const extra = { send: (x) => s.sendMessage(info.jid, { text: x }), react: info.key ? (e) => s.sendMessage(info.jid, { react: { text: e, key: info.key } }) : null, sendMedia: (m) => s.sendMessage(info.jid, mediaMessage(m)), manage: makeManage(id, { s, jid: info.jid, people, actorOk: true }), groupInfo: null };
     Promise.resolve().then(() => getHost(id).call('event', event, ctx, extra)).catch((e) => log(id, 'event ' + event + ' failed: ' + (e.code || e.message))).finally(() => evPending.set(id, Math.max(0, (evPending.get(id) || 1) - 1)));
@@ -234,7 +234,7 @@ function startTimers() {
     const arr = l.manifest.schedules.map((s) => setInterval(async () => {
       const h = hosts.get(id);
       if (!isRunning() || (h && h.busy())) return;
-      try { await getHost(id).call('schedule', s.id, { args: [], rest: '', prefix: prefixOf(), chat: null, sender: null }, {}); } catch (e) { log(id, 'schedule ' + s.id + ' failed: ' + (e.code || e.message)); }
+      try { await getHost(id).call('schedule', s.id, { args: [], rest: '', prefix: prefixOf(), chat: null, sender: null, settings: settingsFor(id, null) }, {}); } catch (e) { log(id, 'schedule ' + s.id + ' failed: ' + (e.code || e.message)); }
     }, s.everyMinutes * 60000));
     arr.forEach((x) => x.unref && x.unref()); timers.set(id, arr);
   }
@@ -287,7 +287,8 @@ function confirm(code) { // step 2: the owner confirmed
   if (d.removed) delete d.removed[p.id];
   d.installed[p.id] = { version: v.manifest.version, sha: v.entrySha, enabled: true, grants: v.manifest.permissions.slice(), allowOnly: old ? old.allowOnly : null, blocked: old ? old.blocked : [], installedAt: Date.now(), ...(registry.storeVersionOf(p.folder) ? { store: { version: registry.storeVersionOf(p.folder) } } : {}) };
   const cur = d.installed[p.id];
-  if (old && old.updateMode) cur.updateMode = old.updateMode;   // the owner's update choice survives an update
+  if (old && old.updateMode) cur.updateMode = old.updateMode;
+  if (old && old.settings) cur.settings = old.settings;   // the owner's settings survive an update (a value that no longer fits is ignored when read)   // the owner's update choice survives an update
   if (old && old.store && cur.store && cur.store.version !== old.store.version && fs.existsSync(path.join(state.previousDir(p.id), old.store.version))) {
     cur.previous = { version: old.version, sha: old.sha, grants: (old.grants || []).slice(), store: { version: old.store.version } };   // the version the owner had approved before: one command back
   }
@@ -328,6 +329,48 @@ async function checkWithdrawn() {
     const index = await registry.getIndex(true);
     for (const [id, rec] of mine) if (registry.isRevoked(index, id, rec.store.version)) onDisabled(id, 'withdrawn');
   } catch (e) { /* offline or no store: keep running */ }
+}
+
+
+// ---------------------------------------------------------------- settings (typed options the owner changes with `.plugin set`)
+function defsOf(id) {
+  const l = loaded.get(id); if (l) return l.manifest.settings || [];
+  try { const v = manifestLib.validate(findFolder(id) || '/nonexistent', { botVersion: botVersion(), taken: builtinNames() }); return v.ok ? v.manifest.settings || [] : []; } catch (e) { return []; }
+}
+function fitSetting(t, v) { // a stored value is used only if it still fits the plugin's definition, else the default
+  if (t.type === 'toggle') return typeof v === 'boolean' ? v : t.default;
+  if (t.type === 'number') return typeof v === 'number' && Number.isFinite(v) && v >= t.min && v <= t.max ? v : t.default;
+  if (t.type === 'choice') return t.options.includes(v) ? v : t.default;
+  return typeof v === 'string' && v.length <= t.maxLength && !/[\u0000-\u001f\u007f]/.test(v) ? v : t.default;
+}
+// what the plugin sees: the group's own value (if the setting is per group and one was set), else the owner's value, else the default
+function settingsFor(id, jid) {
+  const rec = state.open().data.installed[id]; const st = (rec && rec.settings) || {}; const out = {};
+  for (const t of defsOf(id)) {
+    const g = t.perGroup && jid && st.groups && st.groups[jid] && Object.prototype.hasOwnProperty.call(st.groups[jid], t.key) ? st.groups[jid][t.key] : undefined;
+    const b = st.values && Object.prototype.hasOwnProperty.call(st.values, t.key) ? st.values[t.key] : undefined;
+    out[t.key] = fitSetting(t, g !== undefined ? g : b);
+  }
+  return out;
+}
+function settingsList(id, jid) {
+  if (!state.open().data.installed[id]) return null;
+  const now = settingsFor(id, jid); return defsOf(id).map((t) => ({ ...t, value: now[t.key] }));
+}
+function setSetting(id, key, raw, jid, isGroup) {
+  const d = state.open().data; const rec = d.installed[id]; if (!rec) return { ok: false, why: 'missing' };
+  const t = defsOf(id).find((x) => x.key === String(key || '').toLowerCase()); if (!t) return { ok: false, why: 'nokey' };
+  const text = String(raw === undefined ? '' : raw).trim(); let v; let reset = false;
+  if (text.toLowerCase() === 'reset') reset = true;
+  else if (t.type === 'toggle') { const x = text.toLowerCase(); if (['on', 'yes', 'true', 'enable'].includes(x)) v = true; else if (['off', 'no', 'false', 'disable'].includes(x)) v = false; else return { ok: false, why: 'value', t }; }
+  else if (t.type === 'number') { if (!/^-?\d{1,10}(\.\d{1,6})?$/.test(text)) return { ok: false, why: 'value', t }; v = Number(text); if (v < t.min || v > t.max) return { ok: false, why: 'value', t }; }
+  else if (t.type === 'choice') { v = t.options.find((o) => o.toLowerCase() === text.toLowerCase()); if (v === undefined) return { ok: false, why: 'value', t }; }
+  else { if (!text.length || text.length > t.maxLength || /[\u0000-\u001f\u007f]/.test(text)) return { ok: false, why: 'value', t }; v = text; }
+  rec.settings = rec.settings || {}; const group = t.perGroup && isGroup && jid;
+  const bag = group ? ((rec.settings.groups = rec.settings.groups || {})[jid] = rec.settings.groups[jid] || {}) : (rec.settings.values = rec.settings.values || {});
+  if (reset) delete bag[t.key]; else bag[t.key] = v;
+  state.open().touch();
+  return { ok: true, t, reset, group: !!group, value: settingsFor(id, jid)[t.key] };
 }
 
 // ---------------------------------------------------------------- update modes and rollback
@@ -424,4 +467,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, setUpdateMode, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };

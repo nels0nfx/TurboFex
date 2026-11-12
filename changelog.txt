@@ -1,3 +1,8 @@
+TurboFex v1.5.0 - plugins: options the owner can change
+CHANGED IN 1.5.0
+- NEW: a plugin can come with options (text, number, on/off or a choice from a list). You see them with `.plugin options <name>` and change one with `.plugin option <name> <option> <value>` (use the value `reset` to go back to the default). If the plugin marks an option "per group", using the command inside a group changes only that group. The plugin gets the values by itself, so plugin makers need no extra code, and no new permission is asked. Your choices are kept when the plugin updates, and `.plugin info` shows when a plugin has options.
+- Existing commands (including `.plugin set` for the plugin limits) are unchanged. Use together with pair site v2.38.0.
+
 TurboFex v1.4.9 - plugins: update modes, one-command rollback, and automatic return after failures
 CHANGED IN 1.4.9
 - NEW: update modes for plugins from the store. `.plugin updatemode <name> notify|automatic|manual`. Notify (the default): the bot tells you once about each new version and you decide. Automatic: the bot installs the new version by itself, but ONLY when it asks for exactly the same permissions and websites; anything that asks for more is never installed by itself, you are told and you must approve. Manual: the bot stays quiet (you can still use `.plugin updates`). The bot checks every 6 hours (with a random delay). Your choice is kept when the plugin updates.

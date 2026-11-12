@@ -46,7 +46,7 @@ module.exports = {
     if (!sub || sub === 'help') {
       return reply(
         `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
@@ -107,9 +107,23 @@ module.exports = {
     }
 
     const rec = o.installed[id];
-    if (['enable', 'disable', 'remove', 'groups', 'log', 'info', 'rollback', 'updatemode'].includes(sub)) {
+    if (['enable', 'disable', 'remove', 'groups', 'log', 'info', 'rollback', 'updatemode', 'options', 'option'].includes(sub)) {
       if (!id) return reply(`ℹ️ *Which plugin?*\n▸ ${mono(p, sub + ' <name>')}\n_See the names with_ ${mono(p, 'list')}`);
       if (!rec) return reply(`⚠️ *That plugin is not installed.*\n▸ _See the names with_ ${mono(p, 'list')}`);
+    }
+    const fmtVal = (t, v) => (t.type === 'toggle' ? (v ? 'on' : 'off') : String(v));
+    const hint = (t) => (t.type === 'toggle' ? 'on or off' : t.type === 'number' ? `a number from ${t.min} to ${t.max}` : t.type === 'choice' ? t.options.join(' / ') : `text, up to ${t.maxLength} characters`);
+    if (sub === 'options') {
+      const l = plugins.settingsList(id, isGroup ? jid : null);
+      if (!l.length) return reply(`ℹ️ *${id} has no options.*`);
+      return reply(`⚙️ *Options of ${id}*${isGroup ? '\n_(this group)_' : ''}\n${l.map((t) => `▸ *${t.key}:* ${fmtVal(t, t.value)}  _(${t.label}${t.perGroup ? ', can differ per group' : ''}; ${hint(t)})_`).join('\n')}\n_Change one with_ ${mono(p, `option ${id} <option> <value>`)}${l.some((t) => t.perGroup) ? '\n_Per-group options: use the command inside the group to change only that group._' : ''}`);
+    }
+    if (sub === 'option') {
+      if (!args[2]) return reply(`ℹ️ *Which option?*\n▸ ${mono(p, `options ${id}`)} _(shows them)_\n▸ ${mono(p, `option ${id} <option> <value>`)}`);
+      const r = plugins.setSetting(id, args[2], args.slice(3).join(' '), jid, isGroup);
+      if (r.ok) return reply(`✅ *Saved.*\n▸ *${r.t.label}:* ${r.reset ? 'back to the default (' + fmtVal(r.t, r.value) + ')' : fmtVal(r.t, r.value)}${r.group ? '\n▸ _Only in this group._' : ''}`);
+      if (r.why === 'nokey') return reply(`ℹ️ *That option does not exist.*\n▸ _See them with_ ${mono(p, `options ${id}`)}`);
+      return reply(`⚠️ *That value does not fit.*\n▸ *${r.t.label}:* ${hint(r.t)}\n_Or use_ ${mono(p, `option ${id} ${r.t.key} reset`)}`);
     }
     if (sub === 'rollback') {
       const r = plugins.rollback(id);
@@ -140,7 +154,7 @@ module.exports = {
     }
     if (sub === 'info') {
       const l = o.loaded.get(id); const g = rec.allowOnly ? `${rec.allowOnly.length} group(s) only` : 'every group';
-      return reply(`🧩 *${l ? l.manifest.name : id}*\n▸ *Version:* ${rec.version}\n▸ *Status:* ${rec.enabled ? 'on' : 'off' + (rec.reason ? ' (' + rec.reason + ')' : '')}\n${rec.store ? `▸ *Updates:* ${rec.updateMode || 'notify'}${rec.previous ? ' (can go back to ' + rec.previous.version + ')' : ''}\n` : ''}▸ *Works in:* ${g}${rec.blocked && rec.blocked.length ? `, ${rec.blocked.length} blocked` : ''}\n▸ *Allowed to:* ${rec.grants.length ? rec.grants.join(', ') : 'nothing special'}`);
+      return reply(`🧩 *${l ? l.manifest.name : id}*\n▸ *Version:* ${rec.version}\n▸ *Status:* ${rec.enabled ? 'on' : 'off' + (rec.reason ? ' (' + rec.reason + ')' : '')}\n${(plugins.settingsList(id, null) || []).length ? `▸ *Options:* ${mono(p, 'options ' + id)}\n` : ''}${rec.store ? `▸ *Updates:* ${rec.updateMode || 'notify'}${rec.previous ? ' (can go back to ' + rec.previous.version + ')' : ''}\n` : ''}▸ *Works in:* ${g}${rec.blocked && rec.blocked.length ? `, ${rec.blocked.length} blocked` : ''}\n▸ *Allowed to:* ${rec.grants.length ? rec.grants.join(', ') : 'nothing special'}`);
     }
     return reply(`ℹ️ *I did not understand that.*\n▸ _See what you can do with_ ${mono(p, 'help')}`);
   },
