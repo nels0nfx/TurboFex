@@ -128,6 +128,8 @@ function getHost(id) {
       storage: new Map(Object.entries(store.data.kv || {})),
       persist: (map) => { store.data.kv = Object.fromEntries(map); store.touch(); },
       log: (t) => log(id, t),
+      toSticker: async (buf) => require('../../whatsapp/media').toSticker('image', buf),
+      toAudio: async (buf) => require('../../whatsapp/media').ffmpeg(buf, 'mp3', (i, o) => ['-i', i, '-vn', '-t', '60', '-acodec', 'libmp3lame', '-b:a', '64k', o]),
       isPublicHost: async (host) => { try { await require('../safefetch').assertPublicUrl('https://' + host); return true; } catch (e) { return false; } },
       fetch: async (url) => { const r = await require('../safefetch').get(url, { timeout: 5000, maxBytes: 256 * 1024 }); return { status: r.status, text: r.body.toString('utf8') }; },
       fetchBytes: async (url) => { const r = await require('../safefetch').get(url, { timeout: 5000, maxBytes: 1024 * 1024 + 1 }); return { status: r.status, bytes: r.body }; },
@@ -222,7 +224,7 @@ function makeManage(id, { s, jid, people, actorOk, fromCommand }) {
     meta.invalidate(jid);
   };
 }
-const mediaMessage = (m) => (m.kind === 'sticker' ? { sticker: m.buffer } : m.kind === 'image' ? { image: m.buffer, caption: m.caption || undefined } : { document: m.buffer, mimetype: m.mimetype, fileName: m.fileName, caption: m.caption || undefined });
+const mediaMessage = (m) => (m.kind === 'sticker' ? { sticker: m.buffer } : m.kind === 'audio' ? { audio: m.buffer, mimetype: m.mimetype || 'audio/mpeg' } : m.kind === 'image' ? { image: m.buffer, caption: m.caption || undefined } : { document: m.buffer, mimetype: m.mimetype, fileName: m.fileName, caption: m.caption || undefined });
 
 // Events (stage 1b): a plugin can listen to group messages that are not commands, and to members joining or leaving.
 // It never slows the bot: nothing is waited for, a plugin gets at most 10 events per 10 seconds, and when it is busy extra events are dropped.
@@ -270,6 +272,7 @@ function available() { // plugin folders found in data/plugins
 }
 const RISK = { 'chat.react': ['🟢', 'React to the message that used it with an emoji'], 'chat.send': ['🟢', 'Send messages in the chat where it is used'], storage: ['🟢', 'Keep its own small saved notes'], 'group.read': ['🟢', 'See the group name and how many members and admins it has'], schedule: ['🟡', 'Run by itself on a timer'], 'owner.notify': ['🟡', 'Send you a short message now and then'], network: ['🟡', 'Connect to the internet'],
   'events.message': ['🟡', 'Read the text of messages sent in the groups where it is allowed'], 'events.members': ['🟡', 'Know when members join or leave a group (no phone numbers)'], 'media.send': ['🟢', 'Send pictures, stickers and files in the chat where it is used'],
+  'media.convert': ['🟡', 'Turn pictures into stickers and audio into small MP3 files (uses a little of the bot\'s power, a few times a minute)'],
   'group.admins': ['🔴', 'Make a member an admin or take admin away (only through a command used by a group admin, where the bot is an admin; never the owner or the group creator)'],
   'group.manage': ['🔴', 'Remove members, open or close the group, and rename it (only where I am an admin; never the owner or an admin)'] };
 function permissionLines(m) {

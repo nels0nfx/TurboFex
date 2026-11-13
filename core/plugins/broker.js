@@ -24,7 +24,7 @@ const parseArgs = (json, allowed, maxChars = MAX_ARGS_CHARS) => {
 const DEFAULT_POLICY = {
   maxTextChars: 4000, sendsPerCall: 5, sendsPerMinute: 20, logsPerCall: 100, fetchesPerCall: 3, notifiesPerHour: 3, notifyChars: 500,
   fetchMs: 5000, fetchMaxChars: 256 * 1024, storageKeys: 200, storageBytes: 1024 * 1024, storageValueChars: 64 * 1024, strikeLimit: 5,
-  kicksPerCall: 3, kicksPerHour: 20, settingsPerHour: 6, adminOpsPerHour: 6, reactsPerCall: 1, reactsPerMinute: 10, mediaPerCall: 3, mediaPerMinute: 6, mediaBytes: 1024 * 1024, fetchBytesMax: 1024 * 1024, captionChars: 1000,
+  kicksPerCall: 3, kicksPerHour: 20, settingsPerHour: 6, adminOpsPerHour: 6, reactsPerCall: 1, reactsPerMinute: 10, mediaPerCall: 3, mediaPerMinute: 6, convertsPerCall: 2, convertsPerMinute: 6, convertMs: 4000, mediaBytes: 1024 * 1024, fetchBytesMax: 1024 * 1024, captionChars: 1000,
 };
 
 // What a file really is, judged by its first bytes (never by its name or by what the plugin says it is)
@@ -36,6 +36,18 @@ function sniff(b) {
   if (b.length > 5 && b.toString('latin1', 0, 5) === '%PDF-') return { mime: 'application/pdf', image: false };
   return null;
 }
+// audio files the bot is willing to convert or send (judged by their first bytes)
+function sniffAudio(b) {
+  if (b.length > 12 && b.toString('latin1', 0, 3) === 'ID3') return 'audio/mpeg';
+  if (b.length > 3 && b[0] === 0xff && (b[1] & 0xe0) === 0xe0) return 'audio/mpeg';
+  if (b.length > 4 && b.toString('latin1', 0, 4) === 'OggS') return 'audio/ogg';
+  if (b.length > 12 && b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WAVE') return 'audio/wav';
+  if (b.length > 12 && b.toString('latin1', 4, 8) === 'ftyp') return 'audio/mp4';
+  if (b.length > 4 && b.toString('latin1', 0, 4) === 'fLaC') return 'audio/flac';
+  if (b.length > 6 && b.toString('latin1', 0, 6) === '#!AMR\n') return 'audio/amr';
+  if (b.length > 4 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'audio/webm';
+  return null;
+}
 
 class Broker {
   constructor({ manifest, grants, env, policy, now }) {
@@ -45,7 +57,7 @@ class Broker {
     this.sendTimes = []; this.notifyTimes = []; this.strikes = 0; this.violations = [];
     this.storage = env.storage || new Map();
   }
-  newCall(ctx, extra) { return { ctx: ctx || {}, send: extra && extra.send, sendMedia: extra && extra.sendMedia, react: extra && extra.react, manage: extra && extra.manage, kicks: 0, reacts: 0, adminOps: 0, groupInfo: extra && extra.groupInfo, media: 0, sends: 0, logs: 0, fetches: 0, pending: [] }; }
+  newCall(ctx, extra) { return { ctx: ctx || {}, send: extra && extra.send, sendMedia: extra && extra.sendMedia, react: extra && extra.react, manage: extra && extra.manage, kicks: 0, reacts: 0, adminOps: 0, groupInfo: extra && extra.groupInfo, media: 0, converts: 0, sends: 0, logs: 0, fetches: 0, pending: [] }; }
   deny(code, msg) { this.strikes++; this.violations.push(code); if (this.violations.length > 100) this.violations.shift(); throw new BrokerError(code, msg); }
   need(perm) {
     if (!(this.manifest.permissions || []).includes(perm)) this.deny('not_declared', perm + ' is not in the manifest');
@@ -63,6 +75,8 @@ class Broker {
         case 'storage.set': this.need('storage'); return this.sset(parseArgs(argsJson, ['key', 'value']));
         case 'net.fetch': this.need('network'); return await this.fetch(parseArgs(argsJson, ['url']), st);
         case 'net.fetchBytes': this.need('network'); return await this.fetchBytes(parseArgs(argsJson, ['url']), st);
+        case 'media.toSticker': this.need('media.convert'); return await this.convert('sticker', parseArgs(argsJson, ['data'], MAX_MEDIA_ARGS_CHARS), st);
+        case 'media.toAudio': this.need('media.convert'); return await this.convert('audio', parseArgs(argsJson, ['data'], MAX_MEDIA_ARGS_CHARS), st);
         case 'media.send': this.need('media.send'); return await this.media(parseArgs(argsJson, ['kind', 'data', 'mimetype', 'fileName', 'caption'], MAX_MEDIA_ARGS_CHARS), st);
         case 'group.kick': this.need('group.manage'); return await this.manageKick(parseArgs(argsJson, ['member']), st);
         case 'group.open': case 'group.close': this.need('group.manage'); parseArgs(argsJson, []); return await this.manageSetting(name.slice(6), st);
@@ -129,9 +143,27 @@ class Broker {
     if (buf.length > this.p.fetchBytesMax) throw new BrokerError('too_long', 'download too large');
     return JSON.stringify({ status: r.status, base64: buf.toString('base64') });
   }
+  // pictures to stickers and audio to a small MP3: the bot does the work (never the plugin), small inputs only, a few per call and per minute
+  async convert(what, a, st) {
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(a.data) || a.data.length > Math.ceil(this.p.mediaBytes / 3) * 4 + 4) throw new BrokerError('too_long', 'file not allowed');
+    const buf = Buffer.from(a.data, 'base64');
+    if (!buf.length || buf.length > this.p.mediaBytes) throw new BrokerError('too_long', 'file size not allowed');
+    if (what === 'sticker') { const k = sniff(buf); if (!(k && k.image)) throw new BrokerError('bad_file', 'not a picture'); }
+    else if (!sniffAudio(buf)) throw new BrokerError('bad_file', 'not an audio file');
+    if (++st.converts > this.p.convertsPerCall) throw new BrokerError('rate_limited', 'too many conversions in one call');
+    const t = this.now(); this.convertTimes = (this.convertTimes || []).filter((x) => t - x < 60000);
+    if (this.convertTimes.length >= this.p.convertsPerMinute) throw new BrokerError('rate_limited', 'too many conversions per minute');
+    this.convertTimes.push(t);
+    const fn = what === 'sticker' ? this.env.toSticker : this.env.toAudio; if (!fn) throw new BrokerError('not_allowed', 'conversion is not available');
+    let out;
+    try { out = await Promise.race([fn(buf), new Promise((_, rej) => setTimeout(() => rej(new BrokerError('convert_timeout', 'took too long')), this.p.convertMs).unref())]); }
+    catch (e) { if (e instanceof BrokerError) throw e; throw new BrokerError('convert_failed', 'could not convert'); }
+    out = Buffer.from(out || []); if (!out.length || out.length > this.p.mediaBytes) throw new BrokerError('too_long', 'the result is too big');
+    return JSON.stringify(out.toString('base64'));
+  }
   async media(a, st) {
     if (!st.ctx.chat) this.deny('not_allowed', 'there is no chat to answer in');
-    if (!['image', 'sticker', 'document'].includes(a.kind)) throw new BrokerError('bad_args', 'unknown kind');
+    if (!['image', 'sticker', 'document', 'audio'].includes(a.kind)) throw new BrokerError('bad_args', 'unknown kind');
     if (a.caption.length > this.p.captionChars) throw new BrokerError('too_long', 'caption too long');
     if (!/^[A-Za-z0-9+/]+={0,2}$/.test(a.data) || a.data.length > Math.ceil(this.p.mediaBytes / 3) * 4 + 4) throw new BrokerError('too_long', 'file not allowed');
     const buf = Buffer.from(a.data, 'base64');
@@ -139,6 +171,7 @@ class Broker {
     const kind = sniff(buf);
     let mime = kind && kind.mime; let name = '';
     if (a.kind === 'image' && !(kind && kind.image)) throw new BrokerError('bad_file', 'not a picture');
+    if (a.kind === 'audio') { mime = sniffAudio(buf); if (!mime) throw new BrokerError('bad_file', 'not an audio file'); }
     if (a.kind === 'sticker' && !(kind && kind.mime === 'image/webp')) throw new BrokerError('bad_file', 'a sticker must be a WebP picture');
     if (a.kind === 'document') {
       if (!/^[A-Za-z0-9][\w. -]{0,59}$/.test(a.fileName) || a.fileName.includes('..')) throw new BrokerError('bad_args', 'bad file name');
@@ -206,4 +239,4 @@ class Broker {
     await this.env.notifyOwner(a.text); return 'null';
   }
 }
-module.exports = { Broker, BrokerError, DEFAULT_POLICY, sniff };
+module.exports = { sniffAudio, Broker, BrokerError, DEFAULT_POLICY, sniff };

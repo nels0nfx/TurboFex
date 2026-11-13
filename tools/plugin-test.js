@@ -25,6 +25,8 @@ async function runOne(m, source, what, opts) {
       const r = await require('../core/safefetch').get(url, { timeout: 5000, maxBytes: 256 * 1024 }); return { status: r.status, text: r.body.toString('utf8') };
     },
     fetchBytes: async (url) => { if (!live) { run.notices.push('network (pretend, 4 bytes): ' + url); return { status: 200, bytes: Buffer.from('test') }; } const r = await require('../core/safefetch').get(url, { timeout: 5000, maxBytes: 1024 * 1024 + 1 }); return { status: r.status, bytes: r.body }; },
+    toSticker: async () => { run.notices.push('picture to sticker (pretend)'); return Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBP'), Buffer.alloc(20)]); },
+    toAudio: async () => { run.notices.push('audio to MP3 (pretend)'); return Buffer.concat([Buffer.from('ID3'), Buffer.alloc(40)]); },
     notifyOwner: async (t) => { run.notices.push('message to the owner: ' + t); },
   };
   const host = new PluginHost({ id: m.id, manifest: m, source, grants: m.permissions.slice(), limits: {}, env, onDisabled: (why) => { run.error = 'the bot would switch this plugin off: ' + why; } });

@@ -1,3 +1,8 @@
+TurboFex v1.5.10 - plugins: media.convert
+CHANGED IN 1.5.10
+- NEW (for plugin makers): the new permission "media.convert" lets a plugin ask the bot to turn a picture into a sticker and audio into a small MP3 (tfx.media.toSticker / tfx.media.toAudio), then send it (media.send now also accepts kind "audio"). The bot does the work with strict limits: 1 MB in, 2 per command, 6 per minute, 4 seconds. The owner sees it as a yellow permission when installing.
+- Nothing changes for installed plugins. Use together with pair site v2.51.0.
+
 TurboFex v1.5.9 - plugins: private test install
 CHANGED IN 1.5.9
 - NEW (bot owner only): `.plugin test <code>` installs an unfinished plugin that a developer wants you to try. The developer gets the code (like TFX-ABCD2345, works once, one hour) on the pair site. The plugin was NOT reviewed or signed by the store, so you see a clear warning and the normal permission screen, and you confirm with `.plugin confirm <code>`. It is never updated or counted as a store plugin, and runs in the same sandbox. Only use it if you know and trust the developer.

@@ -23,6 +23,8 @@ const PRELUDE = `(function () {
       fetchBytes: function (url) { return ask('net.fetchBytes', { url: String(url) }); }
     }),
     media: Object.freeze({
+      toSticker: function (data) { return ask('media.toSticker', { data: String(data || '') }); },
+      toAudio: function (data) { return ask('media.toAudio', { data: String(data || '') }); },
       send: function (o) { o = o || {}; return ask('media.send', { kind: String(o.kind || ''), data: String(o.data || ''), mimetype: String(o.mimetype || ''), fileName: String(o.fileName || ''), caption: String(o.caption || '') }); }
     }),
     util: Object.freeze({
