@@ -15,6 +15,7 @@ const MAX_INDEX = 1024 * 1024;
 let cache = null;
 let fetcher = null; // tests can replace the download function
 let keyOverride = null;
+let backupOverride = null;
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 const publicKeyPem = () => (keyOverride !== null ? keyOverride : (() => { try { return require('./registry-key.json').publicKey || ''; } catch (e) { return ''; } })());
@@ -26,8 +27,18 @@ const download = async (rel, maxBytes) => {
   return r.body;
 };
 
+// Keys the bot trusts: the main one, plus optional spare keys (backupKeys in registry-key.json) so the store can keep going
+// if the main signing key is ever lost or leaked (see KEY_ROTATION.md).
+const trustedKeys = () => {
+  const list = [publicKeyPem()];
+  if (keyOverride === null) { try { const b = require('./registry-key.json').backupKeys; if (Array.isArray(b)) for (const k of b.slice(0, 3)) if (typeof k === 'string') list.push(k); } catch (e) { /* none */ } }
+  else if (backupOverride) list.push(...backupOverride);
+  return list.filter(Boolean);
+};
 function verifyIndex(bytes, sigB64) {
-  try { return crypto.verify(null, bytes, crypto.createPublicKey(publicKeyPem()), Buffer.from(String(sigB64).trim(), 'base64')); } catch (e) { return false; }
+  const sig = Buffer.from(String(sigB64).trim(), 'base64');
+  for (const k of trustedKeys()) { try { if (crypto.verify(null, bytes, crypto.createPublicKey(k), sig)) return true; } catch (e) { /* try the next key */ } }
+  return false;
 }
 const semverCmp = (a, b) => { const x = String(a).split('.').map(Number); const y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
 
@@ -89,4 +100,4 @@ async function fetchPlugin(id, wanted) {
 }
 const storeVersionOf = (folder) => { try { return fs.readFileSync(path.join(folder, '.from-store'), 'utf8').trim(); } catch (e) { return null; } };
 module.exports = { configured, getIndex, verifyIndex, list, latestOf, isRevoked, fetchPlugin, storeVersionOf, semverCmp, sha, BASE,
-  _test: { setFetcher: (f) => { fetcher = f; cache = null; }, setKey: (k) => { keyOverride = k; cache = null; }, reset: () => { cache = null; fetcher = null; keyOverride = null; } } };
+  _test: { setFetcher: (f) => { fetcher = f; cache = null; }, setKey: (k, backups) => { keyOverride = k; backupOverride = backups || null; cache = null; }, verifyIndex, reset: () => { cache = null; fetcher = null; keyOverride = null; backupOverride = null; } } };

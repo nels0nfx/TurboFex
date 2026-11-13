@@ -2,6 +2,7 @@
 // Maintenance tool for the TurboFex plugin store (the TurboFex-Registry repository). Run it on your own phone: the signing key
 // never leaves it. Nothing here runs on a server and nothing needs GitHub Actions.
 //   node tools/registry.js keygen                    make the signing key (once) and show the public key for the bot
+//   node tools/registry.js publickey                 show the public key of the signing key in use (to copy into the bot)
 //   node tools/registry.js backup <file>             save an encrypted copy of the key (keep it somewhere safe)
 //   node tools/registry.js restore <file>            put the key back from a backup
 //   node tools/registry.js init <registry-folder>    prepare an empty registry folder
@@ -200,6 +201,7 @@ if (require.main === module) {
   const [cmd, a, b, c, d] = process.argv.slice(2);
   try {
     if (cmd === 'keygen') { console.log('✅ Signing key created in ' + keyDir() + '\nBack it up now:  TFX_PASSPHRASE="a long secret" node tools/registry.js backup ~/registry-key-backup.json\n\nPublic key (this goes into the bot):\n' + keygen()); }
+    else if (cmd === 'publickey') { console.log(publicPem()); }
     else if (cmd === 'backup' && a) { backup(a); console.log('✅ Encrypted backup saved to ' + a + '\nKeep it somewhere safe, away from this phone, and remember the passphrase.'); }
     else if (cmd === 'restore' && a) { restore(a); console.log('✅ Signing key restored.'); }
     else if (cmd === 'init' && a) { init(a); console.log('✅ Registry prepared in ' + a); }

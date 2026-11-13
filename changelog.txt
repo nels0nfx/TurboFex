@@ -1,3 +1,8 @@
+TurboFex v1.5.4 - plugin store: spare signing key
+CHANGED IN 1.5.4
+- NEW (safety): the bot can now trust a SPARE signing key next to the main one (listed as backupKeys in core/plugins/registry-key.json). If the main key is ever lost, you sign the store with the spare and bots keep accepting it without an update. No spare is set yet, so nothing changes today.
+- NEW (your phone only): `node tools/registry.js publickey` shows the public key in use. New file KEY_ROTATION.md explains the steps in plain words.
+
 TurboFex v1.5.3 - plugins: optional anonymous statistics (off by default)
 CHANGED IN 1.5.3
 - NEW (bot owner only): `.plugin stats on` lets your bot send, once a day, a random bot number plus for each store plugin its name, version, whether it is on and how many times it failed. It sends NO messages, phone numbers, group names or session. `.plugin stats` shows the state, `.plugin stats off` stops it and asks the site to delete what it holds. It is OFF until you switch it on.
