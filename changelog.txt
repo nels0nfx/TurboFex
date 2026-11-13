@@ -1,3 +1,7 @@
+TurboFex v1.5.5 - plugin store: your spare signing key is now trusted
+CHANGED IN 1.5.5
+- NEW (safety): the public part of your spare signing key is now built into the bot. If the main key is ever lost, signing the store with the spare keeps every bot that has this version working. Nothing changes for owners today.
+
 TurboFex v1.5.4 - plugin store: spare signing key
 CHANGED IN 1.5.4
 - NEW (safety): the bot can now trust a SPARE signing key next to the main one (listed as backupKeys in core/plugins/registry-key.json). If the main key is ever lost, you sign the store with the spare and bots keep accepting it without an update. No spare is set yet, so nothing changes today.

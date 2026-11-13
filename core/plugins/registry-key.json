@@ -1,3 +1,6 @@
 {
-  "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA+QWRwLFB3HTFZI5W3zMy91aYJko0py7oCo4MCGC5/vU=\n-----END PUBLIC KEY-----\n"
+  "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA+QWRwLFB3HTFZI5W3zMy91aYJko0py7oCo4MCGC5/vU=\n-----END PUBLIC KEY-----\n",
+  "backupKeys": [
+    "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAeuUc0XhWqdOqEXisdv/Hz9V8awaHdaXn3hP2/wNLcYA=\n-----END PUBLIC KEY-----\n"
+  ]
 }
