@@ -11,6 +11,7 @@
 //   node tools/registry.js verify <registry-folder>  check that everything in the registry is intact and signed
 //   node tools/registry.js pull <registry-folder>    download the plugins you approved on the pair site, check them again, add and sign them
 //                                                    (needs TFX_SITE_TOKEN; TFX_SITE_URL is optional)
+//   node tools/registry.js sitebackup <file>         save a backup of everything the pair site's plugin store keeps (needs TFX_SITE_TOKEN); run it now and then
 //   node tools/registry.js published                 after you pushed the registry: tell the pair site those plugins are now published (or withdrawn)
 const fs = require('node:fs');
 const os = require('node:os');
@@ -195,7 +196,13 @@ async function markPublished(fetchImpl) {
   const r = await siteCall('POST', '/api/registry/published', { ids, revoked }, fetchImpl);
   fs.writeFileSync(pendingFile(), '[]'); fs.writeFileSync(pendingRevFile(), '[]'); return (r.marked || 0) + (r.revoked || 0);
 }
-module.exports = { keygen, backup, restore, init, add, revoke, build, verify, publicPem, pull, markPublished };
+async function siteBackup(file, fetchImpl) {
+  const j = await siteCall('GET', '/api/registry/backup', null, fetchImpl);
+  if (!j || j.format !== 'turbofex-devcentre-backup-1') throw new Error('The pair site did not send a backup (is it updated to v2.46.0 or newer?).');
+  fs.writeFileSync(file, JSON.stringify(j), { mode: 0o600 });
+  return { submissions: (j.submissions || []).length, developers: (j.developers || []).length };
+}
+module.exports = { siteBackup, keygen, backup, restore, init, add, revoke, build, verify, publicPem, pull, markPublished };
 
 if (require.main === module) {
   const [cmd, a, b, c, d] = process.argv.slice(2);
@@ -216,6 +223,7 @@ if (require.main === module) {
         if (o.skipped.length) console.log('⚠️ Skipped:\n  ' + o.skipped.map((x) => x.id + ' ' + x.version + ': ' + x.reason).join('\n  '));
       }).catch((e) => { console.error('⚠️ ' + e.message); process.exitCode = 1; });
     }
+    else if (cmd === 'sitebackup' && a) { siteBackup(a).then((o) => console.log('✅ Backup saved to ' + a + ' (' + o.developers + ' developer(s), ' + o.submissions + ' submission(s)).\nKeep it private: it holds the plugin code and the developer list.')).catch((e) => { console.error('⚠️ ' + e.message); process.exitCode = 1; }); }
     else if (cmd === 'published') { markPublished().then((n) => console.log(n ? '✅ The pair site is up to date (' + n + ' plugin change(s) recorded).' : 'Nothing was waiting to be marked.')).catch((e) => { console.error('⚠️ ' + e.message); process.exitCode = 1; }); }
     else { console.log(fs.readFileSync(__filename, 'utf8').split('\n').filter((l) => l.startsWith('//')).map((l) => l.slice(3)).join('\n')); process.exitCode = 1; }
   } catch (e) { console.error('⚠️ ' + e.message); process.exitCode = 1; }

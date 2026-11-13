@@ -1,3 +1,7 @@
+TurboFex v1.5.7 - registry tool: back up the plugin store from your phone
+CHANGED IN 1.5.7
+- NEW (your phone only): `node tools/registry.js sitebackup <file>` saves everything the pair site's plugin store keeps (developers, submissions with code, ratings, reports) into one file, using the same TFX_SITE_TOKEN as `pull`. Needs pair site v2.46.0. Nothing changes for the running bot.
+
 TurboFex v1.5.6 - plugins: rate a store plugin from the bot
 CHANGED IN 1.5.6
 - NEW (bot owner only): `.plugin rate <name> <1-5>` gives a plugin you installed from the store 1 to 5 stars. It needs `.plugin stats on` and the first statistics report already sent. The store page shows the average as "rated by bot owners". Use together with pair site v2.44.0.
