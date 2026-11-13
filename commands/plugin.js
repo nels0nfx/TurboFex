@@ -9,6 +9,7 @@ const STORE_WHY = (p, why) => ({
   unknown: `▸ _I could not find that plugin. See what is there with_ ${mono(p, 'store')}`,
   revoked: '▸ _This plugin was withdrawn for safety and cannot be installed._',
   conflict: '▸ _A different plugin with that name is already in your plugins folder._',
+  badcode: '▸ _That test code is not valid, was already used, or has run out. Ask the developer for a new one._',
 }[why] || '▸ _Please try again in a moment._');
 const showInstall = (p, r) => {
   const m = r.manifest; const cmds = m.commands.map((c) => `\`${p}${c.name}\``).join(', ') || 'none';
@@ -46,7 +47,7 @@ module.exports = {
     if (!sub || sub === 'help') {
       return reply(
         `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'test <code>')}  _(try a developer's unfinished plugin with a private code)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
@@ -114,6 +115,14 @@ module.exports = {
       if (!r.ok && r.why === 'missing') return reply(`⚠️ *I could not find that plugin.*\n▸ _Check the name with_ ${mono(p, 'list')} or ${mono(p, 'store')}`);
       if (!r.ok) return reply(`⚠️ *I could not install that plugin.*\n${STORE_WHY(p, r.why)}`);
       return reply(showInstall(p, r));
+    }
+    if (sub === 'test') {
+      if (!id) return reply(`🧪 *Private test of an unfinished plugin*\n▸ ${mono(p, 'test <code>')}\n▸ _The code (like TFX-ABCD2345) comes from the plugin's developer. The plugin was NOT reviewed or signed by the store. Only try it if you know and trust the developer._`);
+      const r = await plugins.prepareTest(args[1]);
+      if (!r.ok && r.why === 'invalid' && r.errors) return reply(`⚠️ *This plugin cannot be installed.*\n▸ ${r.errors[0]}`);
+      if (!r.ok && r.why === 'same') return reply(`ℹ️ *That test version is already installed.*`);
+      if (!r.ok) return reply(`⚠️ *I could not use that code.*\n${STORE_WHY(p, r.why)}`);
+      return reply(`🧪 *Private test copy: not reviewed, not signed by the store.*\n▸ *Sent by developer:* ${r.developer || 'unknown'}\n\n` + showInstall(p, r));
     }
     if (sub === 'confirm') {
       const r = plugins.confirm(args[1]);

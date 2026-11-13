@@ -1,3 +1,8 @@
+TurboFex v1.5.9 - plugins: private test install
+CHANGED IN 1.5.9
+- NEW (bot owner only): `.plugin test <code>` installs an unfinished plugin that a developer wants you to try. The developer gets the code (like TFX-ABCD2345, works once, one hour) on the pair site. The plugin was NOT reviewed or signed by the store, so you see a clear warning and the normal permission screen, and you confirm with `.plugin confirm <code>`. It is never updated or counted as a store plugin, and runs in the same sandbox. Only use it if you know and trust the developer.
+- Use together with pair site v2.50.0.
+
 TurboFex v1.5.8 - plugin makers: a test tool
 CHANGED IN 1.5.8
 - NEW (for plugin makers, runs on a computer, not in the bot): `node tools/plugin-test.js <plugin-folder>` checks the plugin files with the bot's own rules, then runs every command, event and schedule in the same sandbox with a pretend chat and shows what the bot would say, react with, send or do. Options: --command "name words", --event message --text "hi", --schedule id, --as owner|admin|member, --live-network. Nothing is sent anywhere.

@@ -324,6 +324,12 @@ async function prepareStore(id) {
   if (!f.ok) return f;
   return prepare(id);
 }
+async function prepareTest(code, fetchImpl) {
+  const f = await require('./testcode').fetchTest(code, builtinNames(), fetchImpl);
+  if (!f.ok) return f;
+  const r = prepare(f.id); if (!r.ok) return r;
+  return { ...r, test: true, developer: f.developer };
+}
 async function storeList(text) { return registry.list(await registry.getIndex(), text); }
 async function storeInfo(id) {
   const index = await registry.getIndex(); const p = index.plugins[id]; const v = registry.latestOf(index, id);
@@ -515,4 +521,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
