@@ -3,6 +3,7 @@
 // every call in a sealed sandbox (see host.js). Light on purpose: nothing heavy is loaded while plugins are off.
 const fs = require('node:fs');
 const path = require('node:path');
+const stats = require('./stats');
 const crypto = require('node:crypto');
 const manifestLib = require('./manifest');
 const state = require('./state');
@@ -52,11 +53,12 @@ async function start(s) {
   for (const [id, rec] of Object.entries(state.open().data.installed)) if (rec.enabled && !loaded.has(id)) activate(id, rec);
   startTimers(); try { purgeOldNotes(); } catch (e) { /* never stops the bot */ }
   if (!revTimer) { revTimer = setInterval(() => { checkWithdrawn(); setTimeout(() => checkUpdates(), Math.floor(Math.random() * 600000)).unref(); try { purgeOldNotes(); } catch (e) { /* ignore */ } }, 6 * 3600 * 1000); if (revTimer.unref) revTimer.unref(); }
-  setTimeout(() => checkWithdrawn(), 15000).unref();
+  setTimeout(() => checkWithdrawn(), 15000).unref(); scheduleStats();
   setTimeout(() => checkUpdates(), 60000 + Math.floor(Math.random() * 300000)).unref();
   return status;
 }
 function stop() {
+  if (statsTimer) { clearTimeout(statsTimer); statsTimer = null; }
   if (revTimer) { clearInterval(revTimer); revTimer = null; } for (const t of timers.values()) clearInterval(t); timers.clear(); for (const h of hosts.values()) h.stop(); hosts.clear(); }
 async function turnOn() { state.open().data.enabled = true; state.open().touch(); return start(sock); }
 function turnOff() {
@@ -138,6 +140,7 @@ function getHost(id) {
   return h;
 }
 function onDisabled(id, why) {
+  if (why !== 'withdrawn') { try { stats.bumpError(id); } catch (e) { /* statistics never stop the bot */ } }
   const rec = state.open().data.installed[id]; const l = loaded.get(id); const name = l ? l.manifest.name : id;
   // a new version that keeps failing within a day of its update: return to the version before (the same rule as three faults in ten minutes)
   if (why !== 'withdrawn' && rec && rec.previous && Date.now() - (rec.installedAt || 0) < 86400000) {
@@ -388,6 +391,28 @@ function setSetting(id, key, raw, jid, isGroup) {
   return { ok: true, t, reset, group: !!group, value: settingsFor(id, jid)[t.key] };
 }
 
+
+// ---------------------------------------------------------------- anonymous statistics (opt-in)
+const statsStatus = () => stats.status();
+async function setStats(on, fetchImpl) {
+  if (on) { stats.setOn(true); const t = setTimeout(() => reportStats(), 60000 + Math.floor(Math.random() * 540000)); if (t.unref) t.unref(); return stats.status(); }
+  stats.setOn(false); await stats.forget(fetchImpl); return stats.status();
+}
+async function reportStats(fetchImpl) {
+  try {
+    if (!stats.status().on) return { ok: false, why: 'off' };
+    const list = Object.entries(state.open().data.installed).filter(([, r]) => r.store).map(([id, r]) => ({ id, version: r.store.version, enabled: !!r.enabled }));
+    return await stats.report(list, botVersion(), fetchImpl);
+  } catch (e) { return { ok: false, why: 'site' }; }
+}
+let statsTimer = null;
+function scheduleStats() {   // about once a day, never at the same minute for every bot
+  if (statsTimer) return;
+  const next = () => { statsTimer = setTimeout(async () => { statsTimer = null; try { const s = stats.status(); if (s.on && Date.now() - s.last > 20 * 3600 * 1000) await reportStats(); } catch (e) { /* ignore */ } next(); }, (6 + Math.random() * 6) * 3600 * 1000); if (statsTimer.unref) statsTimer.unref(); };
+  const first = setTimeout(async () => { try { const s = stats.status(); if (s.on && Date.now() - s.last > 20 * 3600 * 1000) await reportStats(); } catch (e) { /* ignore */ } }, 120000 + Math.floor(Math.random() * 600000)); if (first.unref) first.unref();
+  next();
+}
+
 // ---------------------------------------------------------------- update modes and rollback
 const MODES = ['notify', 'automatic', 'manual'];
 function tellOwner(text) { try { if (sock) Promise.resolve(sock.sendMessage(require('../../whatsapp/owner').ownerChat(sock), { text })).catch(() => {}); } catch (e) { /* never stops the bot */ } }
@@ -482,4 +507,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };

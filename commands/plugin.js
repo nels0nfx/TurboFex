@@ -46,7 +46,7 @@ module.exports = {
     if (!sub || sub === 'help') {
       return reply(
         `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
@@ -79,6 +79,13 @@ module.exports = {
       } catch (e) {
         return reply(`⚠️ *The store is not available.*\n${STORE_WHY(p, e.code)}`);
       }
+    }
+    if (sub === 'stats') {
+      const a = (args[1] || '').toLowerCase();
+      if (a === 'on') { await plugins.setStats(true); return reply(`✅ *Anonymous statistics are on.*\n▸ _Once a day the bot tells the plugin store which store plugins are installed and how often they failed, so developers can see how many bots use their plugin._\n▸ _Never sent: messages, numbers, group names or your session. Turn off with_ ${mono(p, 'stats off')}`); }
+      if (a === 'off') { await plugins.setStats(false); return reply(`✅ *Anonymous statistics are off.*\n▸ _Nothing is sent, and the site was asked to delete what it had for this bot._`); }
+      const st = plugins.statsStatus();
+      return reply(`📊 *Anonymous statistics: ${st.on ? 'on' : 'off'}*\n${st.on ? `▸ *Last sent:* ${st.last ? new Date(st.last).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : 'not yet'}\n` : ''}▸ _Sent once a day when on: a random bot id and which store plugins are installed (with version and failure counts). Never messages, numbers, group names or your session._\n▸ ${mono(p, 'stats on')} / ${mono(p, 'stats off')}`);
     }
     if (sub === 'updates') {
       try {
