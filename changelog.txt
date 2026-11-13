@@ -1,3 +1,8 @@
+TurboFex v1.5.8 - plugin makers: a test tool
+CHANGED IN 1.5.8
+- NEW (for plugin makers, runs on a computer, not in the bot): `node tools/plugin-test.js <plugin-folder>` checks the plugin files with the bot's own rules, then runs every command, event and schedule in the same sandbox with a pretend chat and shows what the bot would say, react with, send or do. Options: --command "name words", --event message --text "hi", --schedule id, --as owner|admin|member, --live-network. Nothing is sent anywhere.
+- Nothing changes for the running bot. Use together with pair site v2.49.0 (plugin guide section 5d).
+
 TurboFex v1.5.7 - registry tool: back up the plugin store from your phone
 CHANGED IN 1.5.7
 - NEW (your phone only): `node tools/registry.js sitebackup <file>` saves everything the pair site's plugin store keeps (developers, submissions with code, ratings, reports) into one file, using the same TFX_SITE_TOKEN as `pull`. Needs pair site v2.46.0. Nothing changes for the running bot.
