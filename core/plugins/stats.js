@@ -37,4 +37,13 @@ async function report(list, botVersion, fetchImpl) {
   if (!r.ok) return { ok: false, why: 'site' };
   s.errors = {}; s.last = Date.now(); state.open().touch(); return { ok: true, sent: body.plugins.length };
 }
-module.exports = { status, setOn, forget, report, bumpError };
+// the owner's own 1-5 rating of an installed store plugin (needs statistics on and at least one report already sent)
+async function rate(id, stars, fetchImpl) {
+  const s = S(); if (!s.on) return { ok: false, why: 'off' };
+  if (!s.botId || !s.last) return { ok: false, why: 'notyet' };
+  const r = await call('/bot/rate', { plugin: id, stars }, s.botId + '.' + s.secret, fetchImpl);
+  if (r.status === 401) { s.botId = ''; s.secret = ''; state.open().touch(); return { ok: false, why: 'notyet' }; }
+  if (!r.ok) return { ok: false, why: r.status === 400 ? 'notyet' : 'site' };
+  return { ok: true };
+}
+module.exports = { status, setOn, forget, report, bumpError, rate };

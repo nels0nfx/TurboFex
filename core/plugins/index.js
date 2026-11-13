@@ -398,6 +398,14 @@ async function setStats(on, fetchImpl) {
   if (on) { stats.setOn(true); const t = setTimeout(() => reportStats(), 60000 + Math.floor(Math.random() * 540000)); if (t.unref) t.unref(); return stats.status(); }
   stats.setOn(false); await stats.forget(fetchImpl); return stats.status();
 }
+async function ratePlugin(id, stars, fetchImpl) {
+  try {
+    const rec = state.open().data.installed[id];
+    if (!rec || !rec.store) return { ok: false, why: 'unknown' };
+    if (!Number.isInteger(stars) || stars < 1 || stars > 5) return { ok: false, why: 'stars' };
+    return await stats.rate(id, stars, fetchImpl);
+  } catch (e) { return { ok: false, why: 'site' }; }
+}
 async function reportStats(fetchImpl) {
   try {
     if (!stats.status().on) return { ok: false, why: 'off' };
@@ -507,4 +515,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };

@@ -46,7 +46,7 @@ module.exports = {
     if (!sub || sub === 'help') {
       return reply(
         `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
@@ -79,6 +79,14 @@ module.exports = {
       } catch (e) {
         return reply(`⚠️ *The store is not available.*\n${STORE_WHY(p, e.code)}`);
       }
+    }
+    if (sub === 'rate') {
+      const stars = Number(args[2]);
+      if (!id || !Number.isInteger(stars) || stars < 1 || stars > 5) return reply(`⭐ *Rate a store plugin*\n▸ ${mono(p, 'rate <name> <1-5>')}\n▸ _Needs_ ${mono(p, 'stats on')} _and the plugin installed from the store. Your rating is shown on the store page as "rated by bot owners". It is sent with your anonymous bot number only._`);
+      const r = await plugins.ratePlugin(id, stars);
+      if (r.ok) return reply(`✅ *Thank you!* You gave *${id}* ${'⭐'.repeat(stars)}.`);
+      const why = { unknown: `That plugin is not installed from the store. See ${mono(p, 'list')}.`, off: `Turn on anonymous statistics first: ${mono(p, 'stats on')}.`, notyet: 'The bot has not sent its first statistics report yet. Try again tomorrow, or later today.', stars: 'Use a number from 1 to 5.', site: 'The store site could not be reached. Try again later.' }[r.why] || 'Not possible right now.';
+      return reply(`⚠️ ${why}`);
     }
     if (sub === 'stats') {
       const a = (args[1] || '').toLowerCase();
