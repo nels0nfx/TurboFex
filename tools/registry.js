@@ -62,6 +62,21 @@ const versionsOf = (reg) => { const out = []; const base = path.join(reg, 'plugi
 const DOCS = { readme: 'README.md', changelog: 'CHANGELOG.md' };
 const DOC_MAX = 16 * 1024;
 const docOk = (buf) => buf.length > 0 && buf.length <= DOC_MAX && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(buf.toString('utf8')) && Buffer.from(buf.toString('utf8')).equals(buf);
+// optional logo: icon.png, a square PNG between 64 and 512 pixels, up to 32 KB
+const ICON = 'icon.png', ICON_MAX = 32 * 1024;
+function iconOk(b) {
+  if (!Buffer.isBuffer(b) || b.length < 33 || b.length > ICON_MAX) return false;
+  if (!b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) || b.toString('latin1', 12, 16) !== 'IHDR') return false;
+  const w = b.readUInt32BE(16), h = b.readUInt32BE(20); return w === h && w >= 64 && w <= 512;
+}
+// optional screenshots: screenshot1.png, screenshot2.png, screenshot3.png (in that order, no gaps): PNG, 200 to 2000 pixels each side, up to 200 KB
+const SHOT_MAX = 200 * 1024;
+function shotOk(b) {
+  if (!Buffer.isBuffer(b) || b.length < 33 || b.length > SHOT_MAX) return false;
+  if (!b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) || b.toString('latin1', 12, 16) !== 'IHDR') return false;
+  const w = b.readUInt32BE(16), h = b.readUInt32BE(20); return w >= 200 && w <= 2000 && h >= 200 && h <= 2000;
+}
+const shotFiles = (dir) => { const out = []; for (let i = 1; i <= 3; i++) { const f = path.join(dir, `screenshot${i}.png`); if (!fs.existsSync(f)) break; out.push(f); } return out; };
 function build(reg) {
   const old = readJson(path.join(reg, 'index.json'), { plugins: {} });
   const plugins = {};
@@ -72,8 +87,10 @@ function build(reg) {
     const manifestSha = sha(fs.readFileSync(path.join(dir, 'turbofex-plugin.json'))); const entrySha = sha(fs.readFileSync(path.join(dir, v.manifest.entry)));
     const docSha = {};
     for (const [k, f] of Object.entries(DOCS)) { const fp = path.join(dir, f); if (fs.existsSync(fp)) { const b = fs.readFileSync(fp); if (!docOk(b)) throw new Error(`${id} ${version}: ${f} must be plain text up to 16 KB`); docSha[k + 'Sha'] = sha(b); } }
+    { const ip = path.join(dir, ICON); if (fs.existsSync(ip)) { const b = fs.readFileSync(ip); if (!iconOk(b)) throw new Error(`${id} ${version}: icon.png must be a square PNG, 64 to 512 pixels, up to 32 KB`); docSha.iconSha = sha(b); } }
+    { const shots = shotFiles(dir).map((f) => fs.readFileSync(f)); for (const b of shots) if (!shotOk(b)) throw new Error(`${id} ${version}: screenshots must be PNG pictures, 200 to 2000 pixels each side, up to 200 KB`); if (shots.length) docSha.shotShas = shots.map(sha); }
     const before = old.plugins && old.plugins[id] && old.plugins[id].versions && old.plugins[id].versions[version];
-    if (before && (before.manifestSha !== manifestSha || before.entrySha !== entrySha || (before.readmeSha || null) !== (docSha.readmeSha || null) || (before.changelogSha || null) !== (docSha.changelogSha || null))) throw new Error(`${id} ${version} was changed after it was published. Published versions never change: publish a new version instead.`);
+    if (before && (before.manifestSha !== manifestSha || before.entrySha !== entrySha || (before.readmeSha || null) !== (docSha.readmeSha || null) || (before.changelogSha || null) !== (docSha.changelogSha || null) || (before.iconSha || null) !== (docSha.iconSha || null) || JSON.stringify(before.shotShas || []) !== JSON.stringify(docSha.shotShas || []))) throw new Error(`${id} ${version} was changed after it was published. Published versions never change: publish a new version instead.`);
     const p = plugins[id] || (plugins[id] = { versions: {} });
     p.versions[version] = { manifestSha, entrySha, entry: v.manifest.entry, permissions: v.manifest.permissions, domains: v.manifest.network.domains, publishedAt: before ? before.publishedAt : new Date().toISOString(), ...docSha };
     const latest = Object.keys(p.versions).sort(semverCmp).pop();
@@ -99,6 +116,8 @@ function add(pluginFolder, reg) {
     const b = fs.readFileSync(fp); if (!docOk(b)) { dropVersion(to); throw new Error(`${f} must be plain text up to 16 KB`); }
     fs.copyFileSync(fp, path.join(to, f));
   }
+  { const ip = path.join(pluginFolder, ICON); if (fs.existsSync(ip)) { const b = fs.readFileSync(ip); if (!iconOk(b)) { dropVersion(to); throw new Error('icon.png must be a square PNG, 64 to 512 pixels, up to 32 KB'); } fs.copyFileSync(ip, path.join(to, ICON)); } }
+  { const fs2 = shotFiles(pluginFolder); for (const f of fs2) { if (!shotOk(fs.readFileSync(f))) { dropVersion(to); throw new Error('screenshots must be PNG pictures, 200 to 2000 pixels each side, up to 200 KB'); } fs.copyFileSync(f, path.join(to, path.basename(f))); } }
   try { return build(reg); } catch (e) { dropVersion(to); throw e; }
 }
 function revoke(id, version, reason, reg) {
@@ -157,6 +176,15 @@ async function pull(reg, fetchImpl) {
           const b = typeof t === 'string' ? Buffer.from(t) : null;
           if (!b || !docOk(b) || sha(b) !== p[k + 'Sha']) { docBad = f + ' does not match what the site announced'; break; }
           fs.writeFileSync(path.join(tmp, f), b);
+        }
+        if (!docBad && p.icon) {   // the logo arrives as base64 text and must match what the site announced
+          const ib = typeof p.icon === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(p.icon) ? Buffer.from(p.icon, 'base64') : null;
+          if (!ib || !iconOk(ib) || sha(ib) !== p.iconSha) docBad = 'icon.png does not match what the site announced'; else fs.writeFileSync(path.join(tmp, ICON), ib);
+        }
+        if (!docBad && p.shots !== undefined) {   // screenshots arrive as base64 text and must match what the site announced
+          const arr = Array.isArray(p.shots) && Array.isArray(p.shotShas) && p.shots.length === p.shotShas.length && p.shots.length <= 3 ? p.shots : null;
+          if (!arr) docBad = 'screenshots do not match what the site announced';
+          else arr.forEach((t, i) => { if (docBad) return; const sb = typeof t === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(t) ? Buffer.from(t, 'base64') : null; if (!sb || !shotOk(sb) || sha(sb) !== p.shotShas[i]) docBad = 'screenshots do not match what the site announced'; else fs.writeFileSync(path.join(tmp, `screenshot${i + 1}.png`), sb); });
         }
         if (docBad) { skip(docBad); continue; }
         const v = manifestLib.validate(tmp, {});

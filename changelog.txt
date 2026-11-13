@@ -1,3 +1,15 @@
+TurboFex v1.5.13 - tool that builds the site's Playground
+CHANGED IN 1.5.13
+- NEW (for the website, not the running bot): `node tools/build-playground.js <folder>` builds the two browser files of the pair site's Plugin Playground from the bot's own sandbox and broker code, so the Playground behaves like the bot. Run it again and copy the files to the site whenever core/plugins/worker.js or broker.js change. Use together with pair site v2.54.0, which already contains the files built from this version.
+
+TurboFex v1.5.12 - registry tool: plugin screenshots
+CHANGED IN 1.5.12
+- NEW (your phone only): `node tools/registry.js pull` (and `add`) now carry up to 3 screenshots of a plugin (PNG, 200 to 2000 pixels each side, up to 200 KB) into the store and into the signed list. A screenshot that does not match what the site announced is skipped like any other bad file. Nothing changes for the running bot. Use together with pair site v2.53.0.
+
+TurboFex v1.5.11 - registry tool: plugin logos
+CHANGED IN 1.5.11
+- NEW (your phone only): `node tools/registry.js pull` (and `add`) now carry a plugin's logo (icon.png: square PNG, 64 to 512 pixels, up to 32 KB) into the store and into the signed list, so the Plugins page can show it. A logo that does not match what the site announced is skipped like any other bad file. Nothing changes for the running bot. Use together with pair site v2.52.0.
+
 TurboFex v1.5.10 - plugins: media.convert
 CHANGED IN 1.5.10
 - NEW (for plugin makers): the new permission "media.convert" lets a plugin ask the bot to turn a picture into a sticker and audio into a small MP3 (tfx.media.toSticker / tfx.media.toAudio), then send it (media.send now also accepts kind "audio"). The bot does the work with strict limits: 1 MB in, 2 per command, 6 per minute, 4 seconds. The owner sees it as a yellow permission when installing.
