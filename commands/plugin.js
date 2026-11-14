@@ -47,7 +47,7 @@ module.exports = {
     if (!sub || sub === 'help') {
       return reply(
         `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'test <code>')}  _(try a developer's unfinished plugin with a private code)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'collections')} / ${mono(p, 'bundle <name>')}  _(ready-made sets of plugins)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'test <code>')}  _(try a developer's unfinished plugin with a private code)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
@@ -67,6 +67,30 @@ module.exports = {
       return reply(`🧩 *Plugins*\n${lines.join('\n')}\n_Install one with_ ${mono(p, 'install <name>')}`);
     }
 
+    if (sub === 'collections' || sub === 'collection' || sub === 'bundle') {
+      try {
+        if (sub === 'collections') {
+          const cs = await plugins.storeCollections();
+          if (!cs.length) return reply(`🧩 *No collections yet.*\n▸ _Look at single plugins with_ ${mono(p, 'store')}`);
+          return reply(`🧩 *Plugin collections*\n${cs.map((c) => `▸ *${c.name}* \`${c.id}\` (${c.available} plugin${c.available === 1 ? '' : 's'})\n   _${c.description}_`).join('\n')}\n_See inside with_ ${mono(p, 'collection <name>')} _and install the set with_ ${mono(p, 'bundle <name>')}`);
+        }
+        if (!id) return reply(`ℹ️ *Which collection?*\n▸ ${mono(p, sub + ' <name>')}\n_See the names with_ ${mono(p, 'collections')}`);
+        if (sub === 'collection') {
+          const c = await plugins.storeCollection(id);
+          if (!c) return reply(`⚠️ *I could not find that collection.*\n▸ _See the names with_ ${mono(p, 'collections')}`);
+          const tag = { new: '', installed: '  _(already installed)_', update: '  _(update available)_', unavailable: '  _(not in the store right now)_' };
+          return reply(`🧩 *${c.name}*\n_${c.description}_\n${c.items.map((x) => `▸ *${x.name}*${x.version ? ' ' + x.version : ''} \`${x.id}\`${tag[x.state]}`).join('\n')}\n_Install the whole set with_ ${mono(p, 'bundle ' + c.id)}`);
+        }
+        const b = await plugins.prepareBundle(id);
+        if (!b.ok) return reply(`⚠️ *I could not find that collection.*\n▸ _See the names with_ ${mono(p, 'collections')}`);
+        const ready = b.results.filter((x) => x.r && x.r.ok), skipped = b.results.filter((x) => x.skipped), failed = b.results.filter((x) => x.r && !x.r.ok);
+        await reply(`🧩 *${b.collection.name}*\n▸ *Ready to approve:* ${ready.length}\n` + (skipped.length ? `▸ *Skipped:* ${skipped.map((x) => x.name + (x.skipped === 'installed' ? ' (already installed)' : ' (not in the store)')).join(', ')}\n` : '') + (failed.length ? `▸ *Could not prepare:* ${failed.map((x) => `${x.name} (${x.r.why === 'invalid' ? 'not valid for this bot' : x.r.why === 'same' ? 'already installed' : x.r.why || 'unknown'})`).join(', ')}\n` : '') + (ready.length ? `_Each plugin below needs your own OK, so you see what it asks for. Skip any you do not want._` : '_Nothing to install._'));
+        for (const x of ready) await reply(showInstall(p, x.r));
+        return;
+      } catch (e) {
+        return reply(`⚠️ *The store is not available.*\n${STORE_WHY(p, e.code)}`);
+      }
+    }
     if (sub === 'store') {
       try {
         const d = id ? await plugins.storeInfo(id) : null; // an exact name shows its details, anything else is a search

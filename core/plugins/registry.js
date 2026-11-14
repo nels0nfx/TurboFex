@@ -54,6 +54,18 @@ async function getIndex(fresh) {
   cache = { t: Date.now(), index };
   return index;
 }
+// collections (curated sets of store plugins), signed inside the index. Anything with an odd shape is dropped.
+const MAX_BUNDLE = 8, MAX_COLLECTIONS = 20;
+function collectionsOf(index) {
+  const out = [];
+  for (const c of Array.isArray(index && index.collections) ? index.collections : []) {
+    if (!c || typeof c !== 'object' || !/^[a-z0-9-]{3,32}$/.test(String(c.id)) || !Array.isArray(c.plugins)) continue;
+    const ids = [...new Set(c.plugins.filter((x) => /^[a-z0-9-]{3,32}$/.test(String(x))).map(String))].slice(0, MAX_BUNDLE);
+    if (!ids.length || out.some((x) => x.id === c.id)) continue;
+    out.push({ id: String(c.id), name: String(c.name || c.id).slice(0, 40), description: String(c.description || '').slice(0, 200), plugins: ids });
+  }
+  return out.slice(0, MAX_COLLECTIONS);
+}
 const isRevoked = (index, id, version) => (index.revoked || []).some((r) => r.id === id && (!r.version || r.version === version));
 const latestOf = (index, id) => {
   const p = index.plugins[id]; if (!p) return null;
@@ -99,5 +111,5 @@ async function fetchPlugin(id, wanted) {
   return { ok: true, version, folder: to };
 }
 const storeVersionOf = (folder) => { try { return fs.readFileSync(path.join(folder, '.from-store'), 'utf8').trim(); } catch (e) { return null; } };
-module.exports = { configured, getIndex, verifyIndex, list, latestOf, isRevoked, fetchPlugin, storeVersionOf, semverCmp, sha, BASE,
+module.exports = { collectionsOf, configured, getIndex, verifyIndex, list, latestOf, isRevoked, fetchPlugin, storeVersionOf, semverCmp, sha, BASE,
   _test: { setFetcher: (f) => { fetcher = f; cache = null; }, setKey: (k, backups) => { keyOverride = k; backupOverride = backups || null; cache = null; }, verifyIndex, reset: () => { cache = null; fetcher = null; keyOverride = null; backupOverride = null; } } };

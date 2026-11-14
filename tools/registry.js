@@ -77,6 +77,19 @@ function shotOk(b) {
   const w = b.readUInt32BE(16), h = b.readUInt32BE(20); return w >= 200 && w <= 2000 && h >= 200 && h <= 2000;
 }
 const shotFiles = (dir) => { const out = []; for (let i = 1; i <= 3; i++) { const f = path.join(dir, `screenshot${i}.png`); if (!fs.existsSync(f)) break; out.push(f); } return out; };
+// collections: curated sets of plugins (2 to 8 plugin ids), kept in collections.json next to the index and signed with it
+const reId = /^[a-z0-9-]{3,32}$/;
+function cleanCollections(arr) {
+  const out = [];
+  for (const c of Array.isArray(arr) ? arr : []) {
+    if (!c || typeof c !== 'object' || !reId.test(String(c.id)) || !Array.isArray(c.plugins) || out.some((x) => x.id === c.id)) continue;
+    const ids = [...new Set(c.plugins.filter((x) => reId.test(String(x))).map(String))];
+    if (ids.length < 2 || ids.length > 8) continue;
+    const name = String(c.name || '').trim().slice(0, 40); if (!name) continue;
+    out.push({ id: String(c.id), name, description: String(c.description || '').trim().slice(0, 200), plugins: ids });
+  }
+  return out.slice(0, 20);
+}
 function build(reg) {
   const old = readJson(path.join(reg, 'index.json'), { plugins: {} });
   const plugins = {};
@@ -97,6 +110,7 @@ function build(reg) {
     if (latest === version) { p.name = v.manifest.name; p.description = v.manifest.description; p.author = v.manifest.author.name; }
   }
   const index = { format: 1, updated: new Date().toISOString(), plugins: Object.fromEntries(Object.entries(plugins).sort()), revoked: readJson(path.join(reg, 'revoked.json'), []) };
+  { const cols = cleanCollections(readJson(path.join(reg, 'collections.json'), [])); if (cols.length) index.collections = cols; }
   const bytes = Buffer.from(JSON.stringify(index, null, 1) + '\n');
   fs.writeFileSync(path.join(reg, 'index.json'), bytes);
   fs.writeFileSync(path.join(reg, 'index.json.sig'), crypto.sign(null, bytes, privateKey()).toString('base64') + '\n');
@@ -152,7 +166,7 @@ async function siteCall(method, route, body, fetchImpl) {
   return r.json();
 }
 async function pull(reg, fetchImpl) {
-  const out = { added: [], skipped: [], revoked: [] };
+  const out = { added: [], skipped: [], revoked: [], collections: null };
   const resp = await siteCall('GET', '/api/registry/approved', null, fetchImpl);
   const list = resp.plugins || [];
   const ownersFile = path.join(reg, 'owners.json'); const owners = readJson(ownersFile, {});
@@ -214,6 +228,10 @@ async function pull(reg, fetchImpl) {
       out.revoked.push(r.id + ' ' + r.version + (already ? ' (already withdrawn)' : ''));
     } catch (e) { out.skipped.push({ id: r.id, version: r.version, reason: e.message }); }
   }
+  if (Array.isArray(resp.collections)) {   // the owner's collections from the admin dashboard: the whole list replaces the old one (an old site that sends none changes nothing)
+    const cf = path.join(reg, 'collections.json'), cols = cleanCollections(resp.collections);
+    if (JSON.stringify(cols) !== JSON.stringify(cleanCollections(readJson(cf, [])))) { fs.writeFileSync(cf, JSON.stringify(cols, null, 1) + '\n'); build(reg); out.collections = cols.length; }
+  }
   fs.writeFileSync(ownersFile, JSON.stringify(owners, null, 1) + '\n');
   fs.mkdirSync(keyDir(), { recursive: true, mode: 0o700 }); fs.writeFileSync(pendingFile(), JSON.stringify(pending)); fs.writeFileSync(pendingRevFile(), JSON.stringify(pendingRev));
   return out;
@@ -230,7 +248,7 @@ async function siteBackup(file, fetchImpl) {
   fs.writeFileSync(file, JSON.stringify(j), { mode: 0o600 });
   return { submissions: (j.submissions || []).length, developers: (j.developers || []).length };
 }
-module.exports = { siteBackup, keygen, backup, restore, init, add, revoke, build, verify, publicPem, pull, markPublished };
+module.exports = { cleanCollections, siteBackup, keygen, backup, restore, init, add, revoke, build, verify, publicPem, pull, markPublished };
 
 if (require.main === module) {
   const [cmd, a, b, c, d] = process.argv.slice(2);
@@ -247,7 +265,8 @@ if (require.main === module) {
       pull(a).then((o) => {
         console.log(o.added.length ? '✅ Added and signed:\n  ' + o.added.join('\n  ') : 'Nothing new to add.');
         if (o.revoked.length) console.log('✅ Withdrawn and signed:\n  ' + o.revoked.join('\n  '));
-        if (o.added.length || o.revoked.length) console.log('Now push the registry folder to GitHub, then run:  node tools/registry.js published');
+        if (o.collections !== null) console.log('✅ Collections updated and signed (' + o.collections + ' in the store now).');
+        if (o.added.length || o.revoked.length || o.collections !== null) console.log('Now push the registry folder to GitHub, then run:  node tools/registry.js published');
         if (o.skipped.length) console.log('⚠️ Skipped:\n  ' + o.skipped.map((x) => x.id + ' ' + x.version + ': ' + x.reason).join('\n  '));
       }).catch((e) => { console.error('⚠️ ' + e.message); process.exitCode = 1; });
     }

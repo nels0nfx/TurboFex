@@ -340,6 +340,30 @@ async function storeInfo(id) {
   const e = p.versions[v];
   return { id, name: p.name, description: p.description, author: p.author, version: v, permissions: e.permissions || [], domains: e.domains || [] };
 }
+async function storeCollections() {
+  const index = await registry.getIndex();
+  return registry.collectionsOf(index).map((c) => ({ ...c, available: c.plugins.filter((id) => registry.latestOf(index, id)).length }));
+}
+async function storeCollection(id) {
+  const index = await registry.getIndex(); const c = registry.collectionsOf(index).find((x) => x.id === id); if (!c) return null;
+  const installed = state.open().data.installed;
+  const items = c.plugins.map((pid) => {
+    const p = index.plugins[pid], v = registry.latestOf(index, pid), rec = installed[pid];
+    const st = !v ? 'unavailable' : !rec ? 'new' : (rec.store && registry.semverCmp(v, rec.store.version) > 0) ? 'update' : 'installed';
+    return { id: pid, name: p ? p.name : pid, version: v, state: st };
+  });
+  return { ...c, items };
+}
+// "install the whole set": every plugin goes through the normal two-step approval on its own, so the owner still sees what each one asks for
+async function prepareBundle(id) {
+  const c = await storeCollection(id); if (!c) return { ok: false, why: 'unknown' };
+  const results = [];
+  for (const it of c.items) {
+    if (it.state === 'unavailable' || it.state === 'installed') { results.push({ id: it.id, name: it.name, skipped: it.state }); continue; }
+    results.push({ id: it.id, name: it.name, r: await prepareStore(it.id) });
+  }
+  return { ok: true, collection: c, results };
+}
 async function updatesAvailable() {
   const index = await registry.getIndex(true); const out = [];
   for (const [id, rec] of Object.entries(state.open().data.installed)) {
@@ -524,4 +548,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };

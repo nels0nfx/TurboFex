@@ -1,3 +1,8 @@
+TurboFex v1.6.0 - collections and bundles
+CHANGED IN 1.6.0
+- NEW: COLLECTIONS. The store owner can group 2 to 8 plugins into a ready-made set (for example a starter set). As the bot owner: `.plugin collections` lists the sets, `.plugin collection <name>` shows what is inside, and `.plugin bundle <name>` prepares the whole set. You still approve every plugin on its own and see what it asks for, so nothing is installed without your OK; plugins you already have are skipped. Collections are signed together with the store list, so they cannot be changed on the way to your bot.
+- For the store owner: `node tools/registry.js pull` now also collects the collections made in the admin dashboard and signs them (needs pair site v2.56.0).
+
 TurboFex v1.5.13 - tool that builds the site's Playground
 CHANGED IN 1.5.13
 - NEW (for the website, not the running bot): `node tools/build-playground.js <folder>` builds the two browser files of the pair site's Plugin Playground from the bot's own sandbox and broker code, so the Playground behaves like the bot. Run it again and copy the files to the site whenever core/plugins/worker.js or broker.js change. Use together with pair site v2.54.0, which already contains the files built from this version.

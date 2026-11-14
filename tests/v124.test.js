@@ -56,8 +56,8 @@ test('phone notifications: the bot goes offline after typing, and phonepush fix 
   assert.ok(sent.includes('unavailable'));
 });
 
-test('the version is 1.5.13', () => {
-  assert.strictEqual(require('../package.json').version, '1.5.13');
+test('the version is 1.6.0', () => {
+  assert.strictEqual(require('../package.json').version, '1.6.0');
 });
 
 test('delcmd: the command and the bot answers are deleted after the answer, games never', async () => {
