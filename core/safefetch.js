@@ -68,7 +68,7 @@ async function assertPublicUrl(raw) {
 
 // GET a public address. Returns { status, headers, body, url }. The body is cut off at maxBytes (that is fine for a web
 // page head or a picture limit); `truncated` says so.
-function get(raw, { timeout = 4000, maxBytes = 512 * 1024, headers = {}, maxRedirects = 3, allowPrivate = false } = {}) {
+function get(raw, { timeout = 4000, maxBytes = 512 * 1024, headers = {}, maxRedirects = 3, allowPrivate = false, method = 'GET', body = null } = {}) {
   return new Promise((resolve, reject) => {
     let hops = 0;
     const go = async (target) => {
@@ -81,9 +81,9 @@ function get(raw, { timeout = 4000, maxBytes = 512 * 1024, headers = {}, maxRedi
       const lib = u.protocol === 'https:' ? https : http;
       const req = lib.request(
         u,
-        { method: 'GET', timeout, lookup: allowPrivate ? undefined : safeLookup, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TurboFex/1.0)', 'Accept-Encoding': 'identity', ...headers } },
+        { method, timeout, lookup: allowPrivate ? undefined : safeLookup, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TurboFex/1.0)', 'Accept-Encoding': 'identity', ...headers } },
         (res) => {
-          if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+          if (method === 'GET' && [301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
             res.resume();
             if (++hops > maxRedirects) return reject(new Error('Too many redirects.'));
             return go(new URL(res.headers.location, u).href);
@@ -109,10 +109,14 @@ function get(raw, { timeout = 4000, maxBytes = 512 * 1024, headers = {}, maxRedi
       );
       req.on('timeout', () => req.destroy(Object.assign(new Error('The server took too long.'), { code: 'TIMEOUT' })));
       req.on('error', reject);
+      if (body !== null) req.write(body);
       req.end();
     };
     go(raw);
   });
 }
 
-module.exports = { get, assertPublicUrl, isPrivateIp, safeLookup };
+// POST a small text body to a public address (used by plugins); redirects are NOT followed for a POST
+const post = (raw, body, type, opts = {}) => get(raw, { ...opts, method: 'POST', body: Buffer.from(String(body), 'utf8'), headers: { 'Content-Type': type, 'Content-Length': Buffer.byteLength(String(body), 'utf8') } });
+
+module.exports = { post, get, assertPublicUrl, isPrivateIp, safeLookup };

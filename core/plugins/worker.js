@@ -20,14 +20,22 @@ const PRELUDE = `(function () {
     log: function (t) { send('log', { text: String(t) }); },
     net: Object.freeze({
       fetch: function (url) { return ask('net.fetch', { url: String(url) }); },
-      fetchBytes: function (url) { return ask('net.fetchBytes', { url: String(url) }); }
+      fetchBytes: function (url) { return ask('net.fetchBytes', { url: String(url) }); },
+      post: function (url, body, type) { return ask('net.post', { url: String(url), body: String(body === undefined ? '' : body), type: String(type || 'application/json') }); }
     }),
     media: Object.freeze({
       toSticker: function (data) { return ask('media.toSticker', { data: String(data || '') }); },
       toAudio: function (data) { return ask('media.toAudio', { data: String(data || '') }); },
+      download: function (which) { return ask('media.download', { which: String(which || 'any') }); },
       send: function (o) { o = o || {}; return ask('media.send', { kind: String(o.kind || ''), data: String(o.data || ''), mimetype: String(o.mimetype || ''), fileName: String(o.fileName || ''), caption: String(o.caption || '') }); }
     }),
     util: Object.freeze({
+      fromBase64: function (b64) { // plain JavaScript again: text from base64 (UTF-8)
+        var k = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', t = String(b64).replace(/=+$/, ''), o = '', bits = 0, acc = 0;
+        for (var i = 0; i < t.length; i++) { var v = k.indexOf(t.charAt(i)); if (v < 0) throw new Error('not base64'); acc = (acc << 6) | v; bits += 6; if (bits >= 8) { bits -= 8; o += String.fromCharCode((acc >> bits) & 255); acc &= (1 << bits) - 1; } }
+        try { return decodeURIComponent(escape(o)); } catch (e) { return o; }
+      },
+      hash: function (text, algo) { return ask('util.hash', { text: String(text), algo: String(algo || 'sha256') }); },
       toBase64: function (text) { // plain JavaScript: the sandbox has no Buffer or btoa
         var s = unescape(encodeURIComponent(String(text))), k = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', o = [], i = 0;
         for (; i + 2 < s.length; i += 3) { var n = (s.charCodeAt(i) << 16) | (s.charCodeAt(i + 1) << 8) | s.charCodeAt(i + 2); o.push(k[n >> 18], k[(n >> 12) & 63], k[(n >> 6) & 63], k[n & 63]); }
@@ -40,7 +48,12 @@ const PRELUDE = `(function () {
       get: function (k) { return ask('storage.get', { key: String(k) }); },
       set: function (k, v) { return ask('storage.set', { key: String(k), value: String(v) }); },
       delete: function (k) { return ask('storage.delete', { key: String(k) }); },
-      list: function () { return ask('storage.list', {}); }
+      list: function () { return ask('storage.list', {}); },
+      chat: Object.freeze({
+        get: function (k) { return ask('storage.chat.get', { key: String(k) }); },
+        set: function (k, v) { return ask('storage.chat.set', { key: String(k), value: String(v) }); },
+        delete: function (k) { return ask('storage.chat.delete', { key: String(k) }); }
+      })
     }),
     group: Object.freeze({
       info: function () { return ask('group.info', {}); },
@@ -49,7 +62,10 @@ const PRELUDE = `(function () {
       close: function () { return ask('group.close', {}); },
       promote: function (m) { return ask('group.promote', { member: String(m) }); },
       demote: function (m) { return ask('group.demote', { member: String(m) }); },
-      rename: function (n) { return ask('group.rename', { name: String(n) }); }
+      rename: function (n) { return ask('group.rename', { name: String(n) }); },
+      members: function () { return ask('group.members', {}); },
+      describe: function (t) { return ask('group.describe', { text: String(t) }); },
+      inviteLink: function () { return ask('group.invite', {}); }
     }),
     owner: Object.freeze({ notify: function (t) { return ask('owner.notify', { text: String(t) }); } })
   };
@@ -60,7 +76,13 @@ const PRELUDE = `(function () {
     if (typeof h !== 'function') { hd('fail', 'no such handler'); return; }
     var raw = JSON.parse(ctxJson);
     var ctx = { args: raw.args, rest: raw.rest, prefix: raw.prefix, chat: raw.chat, sender: raw.sender, event: raw.event, text: raw.text, settings: Object.freeze(raw.settings || {}), members: raw.members, mentions: raw.mentions,
+                quoted: raw.quoted, hasMedia: raw.hasMedia,
                 reply: function (t) { return send('chat.send', { text: String(t) }); },
+                quote: function (t) { return ask('chat.quote', { text: String(t) }); },
+                mention: function (t, ids) { return ask('chat.mention', { text: String(t), members: JSON.stringify(ids || []) }); },
+                typing: function (kind) { return ask('chat.typing', { kind: String(kind || 'typing') }); },
+                poll: function (q, options, multi) { return ask('chat.poll', { question: String(q), options: JSON.stringify(options || []), multi: multi ? 'yes' : 'no' }); },
+                dm: function (t) { return ask('user.dm', { text: String(t) }); },
                 react: function (e) { return send('chat.react', { emoji: String(e) }); } };
     Promise.resolve().then(function () { return h(ctx); }).then(
       function () { hd('ok', ''); },

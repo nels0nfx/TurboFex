@@ -132,6 +132,8 @@ function getHost(id) {
       toAudio: async (buf) => require('../../whatsapp/media').ffmpeg(buf, 'mp3', (i, o) => ['-i', i, '-vn', '-t', '60', '-acodec', 'libmp3lame', '-b:a', '64k', o]),
       isPublicHost: async (host) => { try { await require('../safefetch').assertPublicUrl('https://' + host); return true; } catch (e) { return false; } },
       fetch: async (url) => { const r = await require('../safefetch').get(url, { timeout: 5000, maxBytes: 256 * 1024 }); return { status: r.status, text: r.body.toString('utf8') }; },
+      hash: (algo, text) => require('node:crypto').createHash(algo).update(text, 'utf8').digest('hex'),
+      post: async (url, body, type) => { const r = await require('../safefetch').post(url, body, type, { timeout: 5000, maxBytes: 256 * 1024 }); return { status: r.status, text: r.body.toString('utf8') }; },
       fetchBytes: async (url) => { const r = await require('../safefetch').get(url, { timeout: 5000, maxBytes: 1024 * 1024 + 1 }); return { status: r.status, bytes: r.body }; },
       notifyOwner: async (t) => { if (sock) await sock.sendMessage(require('../../whatsapp/owner').ownerChat(sock), { text: '🧩 *Message from ' + l.manifest.name + '*\n▸ ' + t }); },
     };
@@ -167,8 +169,8 @@ function plainCtx(id, c, extra) {
   return {
     ctx: { args: (c.args || []).slice(0, 50).map((a) => String(a).slice(0, 500)), rest: String(c.rest || '').slice(0, 4000), prefix: c.prefix || prefixOf(),
       chat: { id: o(c.jid), isGroup: !!c.isGroup, name: String(meta && meta.subject || '').slice(0, 100) },
-      settings: settingsFor(id, c.isGroup ? c.jid : null), mentions, sender: { id: senderId, name: String(c.msg && c.msg.pushName || '').slice(0, 40), isAdmin: !!c.isAdmin, isOwner: !!c.isOwner } },
-    extra: { send: (t) => c.reply(t), react: c.msg && c.msg.key ? (e) => (c.sock || sock).sendMessage(c.jid, { react: { text: e, key: c.msg.key } }) : null, sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), manage: c.isGroup ? makeManage(id, { s: c.sock || sock, jid: c.jid, people, actorOk: !!(c.isAdmin || c.isOwner), fromCommand: true }) : null, groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...(extra || {}) },
+      settings: settingsFor(id, c.isGroup ? c.jid : null), mentions, quoted: quotedInfo(c.msg, seen), hasMedia: (() => { try { const m = require('../../whatsapp/media'); return m.kindOf(m.unwrap(c.msg && c.msg.message)) || null; } catch (e) { return null; } })(), sender: { id: senderId, name: String(c.msg && c.msg.pushName || '').slice(0, 40), isAdmin: !!c.isAdmin, isOwner: !!c.isOwner } },
+    extra: { send: (t) => c.reply(t), react: c.msg && c.msg.key ? (e) => (c.sock || sock).sendMessage(c.jid, { react: { text: e, key: c.msg.key } }) : null, sendMedia: (m) => (c.sock || sock).sendMessage(c.jid, mediaMessage(m)), manage: c.isGroup ? makeManage(id, { s: c.sock || sock, jid: c.jid, people, actorOk: !!(c.isAdmin || c.isOwner), fromCommand: true }) : null, groupInfo: meta ? { name: meta.subject, size: parts.length, admins: parts.filter((p) => p.admin).length } : null, ...richExtras(id, { s: c.sock || sock, jid: c.jid, people, seen, msg: c.msg, isGroup: !!c.isGroup, command: true, quoteMsg: c.msg }), ...(extra || {}) },
   };
 }
 async function invoke(id, kind, name, c) {
@@ -184,6 +186,53 @@ async function invoke(id, kind, name, c) {
     return c.reply(`⚠️ *This command did not work.*\n▸ _Please try again in a moment._${own}`);
   }
 }
+// ---- Plugin API 1.1: shared helpers for the extra abilities. The target is ALWAYS the chat (or the person) of the call, never chosen by the plugin.
+function richExtras(id, { s, jid, people, seen, msg, isGroup, command, quoteMsg }) {
+  const { BrokerError } = require('./broker');
+  const mediaLib = require('../../whatsapp/media'); const { num, getQuoted, quotedText } = require('../../whatsapp/utils');
+  const out = {};
+  if (quoteMsg) out.quote = (t) => s.sendMessage(jid, { text: t }, { quoted: quoteMsg });
+  out.mention = (t, ids) => {
+    const jids = ids.map((k) => { const j = people.get(k); if (!j) throw new BrokerError('not_allowed', 'that person is not part of this event or member list'); return j; });
+    const text = t.replace(/\{(\d{1,2})\}/g, (m, n) => (jids[n - 1] ? '@' + num(jids[n - 1]) : m));
+    return s.sendMessage(jid, { text, mentions: jids });
+  };
+  out.presence = (k) => s.sendPresenceUpdate(k === 'typing' ? 'composing' : k === 'recording' ? 'recording' : 'paused', jid);
+  out.poll = (q, o, multi) => s.sendMessage(jid, { poll: { name: q, values: o, selectableCount: multi ? o.length : 1 } });
+  if (isGroup) {
+    out.members = async () => {
+      const md = await require('../../whatsapp/metadata').getMeta(s, jid);
+      return ((md && md.participants) || []).slice(0, 1024).map((p) => ({ id: seen(p.id), admin: p.admin === 'admin' || p.admin === 'superadmin' }));
+    };
+  }
+  if (command && msg) {
+    const sender = msg.key && (msg.key.participant || msg.key.remoteJid) || jid;
+    out.dm = (t) => s.sendMessage(sender, { text: t });
+    out.download = async (which, max) => {
+      const botIds = [s.user && s.user.id, s.user && s.user.lid].filter(Boolean).map(num);
+      let found = null;
+      if (which !== 'quoted') { const own = mediaLib.unwrap(msg.message); const k = mediaLib.kindOf(own); if (k) found = { kind: k, source: msg, inner: own }; }
+      if (!found && which !== 'message') {
+        const q = getQuoted(msg);
+        if (q) { const inner = mediaLib.unwrap(q.message); const k = mediaLib.kindOf(inner);
+          if (k) found = { kind: k, inner, source: { key: { remoteJid: jid, id: q.id, participant: q.participant, fromMe: botIds.includes(num(q.participant)) }, message: q.message } }; }
+      }
+      if (!found) return null;
+      const node = found.inner[found.kind + 'Message'] || found.inner.documentMessage || {};
+      if (Number(node.fileLength) > max) throw new BrokerError('too_long', 'the file is too big (up to ' + Math.floor(max / 1048576) + ' MB)');
+      const buffer = await mediaLib.download(s, found.source);
+      return { kind: found.kind, buffer, mimetype: node.mimetype || '' };
+    };
+  }
+  return out;
+}
+function quotedInfo(msg, seen) {
+  try {
+    const { getQuoted, quotedText } = require('../../whatsapp/utils'); const mediaLib = require('../../whatsapp/media');
+    const q = getQuoted(msg || {}); if (!q) return undefined;
+    return { text: String(quotedText(q) || '').slice(0, 2000), sender: q.participant ? seen(q.participant) : null, media: mediaLib.kindOf(mediaLib.unwrap(q.message)) || null };
+  } catch (e) { return undefined; }
+}
 // Removing people and opening or closing a group. Every check is made here, in the bot, never by the plugin:
 // the bot must be an admin, the person must be part of this very command or event, and never the owner, a sudo user, an admin or the bot.
 function makeManage(id, { s, jid, people, actorOk, fromCommand }) {
@@ -195,6 +244,14 @@ function makeManage(id, { s, jid, people, actorOk, fromCommand }) {
     const md = await meta.getMeta(s, jid); const idx = meta.indexOf(md);
     const botIds = [s.user && s.user.id, s.user && s.user.lid].filter(Boolean).map(num);
     if (!botIds.some((b) => idx.admins.has(b))) throw new BrokerError('not_allowed', 'the bot is not an admin here');
+    if (action === 'describe' || action === 'invite') {
+      // the description and the invite link: only through a command used by an admin or the owner, never from a listener or a timer
+      if (!fromCommand) throw new BrokerError('not_allowed', 'only inside a command used by an admin');
+      if (action === 'describe') { await s.groupUpdateDescription(jid, opaque); log(id, 'changed the description of ' + jid); meta.invalidate(jid); return; }
+      const code = await s.groupInviteCode(jid); log(id, 'asked for the invite link of ' + jid);
+      if (!code) throw new BrokerError('failed', 'no invite link');
+      return 'https://chat.whatsapp.com/' + code;
+    }
     if (action === 'promote' || action === 'demote' || action === 'rename') {
       // changing who the admins are, or the group name: only through a command used by an admin or the owner, never from a listener or a timer
       if (!fromCommand) throw new BrokerError('not_allowed', 'only inside a command used by an admin');
@@ -243,7 +300,7 @@ function emit(event, info) {
       members: (info.members || []).slice(0, 50).map((m) => seen(typeof m === 'string' ? m : (m && m.id) || '')),
       chat: { id: o(info.jid), isGroup: true, name: '' }, settings: settingsFor(id, info.jid),
       sender: info.senderJid ? { id: seen(info.senderJid), name: String(info.pushName || '').slice(0, 40), isAdmin: false, isOwner: false } : null };
-    const extra = { send: (x) => s.sendMessage(info.jid, { text: x }), react: info.key ? (e) => s.sendMessage(info.jid, { react: { text: e, key: info.key } }) : null, sendMedia: (m) => s.sendMessage(info.jid, mediaMessage(m)), manage: makeManage(id, { s, jid: info.jid, people, actorOk: true }), groupInfo: null };
+    const extra = { send: (x) => s.sendMessage(info.jid, { text: x }), react: info.key ? (e) => s.sendMessage(info.jid, { react: { text: e, key: info.key } }) : null, sendMedia: (m) => s.sendMessage(info.jid, mediaMessage(m)), manage: makeManage(id, { s, jid: info.jid, people, actorOk: true }), groupInfo: null, ...richExtras(id, { s, jid: info.jid, people, seen, msg: null, isGroup: true, command: false, quoteMsg: event === 'message' && info.key ? { key: info.key, message: { conversation: String(info.text || '').slice(0, 200) } } : null }) };
     Promise.resolve().then(() => getHost(id).call('event', event, ctx, extra)).catch((e) => log(id, 'event ' + event + ' failed: ' + (e.code || e.message))).finally(() => evPending.set(id, Math.max(0, (evPending.get(id) || 1) - 1)));
   }
 }
@@ -273,8 +330,12 @@ function available() { // plugin folders found in data/plugins
 const RISK = { 'chat.react': ['🟢', 'React to the message that used it with an emoji'], 'chat.send': ['🟢', 'Send messages in the chat where it is used'], storage: ['🟢', 'Keep its own small saved notes'], 'group.read': ['🟢', 'See the group name and how many members and admins it has'], schedule: ['🟡', 'Run by itself on a timer'], 'owner.notify': ['🟡', 'Send you a short message now and then'], network: ['🟡', 'Connect to the internet'],
   'events.message': ['🟡', 'Read the text of messages sent in the groups where it is allowed'], 'events.members': ['🟡', 'Know when members join or leave a group (no phone numbers)'], 'media.send': ['🟢', 'Send pictures, stickers and files in the chat where it is used'],
   'media.convert': ['🟡', 'Turn pictures into stickers and audio into small MP3 files (uses a little of the bot\'s power, a few times a minute)'],
+  'user.dm': ['🟡', 'Send a private message to the person who used one of its commands (a few an hour, never to anyone else)'],
+  'group.members': ['🟡', 'See the list of members of the group it is used in and who is an admin (no phone numbers)'],
+  'media.read': ['🟡', 'Read the picture, sticker, audio or short video that a command was used on (up to 2 MB, a few a minute)'],
+  'group.invite': ['🔴', 'Get the group invite link (only through a command used by a group admin, where the bot is an admin)'],
   'group.admins': ['🔴', 'Make a member an admin or take admin away (only through a command used by a group admin, where the bot is an admin; never the owner or the group creator)'],
-  'group.manage': ['🔴', 'Remove members, open or close the group, and rename it (only where I am an admin; never the owner or an admin)'] };
+  'group.manage': ['🔴', 'Remove members, open or close the group, rename it and change its description (only where I am an admin; never the owner or an admin)'] };
 function permissionLines(m) {
   const out = m.permissions.map((p) => `▸ ${RISK[p][0]} ${RISK[p][1]}` + (p === 'network' ? ': ' + m.network.domains.join(', ') : ''));
   return out.length ? out : ['▸ 🟢 Nothing special: it only answers its commands'];

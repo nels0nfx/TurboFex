@@ -8,6 +8,7 @@ function fakeEnv(extra) {
     notified: [], notifyOwner: async (t) => { e.notified.push(t); },
     log: (l) => e.logs.push(l),
     isPublicHost: async (h) => !/^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(h) && h !== 'internal.example.com',
+    hash: (a, t) => require('node:crypto').createHash(a).update(t, 'utf8').digest('hex'),
     fetch: async (u) => ({ status: 200, text: 'body of ' + u }) };
   return Object.assign(e, extra || {});
 }

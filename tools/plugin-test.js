@@ -27,6 +27,8 @@ async function runOne(m, source, what, opts) {
     fetchBytes: async (url) => { if (!live) { run.notices.push('network (pretend, 4 bytes): ' + url); return { status: 200, bytes: Buffer.from('test') }; } const r = await require('../core/safefetch').get(url, { timeout: 5000, maxBytes: 1024 * 1024 + 1 }); return { status: r.status, bytes: r.body }; },
     toSticker: async () => { run.notices.push('picture to sticker (pretend)'); return Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBP'), Buffer.alloc(20)]); },
     toAudio: async () => { run.notices.push('audio to MP3 (pretend)'); return Buffer.concat([Buffer.from('ID3'), Buffer.alloc(40)]); },
+    hash: (a, t) => require('node:crypto').createHash(a).update(t, 'utf8').digest('hex'),
+    post: async (url, body) => { if (!live) { run.notices.push('network POST (pretend): ' + url); return { status: 200, text: '{"pretend":"answer from ' + String(url).slice(0, 60) + '"}' }; } const r = await require('../core/safefetch').post(url, body, 'application/json', { timeout: 5000, maxBytes: 256 * 1024 }); return { status: r.status, text: r.body.toString('utf8') }; },
     notifyOwner: async (t) => { run.notices.push('message to the owner: ' + t); },
   };
   const host = new PluginHost({ id: m.id, manifest: m, source, grants: m.permissions.slice(), limits: {}, env, onDisabled: (why) => { run.error = 'the bot would switch this plugin off: ' + why; } });
@@ -34,12 +36,22 @@ async function runOne(m, source, what, opts) {
   const sender = what.kind === 'schedule' ? null : { id: 'person-1', name: 'Sam', isAdmin: who !== 'member', isOwner: who === 'owner' };
   const ctx = { args: what.args || [], rest: (what.args || []).join(' '), prefix: '.', chat: what.kind === 'schedule' ? null : { id: 'chat-1', isGroup: true, name: 'Test group' }, settings: defaults(m), mentions: [], sender };
   if (what.kind === 'event') { ctx.event = what.name; ctx.text = what.text || 'hello'; ctx.members = what.name === 'message' ? [] : ['person-2']; }
+  if (what.kind === 'command') { ctx.quoted = { text: 'a quoted message', sender: 'person-2', media: null }; ctx.hasMedia = null; }
   const extra = what.kind === 'schedule' ? {} : {
     send: async (t) => { run.sends.push(String(t)); },
     react: async (e) => { run.reactions.push(String(e)); },
     sendMedia: async (x) => { run.media.push(x.kind + (x.fileName ? ' ' + x.fileName : '') + ' (' + (x.buffer ? x.buffer.length : 0) + ' bytes)'); },
-    manage: async (action, who2) => { run.group.push('would ' + action + (who2 ? ' ' + who2 : '')); },
+    manage: async (action, who2) => { run.group.push('would ' + action + (who2 ? ' ' + who2 : '')); return action === 'invite' ? 'https://chat.whatsapp.com/PRETEND' : undefined; },
+    quote: async (t) => { run.sends.push('(as a reply) ' + String(t)); },
+    mention: async (t, ids) => { run.sends.push('(mentioning ' + ids.length + ') ' + String(t)); },
+    presence: async (k) => { run.notices.push('would show "' + k + '"'); },
+    poll: async (q, o) => { run.notices.push('poll (pretend): ' + q + ' [' + o.join(' / ') + ']'); },
   };
+  if (what.kind === 'command') Object.assign(extra, {
+    dm: async (t) => { run.notices.push('private message to the sender (pretend): ' + String(t).slice(0, 80)); },
+    members: async () => [{ id: 'person-1', admin: true }, { id: 'person-2', admin: false }, { id: 'person-3', admin: false }],
+    download: async () => { run.notices.push('media download (pretend, 4 bytes)'); return { kind: 'image', buffer: Buffer.from('test'), mimetype: 'image/png' }; }
+  });
   try { await host.call(what.kind, what.name, ctx, extra); } catch (e) { run.error = run.error || (e.code || 'error') + (e.message && e.message !== e.code ? ': ' + e.message : ''); }
   if (host.broker.violations.length && !run.error) run.error = 'the bot refused something the plugin tried (' + [...new Set(host.broker.violations)].join(', ') + '). Is every permission it uses in the manifest?';
   host.stop();

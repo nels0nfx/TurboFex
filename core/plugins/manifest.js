@@ -8,8 +8,8 @@ const crypto = require('node:crypto');
 
 const API_VERSION = 1;
 const MAX_ENTRY_BYTES = 1024 * 1024;
-const PERMISSIONS = ['chat.send', 'storage', 'network', 'group.read', 'schedule', 'owner.notify', 'events.message', 'events.members', 'media.send', 'group.manage', 'chat.react', 'group.admins', 'media.convert'];
-const EVENTS = { message: 'events.message', 'member.join': 'events.members', 'member.leave': 'events.members' };
+const PERMISSIONS = ['chat.send', 'storage', 'network', 'group.read', 'schedule', 'owner.notify', 'events.message', 'events.members', 'media.send', 'group.manage', 'chat.react', 'group.admins', 'media.convert', 'user.dm', 'group.members', 'media.read', 'group.invite'];
+const EVENTS = { message: 'events.message', 'member.join': 'events.members', 'member.leave': 'events.members', 'member.promote': 'events.members', 'member.demote': 'events.members' };
 const WHO = ['everyone', 'admin', 'owner'];
 const reId = /^[a-z0-9-]{3,32}$/;
 const reCmd = /^[a-z0-9]{2,20}$/;

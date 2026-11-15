@@ -487,7 +487,7 @@ async function startWhatsApp() {
   sock.ev.on('group-participants.update', async (update) => {
     if (!alive()) return;
     try {
-      const ev = update.action === 'add' ? 'member.join' : update.action === 'remove' ? 'member.leave' : '';
+      const ev = update.action === 'add' ? 'member.join' : update.action === 'remove' ? 'member.leave' : update.action === 'promote' ? 'member.promote' : update.action === 'demote' ? 'member.demote' : '';
       if (ev) require('../core/plugins').emit(ev, { sock, jid: update.id, members: update.participants }); // plugins that listen to joins and leaves
     } catch (err) {
       // a plugin problem never stops the group event

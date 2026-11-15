@@ -24,7 +24,7 @@ const parseArgs = (json, allowed, maxChars = MAX_ARGS_CHARS) => {
 const DEFAULT_POLICY = {
   maxTextChars: 4000, sendsPerCall: 5, sendsPerMinute: 20, logsPerCall: 100, fetchesPerCall: 3, notifiesPerHour: 3, notifyChars: 500,
   fetchMs: 5000, fetchMaxChars: 256 * 1024, storageKeys: 200, storageBytes: 1024 * 1024, storageValueChars: 64 * 1024, strikeLimit: 5,
-  kicksPerCall: 3, kicksPerHour: 20, settingsPerHour: 6, adminOpsPerHour: 6, reactsPerCall: 1, reactsPerMinute: 10, mediaPerCall: 3, mediaPerMinute: 6, convertsPerCall: 2, convertsPerMinute: 6, convertMs: 4000, mediaBytes: 1024 * 1024, fetchBytesMax: 1024 * 1024, captionChars: 1000,
+  kicksPerCall: 3, kicksPerHour: 20, settingsPerHour: 6, adminOpsPerHour: 6, reactsPerCall: 1, reactsPerMinute: 10, mediaPerCall: 3, mediaPerMinute: 6, convertsPerCall: 2, convertsPerMinute: 6, convertMs: 4000, mediaBytes: 1024 * 1024, postsPerMinute: 10, postBodyChars: 64 * 1024, pollsPerHour: 6, typingPerMinute: 20, dmsPerCall: 1, dmsPerHour: 10, downloadsPerCall: 1, downloadsPerMinute: 6, downloadBytes: 2 * 1024 * 1024, memberCalls: 2, mentionMax: 10, hashChars: 100000, fetchBytesMax: 1024 * 1024, captionChars: 1000,
 };
 
 // What a file really is, judged by its first bytes (never by its name or by what the plugin says it is)
@@ -49,6 +49,13 @@ function sniffAudio(b) {
   return null;
 }
 
+// a short stable name for a chat's notes (two 32-bit FNV-1a runs, no Node modules so this file also runs in a browser)
+function shortHash(t) {
+  let a = 0x811c9dc5, b = 0x01000193 ^ 0x9e3779b9;
+  for (let i = 0; i < t.length; i++) { a = Math.imul(a ^ t.charCodeAt(i), 0x01000193) >>> 0; b = Math.imul(b ^ t.charCodeAt(i), 0x85ebca6b) >>> 0; b = (b ^ (b >>> 13)) >>> 0; }
+  return a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0');
+}
+
 class Broker {
   constructor({ manifest, grants, env, policy, now }) {
     this.manifest = manifest; this.grants = grants || []; this.env = env;
@@ -57,7 +64,7 @@ class Broker {
     this.sendTimes = []; this.notifyTimes = []; this.strikes = 0; this.violations = [];
     this.storage = env.storage || new Map();
   }
-  newCall(ctx, extra) { return { ctx: ctx || {}, send: extra && extra.send, sendMedia: extra && extra.sendMedia, react: extra && extra.react, manage: extra && extra.manage, kicks: 0, reacts: 0, adminOps: 0, groupInfo: extra && extra.groupInfo, media: 0, converts: 0, sends: 0, logs: 0, fetches: 0, pending: [] }; }
+  newCall(ctx, extra) { return { ctx: ctx || {}, send: extra && extra.send, sendMedia: extra && extra.sendMedia, react: extra && extra.react, quote: extra && extra.quote, mention: extra && extra.mention, presence: extra && extra.presence, poll: extra && extra.poll, dm: extra && extra.dm, members: extra && extra.members, download: extra && extra.download, dms: 0, downloads: 0, memberCalls: 0, manage: extra && extra.manage, kicks: 0, reacts: 0, adminOps: 0, groupInfo: extra && extra.groupInfo, media: 0, converts: 0, sends: 0, logs: 0, fetches: 0, pending: [] }; }
   deny(code, msg) { this.strikes++; this.violations.push(code); if (this.violations.length > 100) this.violations.shift(); throw new BrokerError(code, msg); }
   need(perm) {
     if (!(this.manifest.permissions || []).includes(perm)) this.deny('not_declared', perm + ' is not in the manifest');
@@ -83,6 +90,20 @@ class Broker {
         case 'group.promote': case 'group.demote': this.need('group.admins'); return await this.manageAdmin(name.slice(6), parseArgs(argsJson, ['member']), st);
         case 'group.rename': this.need('group.manage'); return await this.manageRename(parseArgs(argsJson, ['name']), st);
         case 'group.info': this.need('group.read'); parseArgs(argsJson, []); return this.groupInfo(st);
+        case 'storage.chat.get': this.need('storage'); return this.sget(this.chatKey(parseArgs(argsJson, ['key']), st));
+        case 'storage.chat.set': this.need('storage'); return this.sset(this.chatKey(parseArgs(argsJson, ['key', 'value']), st));
+        case 'storage.chat.delete': this.need('storage'); return this.sdel(this.chatKey(parseArgs(argsJson, ['key']), st));
+        case 'util.hash': return this.hash(parseArgs(argsJson, ['text', 'algo']));
+        case 'net.post': this.need('network'); return await this.post(parseArgs(argsJson, ['url', 'body', 'type']), st);
+        case 'chat.quote': this.need('chat.send'); return await this.quote(parseArgs(argsJson, ['text']), st);
+        case 'chat.mention': this.need('chat.send'); return await this.mention(parseArgs(argsJson, ['text', 'members']), st);
+        case 'chat.typing': this.need('chat.send'); return await this.typing(parseArgs(argsJson, ['kind']), st);
+        case 'chat.poll': this.need('chat.send'); return await this.poll(parseArgs(argsJson, ['question', 'options', 'multi']), st);
+        case 'user.dm': this.need('user.dm'); return await this.dm(parseArgs(argsJson, ['text']), st);
+        case 'group.members': this.need('group.members'); parseArgs(argsJson, []); return await this.members(st);
+        case 'group.describe': this.need('group.manage'); return await this.manageDescribe(parseArgs(argsJson, ['text']), st);
+        case 'group.invite': this.need('group.invite'); parseArgs(argsJson, []); return await this.manageInvite(st);
+        case 'media.download': this.need('media.read'); return await this.download(parseArgs(argsJson, ['which']), st);
         case 'owner.notify': this.need('owner.notify'); return await this.notify(parseArgs(argsJson, ['text']));
         default: this.deny('unknown_api', 'no such call');
       }
@@ -230,6 +251,103 @@ class Broker {
     if (!st.groupInfo) throw new BrokerError('not_allowed', 'only inside a command in a group');
     const g = st.groupInfo; // plain numbers and a name only: no member list, no phone numbers
     return JSON.stringify({ name: String(g.name || '').slice(0, 100), size: Number(g.size) || 0, admins: Number(g.admins) || 0 });
+  }
+  // ---- Plugin API 1.1 (bot 1.6.1)
+  chatKey(a, st) {
+    if (!st.ctx.chat) this.deny('not_allowed', 'there is no chat for chat notes');
+    if (!/^[a-z0-9._-]{1,40}$/i.test(a.key)) throw new BrokerError('bad_args', 'bad key');
+    return { ...a, key: 'g.' + shortHash(String(st.ctx.chat.id)) + '.' + a.key };
+  }
+  hash(a) {
+    if (!['sha256', 'sha1', 'md5'].includes(a.algo)) throw new BrokerError('bad_args', 'unknown algorithm');
+    if (a.text.length > this.p.hashChars) throw new BrokerError('too_long', 'text too long');
+    if (!this.env.hash) throw new BrokerError('not_allowed', 'hashing is not available here');
+    return JSON.stringify(String(this.env.hash(a.algo, a.text)).slice(0, 128));
+  }
+  async post(a, st) {
+    const u = this.checkUrl(a, st);
+    if (!['application/json', 'application/x-www-form-urlencoded', 'text/plain'].includes(a.type)) throw new BrokerError('bad_args', 'content type not allowed');
+    if (a.body.length > this.p.postBodyChars) throw new BrokerError('too_long', 'body too large');
+    const t = this.now(); this.postTimes = (this.postTimes || []).filter((x) => t - x < 60000);
+    if (this.postTimes.length >= this.p.postsPerMinute) throw new BrokerError('rate_limited', 'too many requests per minute');
+    this.postTimes.push(t);
+    if (!this.env.post) throw new BrokerError('not_allowed', 'POST is not available');
+    if (!(await this.env.isPublicHost(u.hostname))) throw new BrokerError('net_denied', 'address is not public');
+    const r = await Promise.race([this.env.post(u.href, a.body, a.type), new Promise((_, rej) => setTimeout(() => rej(new BrokerError('net_timeout', 'request took too long')), this.p.fetchMs).unref())]);
+    return JSON.stringify({ status: r.status, text: String(r.text).slice(0, this.p.fetchMaxChars) });
+  }
+  // one shared message budget for send, quote and mention
+  countSend(st, text) {
+    if (!st.ctx.chat) this.deny('not_allowed', 'there is no chat to answer in');
+    if (!text.length || text.length > this.p.maxTextChars) throw new BrokerError('too_long', 'message size not allowed');
+    if (++st.sends > this.p.sendsPerCall) throw new BrokerError('rate_limited', 'too many messages in one call');
+    const t = this.now(); this.sendTimes = this.sendTimes.filter((x) => t - x < 60000);
+    if (this.sendTimes.length >= this.p.sendsPerMinute) throw new BrokerError('rate_limited', 'too many messages per minute');
+    this.sendTimes.push(t);
+  }
+  async quote(a, st) { if (!st.quote) this.deny('not_allowed', 'there is no message to reply to'); this.countSend(st, a.text); await st.quote(a.text); return 'null'; }
+  async mention(a, st) {
+    let ids; try { ids = JSON.parse(a.members); } catch (e) { throw new BrokerError('bad_args', 'members must be a list'); }
+    if (!Array.isArray(ids) || ids.length < 1 || ids.length > this.p.mentionMax || ids.some((x) => typeof x !== 'string' || x.length > 64)) throw new BrokerError('bad_args', 'one to ' + this.p.mentionMax + ' people');
+    if (!st.mention) this.deny('not_allowed', 'mentions are not possible here');
+    this.countSend(st, a.text); await st.mention(a.text, ids); return 'null';
+  }
+  async typing(a, st) {
+    if (!['typing', 'recording', 'paused'].includes(a.kind)) throw new BrokerError('bad_args', 'unknown kind');
+    if (!st.ctx.chat || !st.presence) this.deny('not_allowed', 'there is no chat');
+    const t = this.now(); this.typingTimes = (this.typingTimes || []).filter((x) => t - x < 60000);
+    if (this.typingTimes.length >= this.p.typingPerMinute) throw new BrokerError('rate_limited', 'too many typing signals');
+    this.typingTimes.push(t); await st.presence(a.kind); return 'null';
+  }
+  async poll(a, st) {
+    let o; try { o = JSON.parse(a.options); } catch (e) { throw new BrokerError('bad_args', 'options must be a list'); }
+    const q = a.question.trim();
+    if (!q.length || q.length > 250) throw new BrokerError('bad_args', 'a question is 1 to 250 characters');
+    if (!Array.isArray(o) || o.length < 2 || o.length > 12 || o.some((x) => typeof x !== 'string' || !x.trim().length || x.length > 100) || new Set(o.map((x) => x.trim())).size !== o.length) throw new BrokerError('bad_args', '2 to 12 different options of up to 100 characters');
+    if (!['yes', 'no'].includes(a.multi)) throw new BrokerError('bad_args', 'bad choice');
+    if (!st.poll) this.deny('not_allowed', 'a poll cannot be sent here');
+    this.countSend(st, q); this.hourly('pollTimes', this.p.pollsPerHour);
+    await st.poll(q, o.map((x) => x.trim()), a.multi === 'yes'); return 'null';
+  }
+  // a private message ONLY to the person who used the command: never to anyone else, never from a listener or timer
+  async dm(a, st) {
+    if (!st.dm) this.deny('not_allowed', 'only inside a command');
+    if (!a.text.length || a.text.length > this.p.maxTextChars) throw new BrokerError('too_long', 'message size not allowed');
+    if (++st.dms > this.p.dmsPerCall) throw new BrokerError('rate_limited', 'one private message per call');
+    this.hourly('dmTimes', this.p.dmsPerHour);
+    await st.dm(a.text); return 'null';
+  }
+  // ids are the plugin's own opaque ids (no phone numbers); they work with kick, promote, demote and mention
+  async members(st) {
+    if (!st.members) throw new BrokerError('not_allowed', 'only inside a group command or event');
+    if (++st.memberCalls > this.p.memberCalls) throw new BrokerError('rate_limited', 'too many member lists in one call');
+    const l = await st.members();
+    return JSON.stringify((Array.isArray(l) ? l : []).slice(0, 1024).map((m) => ({ id: String(m.id).slice(0, 64), admin: !!m.admin })));
+  }
+  async manageDescribe(a, st) {
+    if (!st.manage) throw new BrokerError('not_allowed', 'not possible here');
+    const t = a.text.trim();
+    if (t.length > 500 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200e\u200f\u202a-\u202e]/.test(t)) throw new BrokerError('bad_args', 'a description is up to 500 plain characters');
+    this.hourly('describeTimes', this.p.settingsPerHour);
+    await st.manage('describe', t); return 'null';
+  }
+  async manageInvite(st) {
+    if (!st.manage) throw new BrokerError('not_allowed', 'not possible here');
+    this.hourly('inviteTimes', this.p.adminOpsPerHour);
+    return JSON.stringify(String(await st.manage('invite') || ''));
+  }
+  async download(a, st) {
+    if (!['message', 'quoted', 'any'].includes(a.which)) throw new BrokerError('bad_args', 'unknown choice');
+    if (!st.download) throw new BrokerError('not_allowed', 'only inside a command');
+    if (++st.downloads > this.p.downloadsPerCall) throw new BrokerError('rate_limited', 'one download per call');
+    const t = this.now(); this.dlTimes = (this.dlTimes || []).filter((x) => t - x < 60000);
+    if (this.dlTimes.length >= this.p.downloadsPerMinute) throw new BrokerError('rate_limited', 'too many downloads per minute');
+    this.dlTimes.push(t);
+    const r = await st.download(a.which, this.p.downloadBytes);
+    if (!r) return 'null';
+    const buf = Buffer.from(r.buffer || []);
+    if (!buf.length || buf.length > this.p.downloadBytes) throw new BrokerError('too_long', 'the file is too big (up to ' + Math.floor(this.p.downloadBytes / 1048576) + ' MB)');
+    return JSON.stringify({ kind: String(r.kind), mimetype: String(r.mimetype || '').slice(0, 80), size: buf.length, base64: buf.toString('base64') });
   }
   async notify(a) {
     if (!a.text.length || a.text.length > this.p.notifyChars) throw new BrokerError('too_long', 'message size not allowed');

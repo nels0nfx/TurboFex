@@ -1,3 +1,18 @@
+TurboFex v1.6.1 - Plugin API 1.1: many more abilities for plugin developers
+CHANGED IN 1.6.1
+- NEW for plugins (the owner approves each one when installing; nothing changes for plugins that do not use them):
+  - Reply as a quote: `ctx.quote(text)` (needs chat.send). Mention people: `ctx.mention('Hello {1}', [id])` (chat.send). Typing / recording signal: `ctx.typing('typing'|'recording'|'paused')`. Polls: `ctx.poll(question, [options], multi)` (all use chat.send and the same message limits; polls 6 an hour).
+  - What a command was used on: `ctx.quoted` ({text, sender, media} of the message it replies to) and `ctx.hasMedia`.
+  - `user.dm`: `ctx.dm(text)` sends a private message to the person who used a command (one per call, 10 an hour, never anyone else).
+  - `group.members`: `tfx.group.members()` gives [{id, admin}] with the plugin's own ids (no phone numbers); the ids work with mention, kick, promote and demote.
+  - `media.read`: `tfx.media.download('message'|'quoted'|'any')` gives the picture, sticker, audio or short video a command was used on (up to 2 MB, 6 a minute).
+  - `tfx.net.post(url, body, type)` (needs network, listed domains only, JSON / form / plain text up to 64 KB, 10 a minute).
+  - `tfx.storage.chat.get/set/delete`: notes kept per group, separate from the plugin's other notes (same storage permission and size limit).
+  - `tfx.group.describe(text)` (group.manage) and `tfx.group.inviteLink()` (new permission group.invite): only through a command used by an admin, where the bot is an admin.
+  - `tfx.util.hash(text, 'sha256'|'sha1'|'md5')` and `tfx.util.fromBase64(text)`: no permission needed.
+  - New events (need events.members): `member.promote` and `member.demote`.
+- The plugin test tool (`.plugin test`, tools/plugin-test.js) pretends all of these, so developers can try them before submitting.
+
 TurboFex v1.6.0 - collections and bundles
 CHANGED IN 1.6.0
 - NEW: COLLECTIONS. The store owner can group 2 to 8 plugins into a ready-made set (for example a starter set). As the bot owner: `.plugin collections` lists the sets, `.plugin collection <name>` shows what is inside, and `.plugin bundle <name>` prepares the whole set. You still approve every plugin on its own and see what it asks for, so nothing is installed without your OK; plugins you already have are skipped. Collections are signed together with the store list, so they cannot be changed on the way to your bot.
