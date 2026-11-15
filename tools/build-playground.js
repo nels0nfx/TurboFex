@@ -48,7 +48,7 @@ const BROKER_SHIMS = `
   if (!worker.includes(needle)) throw new Error('worker.js changed: update tools/build-playground.js');
   worker = worker.replace(needle, `const parentPort = { postMessage: (m) => self.postMessage(m), on: (_n, f) => { self.onmessage = (e) => f(e.data); } };\nconst workerData = { limits: ${JSON.stringify({ memoryBytes: DEFAULT_LIMITS.memoryBytes, stackBytes: DEFAULT_LIMITS.stackBytes, cpuMs: DEFAULT_LIMITS.cpuMs })} };`);
   await esbuild.build({ stdin: { contents: worker, resolveDir: root, sourcefile: 'worker.js' }, bundle: true, platform: 'browser', format: 'iife', minify: true, target: 'es2020', external: ['fs', 'path', 'crypto'], outfile: path.join(out, 'playground-sandbox.js'), logLevel: 'error', legalComments: 'none' });
-  const brokerEntry = BROKER_SHIMS + "\nconst { Broker, BrokerError } = require('./core/plugins/broker');\nglobalThis.TFXBroker = { Broker, BrokerError };\n";
-  await esbuild.build({ stdin: { contents: brokerEntry, resolveDir: root, sourcefile: 'broker-entry.js' }, bundle: true, platform: 'browser', format: 'iife', minify: true, target: 'es2020', outfile: path.join(out, 'playground-broker.js'), logLevel: 'error', legalComments: 'none' });
+  const brokerEntry = BROKER_SHIMS + "\nconst { Broker, BrokerError } = require('../core/plugins/broker');\nglobalThis.TFXBroker = { Broker, BrokerError };\n";
+  await esbuild.build({ stdin: { contents: brokerEntry, resolveDir: __dirname, sourcefile: 'broker-entry.js' }, bundle: true, platform: 'browser', format: 'iife', minify: true, target: 'es2020', outfile: path.join(out, 'playground-broker.js'), logLevel: 'error', legalComments: 'none' });
   for (const f of ['playground-sandbox.js', 'playground-broker.js']) console.log('✅ ' + f + ' (' + Math.round(fs.statSync(path.join(out, f)).size / 1024) + ' KB)');
 })().catch((e) => { console.error('⚠️ ' + e.message); process.exit(1); });
