@@ -1,3 +1,7 @@
+TurboFex v1.6.8 - tidier reply when there are no plugin commands
+CHANGED IN 1.6.8
+- CHANGED: `.menu plugins` with no plugin commands now answers in the usual TurboFex style (bold title, ▸ line).
+
 TurboFex v1.6.7 - a plugin command is listed once
 CHANGED IN 1.6.7
 - FIXED: a plugin could appear in more than one menu category. Turning on a plugin that was already on registered its commands a second time. Now a plugin is always registered fresh (never twice), and the menu lists any command only once, in one category.

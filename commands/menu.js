@@ -48,7 +48,7 @@ module.exports = {
     // menu plugins: every plugin command in one place (they still live in their own categories)
     if (query === 'plugins') {
       const mine = all.filter((c) => c.pluginId);
-      if (!mine.length) return reply(`No plugin commands are active.\n> Plugins are managed with ${prefix}plugin`);
+      if (!mine.length) return reply(`🧩 *No plugin commands are active.*\n▸ _Plugins are managed with_ \`${prefix}plugin\``);
       const items = mine.map((c) => `*${c.name}*${mark(c)} _(${sections.find((s) => s.cmds.includes(c)).meta.title.toLowerCase()})_\n┃    _${c.description}_`);
       return reply(block({ meta: { title: 'PLUGIN COMMANDS', symbol: '✦' } }, items));
     }
