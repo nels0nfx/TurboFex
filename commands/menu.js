@@ -4,7 +4,7 @@ const clock = require('../core/clock');
 const { smallcaps: sc } = require('../core/fonts');
 const store = require('../whatsapp/store');
 const capacity = require('../core/capacity');
-const { groupByCategory } = require('../whatsapp/categories');
+const { groupByCategory, mark, PLUGIN_MARK } = require('../whatsapp/categories');
 const ownername = require('../whatsapp/ownername');
 
 const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
@@ -45,10 +45,18 @@ module.exports = {
     const all = sections.flatMap((s) => s.cmds);
     const query = (args[0] || '').toLowerCase().replace(/^[^a-z0-9]+/, '');
 
+    // menu plugins: every plugin command in one place (they still live in their own categories)
+    if (query === 'plugins') {
+      const mine = all.filter((c) => c.pluginId);
+      if (!mine.length) return reply(`No plugin commands are active.\n> Plugins are managed with ${prefix}plugin`);
+      const items = mine.map((c) => `*${c.name}*${mark(c)} _(${sections.find((s) => s.cmds.includes(c)).meta.title.toLowerCase()})_\n┃    _${c.description}_`);
+      return reply(block({ meta: { title: 'PLUGIN COMMANDS', symbol: '✦' } }, items));
+    }
+
     // menu <category>: every command of it with its description
     const section = sections.find((s) => s.key === query);
     if (query && section) {
-      const items = section.cmds.map((c) => `*${c.name}*\n┃    _${c.description}_`);
+      const items = section.cmds.map((c) => `*${c.name}*${mark(c)}\n┃    _${c.description}_`);
       return reply(block(section, items));
     }
 
@@ -64,7 +72,7 @@ module.exports = {
       ];
       if ((c.aliases || []).length) rows.push(['Also', c.aliases.map((a) => prefix + a).join(', ')]);
       if (c.botAdminRequired) rows.push(['Needs', 'Bot as admin']);
-      return reply(`*${c.name.toUpperCase()}*\n_${c.description}_\n${RULE}\n${mono(rows)}`);
+      return reply(`*${c.name.toUpperCase()}*${mark(c)}\n_${c.description}_\n${RULE}\n${mono(rows)}`);
     }
 
     // full menu: a header that opens and closes with a symbol, one detail on every line
@@ -100,11 +108,12 @@ module.exports = {
       ...live.map(line),
       END,
     ].join('\n');
-    const body = sections.map((s) => block(s, s.cmds.map((c) => sc(c.name)))).join('\n\n');
+    const body = sections.map((s) => block(s, s.cmds.map((c) => sc(c.name) + mark(c)))).join('\n\n');
     const tips =
       `> ${prefix}menu <category>  details of a category\n` +
       `> ${prefix}menu <command>  help for one command\n` +
-      `> ${prefix}list  every command with its description\n\n` +
+      `> ${prefix}list  every command with its description\n` +
+      (all.some((c) => c.pluginId) ? `> ${PLUGIN_MARK}  a command that comes from a plugin\n` : '') + '\n' +
       `${chunk(sections.map((s) => s.key), 5).map((r) => `_${r.join(' · ')}_`).join('\n')}\n` +
       `_${brand.botName} • v${pkg.version}_`;
 

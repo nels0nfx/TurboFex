@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "apiVersion": 1,
   "minBotVersion": "1.6.5",
+  "category": "autoreply",
   "name": "Owner Tag Reply",
   "description": "Replies with your custom message when someone tags the owner in a group.",
   "author": { "name": "TurboFex" },

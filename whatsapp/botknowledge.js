@@ -89,7 +89,7 @@ function line(c, p) {
   const names = [c.name, ...(c.aliases || [])];
   const tags = who(c);
   const cat = (categories.info[c.category] || categories.info.other).title;
-  return `${p}${c.name}${names.length > 1 ? ` (also: ${names.slice(1).map((n) => p + n).join(', ')})` : ''} [${cat}${tags.length ? `; ${tags.join('; ')}` : ''}] - ${String(c.description || '').replace(/\s+/g, ' ').slice(0, 190)}`;
+  return `${p}${c.name}${c.pluginId ? ' 〔P〕 (from a plugin)' : ''}${names.length > 1 ? ` (also: ${names.slice(1).map((n) => p + n).join(', ')})` : ''} [${cat}${tags.length ? `; ${tags.join('; ')}` : ''}] - ${String(c.description || '').replace(/\s+/g, ' ').slice(0, 190)}`;
 }
 
 // ---- finding the commands a question is about ----

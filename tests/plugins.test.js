@@ -91,7 +91,7 @@ test('install: shows what the plugin asks for, needs a code, then adds the comma
   assert.match(await run('plugin confirm WRONG', {}), /did not work/);
   assert.match(await run('plugin confirm ' + code, {}), /is ready/);
   const cmd = commands.get('hellogoodone');
-  assert.ok(cmd); assert.strictEqual(cmd.category, 'plugins'); assert.strictEqual(cmd.everyone, false); assert.strictEqual(cmd.ownerOnly, false);
+  assert.ok(cmd); assert.strictEqual(cmd.category, 'tools'); assert.strictEqual(cmd.everyone, false); assert.strictEqual(cmd.ownerOnly, false);
   assert.ok(commandList.includes(cmd));
   assert.match(await run('plugin confirm ' + code, {}), /did not work/); // a code works once
 });
@@ -195,10 +195,27 @@ test('the .plugin replies follow the TurboFex format and never print "undefined"
   }
 });
 
-test('the PLUGINS menu category exists and stays hidden while it is empty', () => {
+test('v1.6.6: there is no PLUGINS category; plugin commands sit in normal categories with the 〔P〕 marker, native ones never', async () => {
   const categories = require('../whatsapp/categories');
-  assert.strictEqual(categories.info.plugins.title, 'PLUGINS');
-  assert.ok(!categories.groupByCategory([{ name: 'ping', category: 'general' }], false).some((g) => g.key === 'plugins'));
+  assert.strictEqual(categories.info.plugins, undefined);
+  assert.strictEqual(categories.mark({ name: 'ping' }), ''); assert.strictEqual(categories.mark({ name: 'x', pluginId: 'p' }), ' 〔P〕');
+  const pc = categories.pluginCategory;
+  assert.strictEqual(pc({ category: 'fun' }), 'fun'); assert.strictEqual(pc({ category: 'owner' }), 'tools'); assert.strictEqual(pc({ category: 'nonsense' }), 'tools');
+  assert.strictEqual(pc({ permissions: ['chat.send', 'group.manage'] }), 'group'); assert.strictEqual(pc({ permissions: ['media.send'] }), 'media');
+  assert.strictEqual(pc({ permissions: ['chat.send'], events: ['message'], commands: [] }), 'autoreply'); assert.strictEqual(pc({ permissions: ['chat.send'], commands: [{}] }), 'tools');
+  const list = [{ name: 'ping', category: 'general' }, { name: 'lockgroup', category: 'group', pluginId: 'lock' }, { name: 'mention', category: 'autoreply', pluginId: 'm' }];
+  const g = categories.groupByCategory(list, false);
+  assert.deepStrictEqual(g.map((x) => x.key), ['autoreply', 'general', 'group']);
+  const menu = require('../commands/menu'); const out = [];
+  const run = (args) => menu.run({ reply: async (t) => { out.push(t); }, commandList: list, prefix: '.', args, isOwner: false, isAdmin: false, sock: { user: {} }, jid: 'x' });
+  await run([]); assert.match(out[0], /ʟᴏᴄᴋɢʀᴏᴜᴘ 〔P〕/); assert.ok(!/ᴘɪɴɢ 〔P〕/.test(out[0])); assert.match(out[0], /〔P〕 {2}a command that comes from a plugin/);
+  await run(['group']); assert.match(out[1], /\*lockgroup\* 〔P〕/);
+  await run(['plugins']); assert.match(out[2], /PLUGIN COMMANDS/); assert.ok(!/ping/.test(out[2]));
+  await run(['lockgroup']); assert.match(out[3], /LOCKGROUP\* 〔P〕|LOCKGROUP.*〔P〕/);
+  // the manifest's optional category
+  const f1 = makePlugin('cat-ok', { category: 'group' }); assert.strictEqual(manifestLib.validate(f1, { botVersion: '1.6.6', taken: new Set() }).manifest.category, 'group');
+  const f2 = makePlugin('cat-bad', { category: 'plugins' }); assert.strictEqual(manifestLib.validate(f2, { botVersion: '1.6.6', taken: new Set() }).ok, false);
+  const f3 = makePlugin('cat-none'); assert.strictEqual(manifestLib.validate(f3, { botVersion: '1.6.6', taken: new Set() }).manifest.category, null);
 });
 
 test('v1.3.6: the sample that ships with the bot is found in examples and is copied into the plugins folder when installed', async () => {

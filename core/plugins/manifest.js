@@ -11,6 +11,8 @@ const MAX_ENTRY_BYTES = 1024 * 1024;
 const PERMISSIONS = ['chat.send', 'storage', 'network', 'group.read', 'schedule', 'owner.notify', 'events.message', 'events.members', 'media.send', 'group.manage', 'chat.react', 'group.admins', 'media.convert', 'user.dm', 'group.members', 'media.read', 'group.invite'];
 const EVENTS = { message: 'events.message', 'member.join': 'events.members', 'member.leave': 'events.members', 'member.promote': 'events.members', 'member.demote': 'events.members' };
 const WHO = ['everyone', 'admin', 'owner'];
+// where the plugin's commands appear in the bot's menu (optional). Keep in step with the pair site's plugin-check.js
+const CATEGORIES = ['general', 'group', 'autoreply', 'status', 'watch', 'tools', 'fun', 'games', 'ai', 'budget', 'download', 'effect', 'media', 'audio', 'video', 'editor', 'security', 'lookup', 'other'];
 const reId = /^[a-z0-9-]{3,32}$/;
 const reCmd = /^[a-z0-9]{2,20}$/;
 const reKey = /^[a-z][a-z0-9]{1,19}$/;
@@ -38,6 +40,7 @@ function validate(folder, { botVersion, taken } = {}) {
   if (m.apiVersion !== API_VERSION) bad('apiVersion must be ' + API_VERSION);
   if (m.minBotVersion !== undefined && (typeof m.minBotVersion !== 'string' || !reSemver.test(m.minBotVersion))) bad('minBotVersion must look like 1.3.5');
   else if (m.minBotVersion && botVersion && !semverGte(botVersion, m.minBotVersion)) bad('needs TurboFex ' + m.minBotVersion + ' or newer');
+  if (m.category !== undefined && !CATEGORIES.includes(m.category)) bad('category must be one of: ' + CATEGORIES.join(', '));
   if (typeof m.name !== 'string' || !m.name.trim() || m.name.length > 40) bad('name is required (up to 40 characters)');
   if (typeof m.description !== 'string' || !m.description.trim() || m.description.length > 200) bad('description is required (up to 200 characters)');
   if (!m.author || typeof m.author.name !== 'string' || !m.author.name.trim() || m.author.name.length > 60) bad('author.name is required');
@@ -146,7 +149,7 @@ function validate(folder, { botVersion, taken } = {}) {
   if (errors.length) return { ok: false, errors: errors.slice(0, 8) };
   const manifest = {
     id: m.id, version: m.version, apiVersion: API_VERSION, name: m.name.trim(), description: m.description.trim(), author: { name: m.author.name.trim() },
-    permissions: perms || [], network: { domains }, entry,
+    category: m.category || null, permissions: perms || [], network: { domains }, entry,
     commands: cmds.map((c) => ({ name: c.name, aliases: c.aliases || [], who: c.who, description: c.description.trim(), usage: c.usage || '', groupOnly: !!c.groupOnly })),
     events: (events || []).slice(),
     schedules: sched.map((s) => ({ id: s.id, everyMinutes: s.everyMinutes })),
@@ -154,4 +157,4 @@ function validate(folder, { botVersion, taken } = {}) {
   };
   return { ok: true, errors: [], manifest, source, entrySha };
 }
-module.exports = { validate, PERMISSIONS, EVENTS, API_VERSION, semverGte };
+module.exports = { validate, CATEGORIES, PERMISSIONS, EVENTS, API_VERSION, semverGte };

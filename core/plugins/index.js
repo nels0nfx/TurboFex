@@ -100,7 +100,7 @@ function deactivate(id) {
 }
 function standIn(id, manifest, c) {
   return {
-    name: c.name, aliases: c.aliases, category: 'plugins', description: c.description, usage: c.usage || undefined, pluginId: id,
+    name: c.name, aliases: c.aliases, category: require('../../whatsapp/categories').pluginCategory(manifest), description: c.description, usage: c.usage || undefined, pluginId: id,
     ownerOnly: c.who === 'owner', adminOnly: c.who === 'admin', groupOnly: c.groupOnly, everyone: false, capacity: { needs: [], weight: 'light' },
     deniedIn: (jid) => denied(id, jid),
     run: (ctx) => invoke(id, 'command', c.name, ctx),

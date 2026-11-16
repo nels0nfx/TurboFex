@@ -1,3 +1,10 @@
+TurboFex v1.6.6 - plugin commands live in the normal menu categories, marked 〔P〕
+CHANGED IN 1.6.6
+- CHANGED: the separate PLUGINS menu category is gone. A plugin's commands now appear inside the category they belong to (GROUP, TOOLS, AUTOREPLY, FUN ...), in the same A-Z order, with the same look, permissions and behaviour as before.
+- NEW: every plugin command carries the marker 〔P〕 beside its name in `.menu`, `.menu <category>`, `.menu <command>`, `.list` and the bot's own help answers. Native commands never have it. The menu is built fresh every time, so the marker appears and disappears by itself when a plugin is installed, updated, enabled, disabled or removed. A short line under the menu explains the marker, only while a plugin command is active.
+- NEW: `.menu plugins` shows every plugin command in one list (with the category each one sits in).
+- NEW for plugin authors: an optional `"category"` line in turbofex-plugin.json (general, group, autoreply, status, watch, tools, fun, games, ai, budget, download, effect, media, audio, video, editor, security, lookup, other). Without it the bot picks one from what the plugin does (group tools -> GROUP, files -> MEDIA, only listening -> AUTOREPLY, otherwise TOOLS). `owner` is not allowed. `.plugin` stays only for managing plugins.
+
 TurboFex v1.6.5 - plugins now know when the owner is tagged
 CHANGED IN 1.6.5
 - FIX: a plugin that answers when someone tags the owner in a group never worked. The message event did not say who was tagged, and WhatsApp often writes the owner as a hidden ID instead of the phone number.

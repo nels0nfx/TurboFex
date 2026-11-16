@@ -23,7 +23,6 @@ const info = {
   owner: { title: 'OWNER', icon: '👑', symbol: '♛' },
   security: { title: 'SECURITY', icon: '🛡️', symbol: '✜' },
   lookup: { title: 'LOOKUP', icon: '🔎', symbol: '⌘' },
-  plugins: { title: 'PLUGINS', icon: '🧩', symbol: '⬡' },
   other: { title: 'OTHER', icon: '📦', symbol: '✱' },
 };
 
@@ -46,4 +45,20 @@ function groupByCategory(commandList, isOwner) {
     }));
 }
 
-module.exports = { info, groupByCategory };
+// Plugin commands sit in the normal categories. Every one of them carries this marker beside its name; native commands never do.
+// The marker comes from the command itself (pluginId), so it appears and disappears with the plugin by itself.
+const PLUGIN_MARK = '〔P〕';
+const mark = (c) => (c && c.pluginId ? ' ' + PLUGIN_MARK : '');
+// The category a plugin command goes to: the one the plugin asked for (manifest "category"), else a sensible guess from what it does.
+const PLUGIN_CATEGORIES = Object.keys(info).filter((k) => k !== 'owner');
+function pluginCategory(manifest) {
+  const want = manifest && manifest.category;
+  if (want && info[want] && want !== 'owner') return want;
+  const perms = (manifest && manifest.permissions) || [];
+  if (perms.some((p) => p.startsWith('group.'))) return 'group';
+  if (perms.some((p) => p.startsWith('media.'))) return 'media';
+  if (manifest && manifest.events && manifest.events.length && !(manifest.commands || []).length) return 'autoreply';
+  return 'tools';
+}
+
+module.exports = { info, groupByCategory, PLUGIN_MARK, mark, pluginCategory, PLUGIN_CATEGORIES };
