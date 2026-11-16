@@ -206,6 +206,8 @@ test('v1.6.6: there is no PLUGINS category; plugin commands sit in normal catego
   const list = [{ name: 'ping', category: 'general' }, { name: 'lockgroup', category: 'group', pluginId: 'lock' }, { name: 'mention', category: 'autoreply', pluginId: 'm' }];
   const g = categories.groupByCategory(list, false);
   assert.deepStrictEqual(g.map((x) => x.key), ['autoreply', 'general', 'group']);
+  const twice = categories.groupByCategory([...list, { name: 'lockgroup', category: 'tools', pluginId: 'lock' }, list[1]], false); // a repeated registration never shows a command twice
+  assert.strictEqual(twice.flatMap((x) => x.cmds).filter((c) => c.name === 'lockgroup').length, 1);
   const menu = require('../commands/menu'); const out = [];
   const run = (args) => menu.run({ reply: async (t) => { out.push(t); }, commandList: list, prefix: '.', args, isOwner: false, isAdmin: false, sock: { user: {} }, jid: 'x' });
   await run([]); assert.match(out[0], /ʟᴏᴄᴋɢʀᴏᴜᴘ 〔P〕/); assert.ok(!/ᴘɪɴɢ 〔P〕/.test(out[0])); assert.match(out[0], /〔P〕 {2}a command that comes from a plugin/);

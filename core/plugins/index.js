@@ -81,6 +81,7 @@ function healFromPrevious(id, rec) {
   } catch (e) { return false; }
 }
 function activate(id, rec) {
+  if (loaded.has(id)) deactivate(id); // enabling a plugin that already runs must never register its commands a second time
   let v = manifestLib.validate(findFolder(id) || '/nonexistent', { botVersion: botVersion(), taken: builtinNames() });
   if ((!v.ok || v.entrySha !== rec.sha) && healFromPrevious(id, rec)) v = manifestLib.validate(findFolder(id) || '/nonexistent', { botVersion: botVersion(), taken: builtinNames() });
   if (!v.ok || v.entrySha !== rec.sha) { rec.enabled = false; rec.reason = 'its files changed'; state.open().touch(); return false; }

@@ -1,3 +1,7 @@
+TurboFex v1.6.7 - a plugin command is listed once
+CHANGED IN 1.6.7
+- FIXED: a plugin could appear in more than one menu category. Turning on a plugin that was already on registered its commands a second time. Now a plugin is always registered fresh (never twice), and the menu lists any command only once, in one category.
+
 TurboFex v1.6.6 - plugin commands live in the normal menu categories, marked 〔P〕
 CHANGED IN 1.6.6
 - CHANGED: the separate PLUGINS menu category is gone. A plugin's commands now appear inside the category they belong to (GROUP, TOOLS, AUTOREPLY, FUN ...), in the same A-Z order, with the same look, permissions and behaviour as before.

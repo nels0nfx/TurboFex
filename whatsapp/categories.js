@@ -29,8 +29,10 @@ const info = {
 // Returns [{ key, meta, cmds }] in menu order. Owner-only commands are hidden from non-owners.
 function groupByCategory(commandList, isOwner) {
   const visible = commandList.filter((c) => isOwner || !(c.ownerOnly || c.realOwnerOnly));
-  const groups = {};
+  const groups = {}; const seen = new Set(); // a command is listed once, in one category only
   for (const c of visible) {
+    const id = c.pluginId ? c.pluginId + ':' + c.name : c;
+    if (seen.has(id)) continue; seen.add(id);
     const key = info[c.category] ? c.category : 'other';
     (groups[key] = groups[key] || []).push(c);
   }
