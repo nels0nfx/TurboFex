@@ -8,7 +8,7 @@ const STORE_WHY = (p, why) => ({
   tampered: '▸ _The files from the store did not pass the safety check, so nothing was installed._',
   unknown: `▸ _I could not find that plugin. See what is there with_ ${mono(p, 'store')}`,
   revoked: '▸ _This plugin was withdrawn for safety and cannot be installed._',
-  conflict: '▸ _A different plugin with that name is already in your plugins folder._',
+  conflict: `▸ _A plugin with that name was added by hand to your plugins folder. Remove it with_ ${mono(p, 'remove <name>')} _and try again._`,
   badcode: '▸ _That test code is not valid, was already used, or has run out. Ask the developer for a new one._',
 }[why] || '▸ _Please try again in a moment._');
 const showInstall = (p, r) => {

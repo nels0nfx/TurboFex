@@ -9,7 +9,7 @@ const code = async (p) => { try { await p; return 'resolved'; } catch (e) { retu
 const run = (host, c, extra, name = 'go') => host.call('command', name, { ...CTX, ...(c || {}) }, extra || {});
 
 test('the version and the new permissions and events are known', () => {
-  assert.strictEqual(require('../package.json').version, '1.6.1');
+  assert.strictEqual(require('../package.json').version, '1.6.2');
   for (const p of ['user.dm', 'group.members', 'media.read', 'group.invite']) assert.ok(manifestLib.PERMISSIONS.includes(p), p);
   assert.strictEqual(manifestLib.EVENTS['member.promote'], 'events.members');
   assert.strictEqual(manifestLib.EVENTS['member.demote'], 'events.members');
@@ -133,4 +133,19 @@ test('events: promote and demote need events.members', () => {
   assert.strictEqual(manifestLib.validate(d, { botVersion: '1.6.1', taken: new Set() }).ok, true);
   fs.writeFileSync(path.join(d, 'turbofex-plugin.json'), JSON.stringify({ ...base, permissions: ['chat.send'] }));
   assert.strictEqual(manifestLib.validate(d, { botVersion: '1.6.1', taken: new Set() }).ok, false);
+});
+
+test('the whole bot passes the updater\'s own safety check (no file needs a file that is not shipped)', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const { validateEntries } = require('../core/updater');
+  const root = path.join(__dirname, '..'), entries = [];
+  (function walk(d) {
+    for (const f of fs.readdirSync(d, { withFileTypes: true })) {
+      if (f.name === 'node_modules' || f.name === '.git') continue;
+      const p = path.join(d, f.name);
+      if (f.isDirectory()) walk(p);
+      else entries.push({ isDirectory: false, entryName: path.relative(root, p).split(path.sep).join('/'), getData: () => fs.readFileSync(p) });
+    }
+  })(root);
+  assert.doesNotThrow(() => validateEntries(entries, ''));
 });

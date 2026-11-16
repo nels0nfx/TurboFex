@@ -30,7 +30,16 @@ async function fetchTest(code, builtins, fetchImpl) {
     const v = manifestLib.validate(tmp, { botVersion: botVersion(), taken: builtins });
     if (!v.ok) { fs.rmSync(tmp, { recursive: true, force: true }); return { ok: false, why: 'invalid', errors: v.errors }; }
     const id = v.manifest.id; const to = path.join(dir, id);
-    if (fs.existsSync(to) && !fs.existsSync(path.join(to, '.from-test'))) { fs.rmSync(tmp, { recursive: true, force: true }); return { ok: false, why: 'conflict' }; }
+    // a test may replace a plugin that came from the store or from an earlier test (the owner confirms it anyway).
+    // Only a folder the owner copied by hand is left alone.
+    if (fs.existsSync(to) && !fs.existsSync(path.join(to, '.from-test')) && !fs.existsSync(path.join(to, '.from-store'))) { fs.rmSync(tmp, { recursive: true, force: true }); return { ok: false, why: 'conflict' }; }
+    try { // keep a copy of the store version that is running now, so it comes back if the test is never confirmed or the owner rolls back
+      const rec = state.open().data.installed[id], active = rec && rec.store && rec.store.version;
+      if (active && fs.existsSync(path.join(to, '.from-store'))) {
+        const keep = path.join(state.previousDir(id), active);
+        if (!fs.existsSync(keep)) { fs.mkdirSync(path.dirname(keep), { recursive: true }); fs.cpSync(to, keep, { recursive: true }); }
+      }
+    } catch (e) { /* no copy: the test still works */ }
     fs.writeFileSync(path.join(tmp, '.from-test'), String(j.developer || '').slice(0, 40) || 'unknown');
     fs.rmSync(to, { recursive: true, force: true }); fs.renameSync(tmp, to);
     return { ok: true, id, developer: String(j.developer || '').slice(0, 40) };

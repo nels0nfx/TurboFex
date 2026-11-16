@@ -12,6 +12,7 @@
 //   node tools/registry.js pull <registry-folder>    download the plugins you approved on the pair site, check them again, add and sign them
 //                                                    (needs TFX_SITE_TOKEN; TFX_SITE_URL is optional)
 //   node tools/registry.js sitebackup <file>         save a backup of everything the pair site's plugin store keeps (needs TFX_SITE_TOKEN); run it now and then
+//   node tools/registry.js serverkey                 ONE TIME: make a separate key for the pair site, so the site can sign the store itself (nothing to run after that)
 //   node tools/registry.js published                 after you pushed the registry: tell the pair site those plugins are now published (or withdrawn)
 const fs = require('node:fs');
 const os = require('node:os');
@@ -50,6 +51,12 @@ function restore(file) {
   fs.mkdirSync(keyDir(), { recursive: true, mode: 0o700 }); fs.writeFileSync(keyFile(), pem, { mode: 0o600 });
 }
 
+// A separate signing key for the pair site. Put the PRIVATE part into the site's REGISTRY_SIGNING_KEY setting (Render) and the PUBLIC part
+// into core/plugins/registry-key.json (backupKeys). Your own key on this phone stays untouched and stays the one that can replace a lost key.
+function serverkey() {
+  const { privateKey, publicKey } = crypto.generateKeyPairSync('ed25519');
+  return { priv: privateKey.export({ type: 'pkcs8', format: 'pem' }), pub: publicKey.export({ type: 'spki', format: 'pem' }) };
+}
 function init(reg) {
   fs.mkdirSync(path.join(reg, 'plugins'), { recursive: true });
   if (!fs.existsSync(path.join(reg, 'revoked.json'))) fs.writeFileSync(path.join(reg, 'revoked.json'), '[]\n');
@@ -248,12 +255,13 @@ async function siteBackup(file, fetchImpl) {
   fs.writeFileSync(file, JSON.stringify(j), { mode: 0o600 });
   return { submissions: (j.submissions || []).length, developers: (j.developers || []).length };
 }
-module.exports = { cleanCollections, siteBackup, keygen, backup, restore, init, add, revoke, build, verify, publicPem, pull, markPublished };
+module.exports = { serverkey, cleanCollections, siteBackup, keygen, backup, restore, init, add, revoke, build, verify, publicPem, pull, markPublished };
 
 if (require.main === module) {
   const [cmd, a, b, c, d] = process.argv.slice(2);
   try {
     if (cmd === 'keygen') { console.log('✅ Signing key created in ' + keyDir() + '\nBack it up now:  TFX_PASSPHRASE="a long secret" node tools/registry.js backup ~/registry-key-backup.json\n\nPublic key (this goes into the bot):\n' + keygen()); }
+    else if (cmd === 'serverkey') { const k = serverkey(); const one = k.priv.trim().split('\n').join('\\n'); console.log('✅ Site signing key made. Nothing was saved on this phone.\n\n1) PRIVATE key: paste this ONE line into Render > Environment as REGISTRY_SIGNING_KEY. Never share it, never put it on GitHub:\n' + one + '\n\n2) PUBLIC key: send this to your AI helper so the bot can trust it (it is safe to share):\n' + k.pub); }
     else if (cmd === 'publickey') { console.log(publicPem()); }
     else if (cmd === 'backup' && a) { backup(a); console.log('✅ Encrypted backup saved to ' + a + '\nKeep it somewhere safe, away from this phone, and remember the passphrase.'); }
     else if (cmd === 'restore' && a) { restore(a); console.log('✅ Signing key restored.'); }

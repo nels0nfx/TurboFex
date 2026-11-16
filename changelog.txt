@@ -1,3 +1,10 @@
+TurboFex v1.6.2 - test codes over store plugins, store read from the site
+CHANGED IN 1.6.2
+- FIX: `.plugin test <code>` said "A different plugin with that name is already in your plugins folder" when the same plugin was already installed from the store. A private test now replaces a store copy or an older test copy (you still confirm it first, and the store version is saved so you can go back). The real store install can also replace a test copy. Only a folder you copied by hand is still protected, and the message now says how to fix it.
+- NEW: the store is now read from the pair site first (it signs the store itself) and from GitHub if the site cannot be reached or its signature is not trusted. Same safety checks for both.
+- NEW (your phone, once): `node tools/registry.js serverkey` makes a separate signing key for the pair site. After that, approving or withdrawing a plugin on the site needs nothing on your phone.
+- Use together with pair site v2.69.0.
+
 TurboFex v1.6.1 - Plugin API 1.1: many more abilities for plugin developers
 CHANGED IN 1.6.1
 - NEW for plugins (the owner approves each one when installing; nothing changes for plugins that do not use them):
@@ -11,6 +18,7 @@ CHANGED IN 1.6.1
   - `tfx.group.describe(text)` (group.manage) and `tfx.group.inviteLink()` (new permission group.invite): only through a command used by an admin, where the bot is an admin.
   - `tfx.util.hash(text, 'sha256'|'sha1'|'md5')` and `tfx.util.fromBase64(text)`: no permission needed.
   - New events (need events.members): `member.promote` and `member.demote`.
+- FIX: updating from an older bot said "tools/build-playground.js needs ./core/plugins/broker, which is not in the update". The build tool's file path was corrected, and a new test runs the updater's own check on the whole bot.
 - The plugin test tool (`.plugin test`, tools/plugin-test.js) pretends all of these, so developers can try them before submitting.
 
 TurboFex v1.6.0 - collections and bundles

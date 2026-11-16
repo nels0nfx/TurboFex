@@ -10,6 +10,10 @@ const manifestLib = require('./manifest');
 const state = require('./state');
 
 const BASE = (process.env.TURBOFEX_REGISTRY_URL || 'https://raw.githubusercontent.com/nels0nfx/TurboFex-Registry/main/').replace(/\/?$/, '/');
+// The store is read from the pair site first (it signs the store itself, so approving a plugin there needs nothing on a phone)
+// and from the GitHub registry if the site cannot be reached or its signature is not trusted. Same signature rules for both.
+const SITE_BASE = String(process.env.TFX_SITE_URL || 'https://turbofex-pair.onrender.com').replace(/\/+$/, '') + '/registry/';
+let activeBase = null;
 const CACHE_MS = 10 * 60 * 1000;
 const MAX_INDEX = 1024 * 1024;
 let cache = null;
@@ -20,11 +24,20 @@ let backupOverride = null;
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 const publicKeyPem = () => (keyOverride !== null ? keyOverride : (() => { try { return require('./registry-key.json').publicKey || ''; } catch (e) { return ''; } })());
 const configured = () => !!publicKeyPem();
-const download = async (rel, maxBytes) => {
-  if (fetcher) return fetcher(BASE + rel, maxBytes);
-  const r = await require('../safefetch').get(BASE + rel, { timeout: 8000, maxBytes });
+const basesInOrder = () => {
+  if (fetcher || process.env.TURBOFEX_REGISTRY_URL) return [BASE];
+  const all = [SITE_BASE, BASE];
+  return activeBase && all.includes(activeBase) ? [activeBase, ...all.filter((b) => b !== activeBase)] : all;
+};
+const downloadFrom = async (base, rel, maxBytes) => {
+  if (fetcher) return fetcher(base + rel, maxBytes);
+  const r = await require('../safefetch').get(base + rel, { timeout: base === SITE_BASE ? 15000 : 8000, maxBytes });   // the site can need a few seconds to wake up
   if (r.status !== 200) throw new Error('status ' + r.status);
   return r.body;
+};
+const download = async (rel, maxBytes) => {   // a file of a plugin: any source works, the fingerprint in the signed index decides
+  let last; for (const b of basesInOrder()) { try { return await downloadFrom(b, rel, maxBytes); } catch (e) { last = e; } }
+  throw last || new Error('unreachable');
 };
 
 // Keys the bot trusts: the main one, plus optional spare keys (backupKeys in registry-key.json) so the store can keep going
@@ -45,14 +58,18 @@ const semverCmp = (a, b) => { const x = String(a).split('.').map(Number); const 
 async function getIndex(fresh) {
   if (!configured()) { const e = new Error('store not set up'); e.code = 'store_off'; throw e; }
   if (!fresh && cache && Date.now() - cache.t < CACHE_MS) return cache.index;
-  let bytes; let sig;
-  try { bytes = await download('index.json', MAX_INDEX); sig = (await download('index.json.sig', 4096)).toString('utf8'); } catch (e) { const x = new Error('store unreachable'); x.code = 'unreachable'; throw x; }
-  if (!verifyIndex(bytes, sig)) { const e = new Error('bad signature'); e.code = 'tampered'; throw e; }
-  let index;
-  try { index = JSON.parse(bytes.toString('utf8')); } catch (e) { const x = new Error('bad index'); x.code = 'tampered'; throw x; }
-  if (!index || index.format !== 1 || typeof index.plugins !== 'object' || !Array.isArray(index.revoked || [])) { const e = new Error('bad index'); e.code = 'tampered'; throw e; }
-  cache = { t: Date.now(), index };
-  return index;
+  let lastCode = 'unreachable';
+  for (const base of basesInOrder()) {   // the first source that gives a correctly signed index wins
+    let bytes; let sig;
+    try { bytes = await downloadFrom(base, 'index.json', MAX_INDEX); sig = (await downloadFrom(base, 'index.json.sig', 4096)).toString('utf8'); } catch (e) { continue; }
+    if (!verifyIndex(bytes, sig)) { lastCode = 'tampered'; continue; }
+    let index;
+    try { index = JSON.parse(bytes.toString('utf8')); } catch (e) { lastCode = 'tampered'; continue; }
+    if (!index || index.format !== 1 || typeof index.plugins !== 'object' || !Array.isArray(index.revoked || [])) { lastCode = 'tampered'; continue; }
+    activeBase = base; cache = { t: Date.now(), index };
+    return index;
+  }
+  const x = new Error(lastCode === 'tampered' ? 'bad signature' : 'store unreachable'); x.code = lastCode; throw x;
 }
 // collections (curated sets of store plugins), signed inside the index. Anything with an odd shape is dropped.
 const MAX_BUNDLE = 8, MAX_COLLECTIONS = 20;
@@ -93,7 +110,7 @@ async function fetchPlugin(id, wanted) {
   if (sha(man) !== v.manifestSha || sha(src) !== v.entrySha || !/^[\w.-]{1,80}$/.test(v.entry)) return { ok: false, why: 'tampered' };
   const dir = state.dir(); const to = path.join(dir, id); const tmp = path.join(dir, '.tmp-' + crypto.randomBytes(4).toString('hex'));
   try {
-    if (fs.existsSync(to) && !fs.existsSync(path.join(to, '.from-store'))) return { ok: false, why: 'conflict' };
+    if (fs.existsSync(to) && !fs.existsSync(path.join(to, '.from-store')) && !fs.existsSync(path.join(to, '.from-test'))) return { ok: false, why: 'conflict' };   // a private test copy may be replaced by the real store version
     fs.mkdirSync(tmp, { recursive: true });
     fs.writeFileSync(path.join(tmp, 'turbofex-plugin.json'), man); fs.writeFileSync(path.join(tmp, v.entry), src); fs.writeFileSync(path.join(tmp, '.from-store'), version);
     const chk = manifestLib.validate(tmp, {});
@@ -112,4 +129,4 @@ async function fetchPlugin(id, wanted) {
 }
 const storeVersionOf = (folder) => { try { return fs.readFileSync(path.join(folder, '.from-store'), 'utf8').trim(); } catch (e) { return null; } };
 module.exports = { collectionsOf, configured, getIndex, verifyIndex, list, latestOf, isRevoked, fetchPlugin, storeVersionOf, semverCmp, sha, BASE,
-  _test: { setFetcher: (f) => { fetcher = f; cache = null; }, setKey: (k, backups) => { keyOverride = k; backupOverride = backups || null; cache = null; }, verifyIndex, reset: () => { cache = null; fetcher = null; keyOverride = null; backupOverride = null; } } };
+  _test: { setFetcher: (f) => { fetcher = f; cache = null; }, setKey: (k, backups) => { keyOverride = k; backupOverride = backups || null; cache = null; }, verifyIndex, reset: () => { cache = null; fetcher = null; keyOverride = null; backupOverride = null; activeBase = null; } } };
