@@ -1,4 +1,4 @@
-// v1.6.2: a private test code may replace a store copy (the "conflict" bug); the store is read from the pair site first, GitHub second
+// v1.6.4: a private test code may replace a store copy (the "conflict" bug); the store is read from the pair site first, GitHub second
 require('./_setup');
 const fs = require('fs'); const os = require('os'); const path = require('path'); const crypto = require('crypto');
 const test = require('node:test'); const assert = require('node:assert');

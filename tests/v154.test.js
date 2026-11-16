@@ -21,7 +21,7 @@ test('an index signed by a spare key is accepted; by an unknown key is not', asy
 
 test('the shipped key file lists a spare key that is different from the main one', () => {
   const j = require('../core/plugins/registry-key.json');
-  assert.strictEqual(j.backupKeys.length, 1);
+  assert.strictEqual(j.backupKeys.length, 2);
   assert.notStrictEqual(j.backupKeys[0].trim(), j.publicKey.trim());
   assert.strictEqual(crypto.createPublicKey(j.backupKeys[0]).asymmetricKeyType, 'ed25519');
 });

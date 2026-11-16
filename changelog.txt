@@ -1,15 +1,9 @@
-TurboFex v1.6.3 - trust the Render plugin registry signing key
-CHANGED IN 1.6.3
-- NEW: Trust the Ed25519 public key configured for the TurboFex PairSite Render plugin registry signer.
-- KEEP: Preserve the previous registry public key as a backup trust key.
-- Use together with TurboFex PairSite v2.69.1.
-
-TurboFex v1.6.2 - test codes over store plugins, store read from the site
+TurboFex v1.6.4 - test codes over store plugins, store read from the site
 CHANGED IN 1.6.2
 - FIX: `.plugin test <code>` said "A different plugin with that name is already in your plugins folder" when the same plugin was already installed from the store. A private test now replaces a store copy or an older test copy (you still confirm it first, and the store version is saved so you can go back). The real store install can also replace a test copy. Only a folder you copied by hand is still protected, and the message now says how to fix it.
 - NEW: the store is now read from the pair site first (it signs the store itself) and from GitHub if the site cannot be reached or its signature is not trusted. Same safety checks for both.
 - NEW (your phone, once): `node tools/registry.js serverkey` makes a separate signing key for the pair site. After that, approving or withdrawing a plugin on the site needs nothing on your phone.
-- Use together with pair site v2.69.0.
+- NEW: the pair site's own signing key is now trusted (second spare key in registry-key.json). Use together with pair site v3.0.1.
 
 TurboFex v1.6.1 - Plugin API 1.1: many more abilities for plugin developers
 CHANGED IN 1.6.1
