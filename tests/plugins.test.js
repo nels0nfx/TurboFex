@@ -341,3 +341,19 @@ test('v1.3.8 group management is rate limited and needs the permission', async (
   const n = mkb(['chat.send']); try { await n.handle('group.close', '{}', n.newCall({ chat: { id: 'x' } }, { manage: async () => {} })); assert.fail('allowed'); } catch (e) { assert.strictEqual(e.code, 'not_declared'); }
   const noGroup = mkb(['group.manage']); try { await noGroup.handle('group.close', '{}', noGroup.newCall({ chat: { id: 'x' } }, {})); assert.fail('allowed'); } catch (e) { assert.strictEqual(e.code, 'not_allowed'); }
 });
+
+test('v1.6.5: the owner counts as tagged by phone number, hidden ID or the group member list; a reply is not a tag', async () => {
+  const g = '1203630000000@g.us'; const owner = process.env.OWNER_NUMBER;
+  const s = { user: { id: '27899999999:1@s.whatsapp.net', lid: '99999@lid' }, groupMetadata: async () => ({ id: g, subject: 'x', participants: [{ id: '777777@lid', phoneNumber: owner + '@s.whatsapp.net' }, { id: '27855555555@s.whatsapp.net' }] }) };
+  assert.strictEqual(await plugins.ownerTagged(s, g, [owner + '@s.whatsapp.net']), true);
+  assert.strictEqual(await plugins.ownerTagged(s, g, ['27855555555@s.whatsapp.net']), false);
+  assert.strictEqual(await plugins.ownerTagged(s, g, []), false);
+  assert.strictEqual(await plugins.ownerTagged(s, g, undefined), false);
+  require('../whatsapp/idmap').learn('424242@lid', owner + '@s.whatsapp.net'); // WhatsApp wrote the owner as a hidden ID that the bot has seen before
+  assert.strictEqual(await plugins.ownerTagged(s, g, ['424242@lid']), true);
+  assert.strictEqual(await plugins.ownerTagged(s, g, ['777777@lid']), true); // only the group's member list knows this pair
+  assert.strictEqual(await plugins.ownerTagged(s, g, ['27811111111@s.whatsapp.net', '27855555555@s.whatsapp.net']), false);
+  const { getMentioned } = require('../whatsapp/utils');
+  assert.strictEqual(getMentioned({ message: { extendedTextMessage: { contextInfo: { participant: owner + '@s.whatsapp.net', quotedMessage: {} } } } }).length, 0); // a reply alone is not a tag
+  assert.deepStrictEqual(getMentioned({ message: { extendedTextMessage: { text: '@1', contextInfo: { mentionedJid: ['1@lid', '1@lid'] } } } }), ['1@lid']);
+});

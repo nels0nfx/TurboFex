@@ -1,3 +1,9 @@
+TurboFex v1.6.5 - plugins now know when the owner is tagged
+CHANGED IN 1.6.5
+- FIX: a plugin that answers when someone tags the owner in a group never worked. The message event did not say who was tagged, and WhatsApp often writes the owner as a hidden ID instead of the phone number.
+- NEW for plugins (nothing changes for plugins that do not use it): in a `message` event, `c.mentionsOwner` is `true` when the owner was tagged (the bot compares the phone number, the hidden ID and the group's member list), and `c.mentions` now lists the people tagged in that message (private codes, they work with `c.mention`). A reply to someone's message is not a tag. Needs only the same `events.message` permission as before.
+- NEW: example plugin `examples/owner-tag-plugin` (answers with a message the owner chose when somebody tags the owner).
+
 TurboFex v1.6.4 - test codes over store plugins, store read from the site
 CHANGED IN 1.6.2
 - FIX: `.plugin test <code>` said "A different plugin with that name is already in your plugins folder" when the same plugin was already installed from the store. A private test now replaces a store copy or an older test copy (you still confirm it first, and the store version is saved so you can go back). The real store install can also replace a test copy. Only a folder you copied by hand is still protected, and the message now says how to fix it.

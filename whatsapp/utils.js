@@ -43,6 +43,12 @@ function getTargets(msg) {
   return [...new Set(list)];
 }
 
+// Only the people really tagged with @ in the message (getTargets also falls back to the person replied to)
+function getMentioned(msg) {
+  const info = getContextInfo(msg);
+  return [...new Set(Array.isArray(info.mentionedJid) ? info.mentionedJid : [])];
+}
+
 // The message that was replied to (or null)
 function getQuoted(msg) {
   const info = getContextInfo(msg);
@@ -143,5 +149,5 @@ module.exports = {
   isCommandText, getContextInfo,
   getInner,
   selfJid, whoIds, whoJid, jidVariants,
-  hasPhrase, num, getText, getTargets, getQuoted, quotedText, resolveTarget, participantIds, senderIds,
+  hasPhrase, num, getText, getTargets, getMentioned, getQuoted, quotedText, resolveTarget, participantIds, senderIds,
 };

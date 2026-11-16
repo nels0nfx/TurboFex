@@ -75,7 +75,7 @@ const PRELUDE = `(function () {
     var h = handlers[kind] && handlers[kind][name];
     if (typeof h !== 'function') { hd('fail', 'no such handler'); return; }
     var raw = JSON.parse(ctxJson);
-    var ctx = { args: raw.args, rest: raw.rest, prefix: raw.prefix, chat: raw.chat, sender: raw.sender, event: raw.event, text: raw.text, settings: Object.freeze(raw.settings || {}), members: raw.members, mentions: raw.mentions,
+    var ctx = { args: raw.args, rest: raw.rest, prefix: raw.prefix, chat: raw.chat, sender: raw.sender, event: raw.event, text: raw.text, settings: Object.freeze(raw.settings || {}), members: raw.members, mentions: raw.mentions, mentionsOwner: raw.mentionsOwner === true,
                 quoted: raw.quoted, hasMedia: raw.hasMedia,
                 reply: function (t) { return send('chat.send', { text: String(t) }); },
                 quote: function (t) { return ask('chat.quote', { text: String(t) }); },

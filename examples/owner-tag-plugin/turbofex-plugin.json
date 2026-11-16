@@ -1,0 +1,15 @@
+{
+  "manifestVersion": 1,
+  "id": "owner-tag-reply",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "minBotVersion": "1.6.5",
+  "name": "Owner Tag Reply",
+  "description": "Replies with your custom message when someone tags the owner in a group.",
+  "author": { "name": "TurboFex" },
+  "permissions": ["chat.send", "events.message"],
+  "events": ["message"],
+  "settings": [
+    { "key": "reply", "type": "text", "label": "Reply message", "description": "Sent when someone tags the owner", "default": "The owner is busy right now. Please leave your message and he will answer when he can.", "maxLength": 200 }
+  ]
+}

@@ -286,6 +286,27 @@ const mediaMessage = (m) => (m.kind === 'sticker' ? { sticker: m.buffer } : m.ki
 // Events (stage 1b): a plugin can listen to group messages that are not commands, and to members joining or leaving.
 // It never slows the bot: nothing is waited for, a plugin gets at most 10 events per 10 seconds, and when it is busy extra events are dropped.
 const evTimes = new Map();
+// Is the owner among the people tagged? WhatsApp may write the owner as a phone number OR as a hidden LID id,
+// so every way of naming the person is compared (the group's member list and the saved LID pairs help).
+async function ownerTagged(s, jid, mentioned) {
+  try {
+    if (!mentioned || !mentioned.length) return false;
+    const config = require('../../config'); const { num, participantIds } = require('../../whatsapp/utils');
+    const owner = String(config.ownerNumber || ''); if (!owner) return false;
+    const want = new Set([owner]);
+    const botIds = [s.user && s.user.id, s.user && s.user.lid].filter(Boolean).map(num);
+    if (botIds.includes(owner)) botIds.forEach((b) => want.add(b)); // the bot runs on the owner's own account
+    const idmap = require('../../whatsapp/idmap'); const meta = require('../../whatsapp/metadata');
+    let idx = null; try { idx = meta.indexOf(await meta.getMeta(s, jid)); } catch (e) { idx = null; }
+    for (const j of mentioned) {
+      const ids = [num(j)];
+      const pn = idmap.pnSync(j); if (pn) ids.push(num(pn));
+      const p = idx && idx.byId.get(num(j)); if (p) ids.push(...participantIds(p));
+      if (ids.some((x) => want.has(x))) return true;
+    }
+  } catch (e) { /* a failed check simply means "not tagged" */ }
+  return false;
+}
 const evPending = new Map();
 function emit(event, info) {
   if (!isRunning() || !info || !info.jid || !String(info.jid).endsWith('@g.us')) return;
@@ -299,9 +320,10 @@ function emit(event, info) {
     const ctx = { args: [], rest: '', prefix: prefixOf(), event, text: String(info.text || '').slice(0, 4000),
       members: (info.members || []).slice(0, 50).map((m) => seen(typeof m === 'string' ? m : (m && m.id) || '')),
       chat: { id: o(info.jid), isGroup: true, name: '' }, settings: settingsFor(id, info.jid),
+      mentions: (Array.isArray(info.mentioned) ? info.mentioned : []).slice(0, 10).map(seen), mentionsOwner: false,
       sender: info.senderJid ? { id: seen(info.senderJid), name: String(info.pushName || '').slice(0, 40), isAdmin: false, isOwner: false } : null };
     const extra = { send: (x) => s.sendMessage(info.jid, { text: x }), react: info.key ? (e) => s.sendMessage(info.jid, { react: { text: e, key: info.key } }) : null, sendMedia: (m) => s.sendMessage(info.jid, mediaMessage(m)), manage: makeManage(id, { s, jid: info.jid, people, actorOk: true }), groupInfo: null, ...richExtras(id, { s, jid: info.jid, people, seen, msg: null, isGroup: true, command: false, quoteMsg: event === 'message' && info.key ? { key: info.key, message: { conversation: String(info.text || '').slice(0, 200) } } : null }) };
-    Promise.resolve().then(() => getHost(id).call('event', event, ctx, extra)).catch((e) => log(id, 'event ' + event + ' failed: ' + (e.code || e.message))).finally(() => evPending.set(id, Math.max(0, (evPending.get(id) || 1) - 1)));
+    Promise.resolve().then(async () => { if (event === 'message') ctx.mentionsOwner = await ownerTagged(s, info.jid, info.mentioned); return getHost(id).call('event', event, ctx, extra); }).catch((e) => log(id, 'event ' + event + ' failed: ' + (e.code || e.message))).finally(() => evPending.set(id, Math.max(0, (evPending.get(id) || 1) - 1)));
   }
 }
 function startTimers() {
@@ -609,4 +631,4 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { ownerTagged, storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
