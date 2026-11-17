@@ -228,18 +228,21 @@ test('v1.6.6: there is no PLUGINS category; plugin commands sit in normal catego
   const f3 = makePlugin('cat-none'); assert.strictEqual(manifestLib.validate(f3, { botVersion: '1.6.6', taken: new Set() }).manifest.category, null);
 });
 
-test('v1.3.6: the sample that ships with the bot is found in examples and is copied into the plugins folder when installed', async () => {
+test('v1.6.11: the samples in examples are no longer offered to bot owners, and an old Hello sample is removed from a bot that has it', async () => {
   const state = require('../core/plugins/state');
-  assert.ok(state.folders().some((f) => f.endsWith(path.join('examples', 'hello-plugin'))));
+  assert.ok(!state.folders().some((f) => f.includes(path.sep + 'examples' + path.sep)));
   await run('plugin on', {});
-  assert.match(await run('plugin list', {}), /Hello.*hello-plugin/);
-  const code = (await run('plugin install hello-plugin', {})).match(/confirm (\w{4})/)[1];
-  assert.match(await run('plugin confirm ' + code, {}), /is ready/);
-  assert.ok(fs.existsSync(path.join(dir, 'plugins', 'hello-plugin', 'index.js')));
-  const a = ctxFor(); await commands.get('hello').run(a.c); assert.match(a.replies[0], /Times used:\* 1/);
-  const b = ctxFor(); await commands.get('hello').run(b.c); assert.match(b.replies[0], /Times used:\* 2/);
-  assert.strictEqual((await run('plugin list', {})).split('hello-plugin').length - 1, 1); // listed once
-  plugins.turnOff(); // stops the sandbox workers so the test run can end
+  assert.ok(!/hello-plugin/.test(await run('plugin list', {})));
+  const f = makePlugin('hello-plugin', {}, "tfx.command('hellohelloplugin', (c) => c.reply('hi'));");
+  state.open().data.installed['hello-plugin'] = { version: '1.0.0', sha: 'x', enabled: false, grants: [], blocked: [] };
+  plugins._dropSample();
+  assert.ok(!state.open().data.installed['hello-plugin'], 'the sample is removed');
+  assert.ok(!fs.existsSync(f));
+  state.open().data.installed['hello-plugin'] = { version: '1.0.0', sha: 'x', enabled: false, grants: [], blocked: [], store: { version: '1.0.0' } };
+  plugins._dropSample();
+  assert.ok(state.open().data.installed['hello-plugin'], 'a copy that came from the store is left alone');
+  delete state.open().data.installed['hello-plugin'];
+  plugins.turnOff();
 });
 
 const { Broker, sniff } = require('../core/plugins/broker');
@@ -278,6 +281,7 @@ test('v1.3.7 events: plugins hear joins and group messages only where allowed, n
   makePlugin('listener', { permissions: ['chat.send', 'events.message'], events: ['message'], commands: [{ name: 'listen', who: 'everyone', description: 'x' }] },
     "tfx.on('message', async (c) => { await c.reply('heard:' + c.text + ':' + c.sender.id.length + ':' + c.event); }); tfx.command('listen', (c) => c.reply('cmd'));");
   const codeA = (await run('plugin install listener', {})).match(/confirm (\w{4})/)[1]; await run('plugin confirm ' + codeA, {});
+  fs.cpSync(path.join(__dirname, '..', 'examples', 'welcome-plugin'), path.join(dir, 'plugins', 'welcome-plugin'), { recursive: true });
   const screen = await run('plugin install welcome-plugin', {});
   assert.match(screen, /Know when members join/); // the install screen says it in plain words
   const codeB = screen.match(/confirm (\w{4})/)[1];

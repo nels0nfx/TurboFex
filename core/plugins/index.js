@@ -50,6 +50,7 @@ async function start(s) {
     selftested = true;
   }
   status = { state: 'ready', reason: '' };
+  dropSample(); // the old Hello test plugin is removed from bots that still have it
   for (const [id, rec] of Object.entries(state.open().data.installed)) if (rec.enabled && !loaded.has(id)) activate(id, rec);
   startTimers(); try { purgeOldNotes(); } catch (e) { /* never stops the bot */ }
   if (!revTimer) { revTimer = setInterval(() => { checkWithdrawn(); setTimeout(() => checkUpdates(), Math.floor(Math.random() * 600000)).unref(); try { purgeOldNotes(); } catch (e) { /* ignore */ } }, 6 * 3600 * 1000); if (revTimer.unref) revTimer.unref(); }
@@ -57,6 +58,10 @@ async function start(s) {
   if (!wdTimer) { wdTimer = setInterval(() => checkWithdrawn(), 10 * 60 * 1000); if (wdTimer.unref) wdTimer.unref(); }
   setTimeout(() => checkUpdates(), 60000 + Math.floor(Math.random() * 300000)).unref();
   return status;
+}
+// the Hello sample was only a test: if a bot still has it (and it did not come from the store), it is removed once
+function dropSample() {
+  try { const rec = state.open().data.installed['hello-plugin']; if (rec && !rec.store) { const f = findFolder('hello-plugin'); remove('hello-plugin'); if (f) fs.rmSync(f, { recursive: true, force: true }); } } catch (e) { /* never stops the bot */ }
 }
 function stop() {
   if (statsTimer) { clearTimeout(statsTimer); statsTimer = null; }
@@ -672,4 +677,4 @@ function doctor() {
   const overlaps = Object.entries(listens).filter(([, names]) => names.length > 1).map(([event, names]) => ({ event, names }));
   return { list, overlaps };
 }
-module.exports = { ownerTagged, removeWithdrawn, doctor, setCategory, categoryOf, storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { _dropSample: () => dropSample(), ownerTagged, removeWithdrawn, doctor, setCategory, categoryOf, storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };

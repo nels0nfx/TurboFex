@@ -1,4 +1,4 @@
-# ⚡ TurboFex v1.6.10
+# ⚡ TurboFex v1.6.11
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and more.
@@ -105,7 +105,7 @@ which is why pm2, systemd or Docker's `restart: unless-stopped` are worth settin
 
 Plugins add extra commands made by other developers. They are **off** until the owner sends `.plugin on`, and each one runs in a sealed sandbox: it cannot read your files, passwords or other plugins. Plugins need Node.js 22 or newer; on older versions TurboFex works as usual without them.
 
-1. Copy a plugin folder into `data/plugins/` (see `examples/hello-plugin`).
+1. Copy a plugin folder into `data/plugins/` (see the plugin guide on the TurboFex site).
 2. Send `.plugin list`, then `.plugin install <name>`. The bot shows what the plugin asks for and gives you a code.
 3. Send `.plugin confirm <code>`. The plugin's commands now appear in the menu inside their normal category (for example GROUP or TOOLS), each marked with 〔P〕. A plugin can choose its category with an optional `"category"` line in its manifest, and you can move any plugin yourself with `.plugin category <name> <category>`.
 
