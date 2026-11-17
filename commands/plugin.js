@@ -47,7 +47,7 @@ module.exports = {
     if (!sub || sub === 'help') {
       return reply(
         `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'doctor')}  _(how every plugin is doing)_\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'collections')} / ${mono(p, 'bundle <name>')}  _(ready-made sets of plugins)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'test <code>')}  _(try a developer's unfinished plugin with a private code)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'doctor')}  _(how every plugin is doing)_\n▸ ${mono(p, 'category <name> <category>')}  _(where its commands sit in the menu)_\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'collections')} / ${mono(p, 'bundle <name>')}  _(ready-made sets of plugins)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'test <code>')}  _(try a developer's unfinished plugin with a private code)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
@@ -203,13 +203,20 @@ module.exports = {
       const ov = r.overlaps.map((o) => `▸ ⚠️ ${o.names.join(' and ')} both react to ${ev[o.event] || o.event}, so they may answer together.`);
       return reply(`🩺 *Plugin check*\n${r.list.map(line).join('\n')}${ov.length ? '\n*Overlap:*\n' + ov.join('\n') : ''}\n_Commands of a plugin are marked 〔P〕 in the menu._`);
     }
+    if (sub === 'category') {
+      const cats = require('../whatsapp/categories'); const want = (args[2] || '').toLowerCase();
+      if (!id || !want) return reply(`ℹ️ *Choose the menu category of a plugin.*\n▸ ${mono(p, 'category <name> <category>')}\n▸ ${mono(p, 'category <name> auto')}  _(let the bot choose)_\n▸ *Categories:* ${cats.PLUGIN_CATEGORIES.join(', ')}`);
+      const r = plugins.setCategory(id, want);
+      if (r.ok) return reply(`✅ *Saved.*\n▸ *Plugin:* ${id}\n▸ *Menu category:* ${cats.info[r.category].title}`);
+      return reply(r.why === 'unknown' ? `ℹ️ *I do not have a plugin called ${id}.*\n▸ _See them with_ ${mono(p, 'list')}` : `ℹ️ *That is not a category.*\n▸ *Choose one of:* ${cats.PLUGIN_CATEGORIES.join(', ')}, auto`);
+    }
     if (sub === 'log') {
       const l = plugins.logOf(id).slice(-15);
       return reply(l.length ? `📜 *${id}*\n${l.map((x) => '▸ ' + x).join('\n')}` : `📜 *Nothing to show for ${id} yet.*`);
     }
     if (sub === 'info') {
       const l = o.loaded.get(id); const g = rec.allowOnly ? `${rec.allowOnly.length} group(s) only` : 'every group';
-      return reply(`🧩 *${l ? l.manifest.name : id}*\n▸ *Version:* ${rec.version}\n▸ *Status:* ${rec.enabled ? 'on' : 'off' + (rec.reason ? ' (' + rec.reason + ')' : '')}\n${(plugins.settingsList(id, null) || []).length ? `▸ *Options:* ${mono(p, 'options ' + id)}\n` : ''}${rec.store ? `▸ *Updates:* ${rec.updateMode || 'notify'}${rec.previous ? ' (can go back to ' + rec.previous.version + ')' : ''}\n` : ''}▸ *Works in:* ${g}${rec.blocked && rec.blocked.length ? `, ${rec.blocked.length} blocked` : ''}\n▸ *Allowed to:* ${rec.grants.length ? rec.grants.join(', ') : 'nothing special'}`);
+      return reply(`🧩 *${l ? l.manifest.name : id}*\n▸ *Version:* ${rec.version}\n${plugins.categoryOf(id) ? `▸ *Menu category:* ${require('../whatsapp/categories').info[plugins.categoryOf(id)].title}${rec.category ? ' (your choice)' : ''}  _(change: ${mono(p, 'category ' + id + ' <category>')})_\n` : ''}▸ *Status:* ${rec.enabled ? 'on' : 'off' + (rec.reason ? ' (' + rec.reason + ')' : '')}\n${(plugins.settingsList(id, null) || []).length ? `▸ *Options:* ${mono(p, 'options ' + id)}\n` : ''}${rec.store ? `▸ *Updates:* ${rec.updateMode || 'notify'}${rec.previous ? ' (can go back to ' + rec.previous.version + ')' : ''}\n` : ''}▸ *Works in:* ${g}${rec.blocked && rec.blocked.length ? `, ${rec.blocked.length} blocked` : ''}\n▸ *Allowed to:* ${rec.grants.length ? rec.grants.join(', ') : 'nothing special'}`);
     }
     return reply(`ℹ️ *I did not understand that.*\n▸ _See what you can do with_ ${mono(p, 'help')}`);
   },

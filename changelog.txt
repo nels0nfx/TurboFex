@@ -1,3 +1,8 @@
+TurboFex v1.6.10 - plugins land in the right menu category
+CHANGED IN 1.6.10
+- FIXED: plugins without a `category` in their manifest were mostly put under TOOLS. The bot now guesses from the plugin's name and commands first, then its description, then the permissions it asks for (tag or reply plugins go to AUTOREPLY, group tools to GROUP, games to GAMES, and so on).
+- NEW: `.plugin category <name> <category>` puts a plugin's commands in the menu category you choose (`auto` gives the choice back to the bot). It changes the menu at once and is kept when the plugin updates. `.plugin info <name>` now shows the menu category.
+
 TurboFex v1.6.9 - withdrawn plugins disappear fast, and a plugin doctor
 CHANGED IN 1.6.9
 - CHANGED: when a plugin is withdrawn from the store, every bot that has it now REMOVES it (commands, files and the saved old copy) instead of only switching it off, and tells the owner. The bot asks the store every 10 minutes, and also when a plugin is used (at most every 5 minutes), so it is usually gone within minutes instead of hours. A bot that is offline removes it the next time it is online. Plugins added by hand or by a test code are never touched.

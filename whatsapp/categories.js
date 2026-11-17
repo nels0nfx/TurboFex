@@ -51,11 +51,32 @@ function groupByCategory(commandList, isOwner) {
 // The marker comes from the command itself (pluginId), so it appears and disappears with the plugin by itself.
 const PLUGIN_MARK = '〔P〕';
 const mark = (c) => (c && c.pluginId ? ' ' + PLUGIN_MARK : '');
-// The category a plugin command goes to: the one the plugin asked for (manifest "category"), else a sensible guess from what it does.
+// The category a plugin command goes to. In this order: 1) the owner's own choice (.plugin category), 2) the plugin's manifest "category",
+// 3) a guess from the plugin's name and commands, then its description, 4) a guess from the permissions it asks for, 5) TOOLS.
 const PLUGIN_CATEGORIES = Object.keys(info).filter((k) => k !== 'owner');
-function pluginCategory(manifest) {
+const GUESS = [ // the first match wins; words are matched at the start of a word
+  ['autoreply', /\b(mention|tagged?|auto-?repl|repl(y|ies)|respon[ds]|afk|away|busy|greet|answer)/],
+  ['group', /\b(group|member|admin|lock|unlock|mute|kick|ban|warn|welcome|invite|promote|demote|antilink|rules?)/],
+  ['security', /\b(spam|scam|virus|protect|secur|filter|block|safe)/],
+  ['games', /\b(game|quiz|trivia|dice|riddle|puzzle|play)/],
+  ['ai', /\b(ai|gpt|chatbot|assistant|smart)\b/],
+  ['download', /\b(download|youtube|tiktok|instagram|facebook)/],
+  ['audio', /\b(audio|music|song|mp3|voice|podcast)/],
+  ['video', /\b(video|movie|clip)/],
+  ['media', /\b(sticker|image|photo|picture|media|gif)/],
+  ['lookup', /\b(lookup|search|weather|dictionary|translat|defin|price|rate|currency|convert|time ?zone)/],
+  ['budget', /\b(budget|expense|money|saving|finance|loan)/],
+  ['status', /\b(status|story)/],
+  ['fun', /\b(fun|joke|meme|quote|fact|funny|roast|compliment)/],
+  ['general', /\b(help|info|about|ping|menu)\b/],
+];
+function pluginCategory(manifest, owned) {
+  if (owned && info[owned] && owned !== 'owner') return owned;
   const want = manifest && manifest.category;
   if (want && info[want] && want !== 'owner') return want;
+  const names = ((manifest && manifest.name) || '') + ' ' + (((manifest && manifest.commands) || []).map((c) => (typeof c === 'string' ? c : c && c.name) || '').join(' '));
+  const words = (t) => String(t).toLowerCase().replace(/[_.-]+/g, ' ');
+  for (const text of [words(names), words((manifest && manifest.description) || '')]) for (const [cat, re] of GUESS) if (re.test(text)) return cat;
   const perms = (manifest && manifest.permissions) || [];
   if (perms.some((p) => p.startsWith('group.'))) return 'group';
   if (perms.some((p) => p.startsWith('media.'))) return 'media';

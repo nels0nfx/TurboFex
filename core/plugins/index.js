@@ -102,8 +102,9 @@ function deactivate(id) {
   const t = timers.get(id); if (t) { for (const x of t) clearInterval(x); timers.delete(id); }
 }
 function standIn(id, manifest, c) {
+  const rec = state.used() ? state.open().data.installed[id] : null; // holds the owner's own category choice, if any
   return {
-    name: c.name, aliases: c.aliases, category: require('../../whatsapp/categories').pluginCategory(manifest), description: c.description, usage: c.usage || undefined, pluginId: id,
+    name: c.name, aliases: c.aliases, category: require('../../whatsapp/categories').pluginCategory(manifest, rec && rec.category), description: c.description, usage: c.usage || undefined, pluginId: id,
     ownerOnly: c.who === 'owner', adminOnly: c.who === 'admin', groupOnly: c.groupOnly, everyone: false, capacity: { needs: [], weight: 'light' },
     deniedIn: (jid) => denied(id, jid),
     run: (ctx) => invoke(id, 'command', c.name, ctx),
@@ -609,6 +610,17 @@ function setEnabled(id, on) {
   if (!activate(id, rec)) return { ok: false, why: 'changed', reason: rec.reason };
   state.open().touch(); startTimers(); return { ok: true };
 }
+// the owner puts a plugin's commands in another menu category (or back to automatic); the menu changes at once
+function setCategory(id, cat) {
+  const rec = state.open().data.installed[id]; if (!rec) return { ok: false, why: 'unknown' };
+  const cats = require('../../whatsapp/categories'); cat = String(cat || '').toLowerCase();
+  if (cat === 'auto') delete rec.category; else if (cats.PLUGIN_CATEGORIES.includes(cat)) rec.category = cat; else return { ok: false, why: 'bad' };
+  state.open().touch();
+  const l = loaded.get(id); const now = cats.pluginCategory(l && l.manifest, rec.category);
+  if (l) for (const c of l.cmds) c.category = now;
+  return { ok: true, category: now };
+}
+function categoryOf(id) { const l = loaded.get(id); const rec = state.used() ? state.open().data.installed[id] : null; return l ? require('../../whatsapp/categories').pluginCategory(l.manifest, rec && rec.category) : null; }
 function remove(id) {
   const d = state.open().data; if (!d.installed[id]) return false;
   deactivate(id); delete d.installed[id];
@@ -660,4 +672,4 @@ function doctor() {
   const overlaps = Object.entries(listens).filter(([, names]) => names.length > 1).map(([event, names]) => ({ event, names }));
   return { list, overlaps };
 }
-module.exports = { ownerTagged, removeWithdrawn, doctor, storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { ownerTagged, removeWithdrawn, doctor, setCategory, categoryOf, storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };

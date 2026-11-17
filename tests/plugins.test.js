@@ -201,6 +201,14 @@ test('v1.6.6: there is no PLUGINS category; plugin commands sit in normal catego
   assert.strictEqual(categories.mark({ name: 'ping' }), ''); assert.strictEqual(categories.mark({ name: 'x', pluginId: 'p' }), ' 〔P〕');
   const pc = categories.pluginCategory;
   assert.strictEqual(pc({ category: 'fun' }), 'fun'); assert.strictEqual(pc({ category: 'owner' }), 'tools'); assert.strictEqual(pc({ category: 'nonsense' }), 'tools');
+  // the guess from names and descriptions (the plugin gave no category)
+  assert.strictEqual(pc({ name: 'Owner Tag Reply', description: 'Replies with your custom message when someone mentions the owner in a group.', permissions: ['chat.send', 'events.message'], events: ['message'], commands: [] }), 'autoreply');
+  assert.strictEqual(pc({ name: 'Mention', description: 'Tag everyone', permissions: ['chat.send'], commands: ['mention'] }), 'autoreply');
+  assert.strictEqual(pc({ name: 'LockGroup', description: 'Close or open the group.', permissions: ['group.manage'], commands: ['lockgroup'] }), 'group');
+  assert.strictEqual(pc({ name: 'Dice Fun', description: 'Roll a dice.', permissions: ['chat.send'], commands: ['roll'] }), 'games');
+  assert.strictEqual(pc({ name: 'Zzz', description: 'Does things.', permissions: ['chat.send'], commands: ['zzz'] }), 'tools');
+  assert.strictEqual(pc({ category: 'fun', name: 'LockGroup' }), 'fun'); // the manifest beats the guess
+  assert.strictEqual(pc({ category: 'fun', name: 'LockGroup' }, 'media'), 'media'); // the owner's choice beats everything
   assert.strictEqual(pc({ permissions: ['chat.send', 'group.manage'] }), 'group'); assert.strictEqual(pc({ permissions: ['media.send'] }), 'media');
   assert.strictEqual(pc({ permissions: ['chat.send'], events: ['message'], commands: [] }), 'autoreply'); assert.strictEqual(pc({ permissions: ['chat.send'], commands: [{}] }), 'tools');
   const list = [{ name: 'ping', category: 'general' }, { name: 'lockgroup', category: 'group', pluginId: 'lock' }, { name: 'mention', category: 'autoreply', pluginId: 'm' }];
@@ -394,4 +402,14 @@ test('v1.6.9 doctor: lists installed plugins and what they are doing', () => {
   assert.ok(a && a.enabled === false && a.running === false && a.reason === 'kept failing');
   assert.ok(Array.isArray(r.overlaps));
   delete state.open().data.installed['doc-a'];
+});
+
+test('v1.6.10: the owner can choose the menu category of a plugin, or go back to automatic', () => {
+  const state = require('../core/plugins/state');
+  state.open().data.installed['cat-x'] = { version: '1.0.0', sha: 'x', enabled: false, grants: [] };
+  assert.deepStrictEqual(plugins.setCategory('cat-x', 'games'), { ok: true, category: 'games' });
+  assert.strictEqual(state.open().data.installed['cat-x'].category, 'games');
+  assert.strictEqual(plugins.setCategory('cat-x', 'owner').ok, false); assert.strictEqual(plugins.setCategory('cat-x', 'nonsense').why, 'bad'); assert.strictEqual(plugins.setCategory('nope', 'fun').why, 'unknown');
+  assert.strictEqual(plugins.setCategory('cat-x', 'auto').ok, true); assert.strictEqual(state.open().data.installed['cat-x'].category, undefined);
+  delete state.open().data.installed['cat-x'];
 });
