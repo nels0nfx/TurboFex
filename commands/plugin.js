@@ -47,7 +47,7 @@ module.exports = {
     if (!sub || sub === 'help') {
       return reply(
         `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'collections')} / ${mono(p, 'bundle <name>')}  _(ready-made sets of plugins)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'test <code>')}  _(try a developer's unfinished plugin with a private code)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'doctor')}  _(how every plugin is doing)_\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'collections')} / ${mono(p, 'bundle <name>')}  _(ready-made sets of plugins)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'test <code>')}  _(try a developer's unfinished plugin with a private code)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
@@ -195,6 +195,13 @@ module.exports = {
       if (!isGroup) return reply(`ℹ️ *Use this inside the group you mean.*`);
       if (!plugins.groupRule(id, jid, mode)) return reply(`ℹ️ *Choose what to do in this group.*\n▸ ${mono(p, `groups ${id} allow`)}\n▸ ${mono(p, `groups ${id} deny`)}\n▸ ${mono(p, `groups ${id} only`)}  _(only the groups where you used it)_\n▸ ${mono(p, `groups ${id} all`)}  _(every group)_`);
       return reply(`✅ *Saved for this group.*\n▸ *Plugin:* ${id}\n▸ *Choice:* ${mode}`);
+    }
+    if (sub === 'doctor') {
+      const r = plugins.doctor(); if (!r.list.length) return reply(`🩺 *No plugins are installed.*\n▸ _See what is available with_ ${mono(p, 'store')}`);
+      const line = (x) => !x.enabled ? `▸ ⏸ *${x.name}* ${x.version} — off${x.reason ? ' (it ' + x.reason + ')' : ''}` : !x.running ? `▸ ⚠️ *${x.name}* ${x.version} — on, but not running` : x.bad ? `▸ ⚠️ *${x.name}* ${x.version} — ${x.bad} problem${x.bad === 1 ? '' : 's'} lately, see ${mono(p, 'log ' + x.id)}` : `▸ ✅ *${x.name}* ${x.version} — fine`;
+      const ev = { message: 'every group message', 'member.join': 'every new member', 'member.leave': 'every member who leaves', 'member.promote': 'every new admin', 'member.demote': 'every admin who is removed' };
+      const ov = r.overlaps.map((o) => `▸ ⚠️ ${o.names.join(' and ')} both react to ${ev[o.event] || o.event}, so they may answer together.`);
+      return reply(`🩺 *Plugin check*\n${r.list.map(line).join('\n')}${ov.length ? '\n*Overlap:*\n' + ov.join('\n') : ''}\n_Commands of a plugin are marked 〔P〕 in the menu._`);
     }
     if (sub === 'log') {
       const l = plugins.logOf(id).slice(-15);

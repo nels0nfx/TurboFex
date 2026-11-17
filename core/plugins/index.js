@@ -54,11 +54,13 @@ async function start(s) {
   startTimers(); try { purgeOldNotes(); } catch (e) { /* never stops the bot */ }
   if (!revTimer) { revTimer = setInterval(() => { checkWithdrawn(); setTimeout(() => checkUpdates(), Math.floor(Math.random() * 600000)).unref(); try { purgeOldNotes(); } catch (e) { /* ignore */ } }, 6 * 3600 * 1000); if (revTimer.unref) revTimer.unref(); }
   setTimeout(() => checkWithdrawn(), 15000).unref(); scheduleStats();
+  if (!wdTimer) { wdTimer = setInterval(() => checkWithdrawn(), 10 * 60 * 1000); if (wdTimer.unref) wdTimer.unref(); }
   setTimeout(() => checkUpdates(), 60000 + Math.floor(Math.random() * 300000)).unref();
   return status;
 }
 function stop() {
   if (statsTimer) { clearTimeout(statsTimer); statsTimer = null; }
+  if (wdTimer) { clearInterval(wdTimer); wdTimer = null; }
   if (revTimer) { clearInterval(revTimer); revTimer = null; } for (const t of timers.values()) clearInterval(t); timers.clear(); for (const h of hosts.values()) h.stop(); hosts.clear(); }
 async function turnOn() { state.open().data.enabled = true; state.open().touch(); return start(sock); }
 function turnOff() {
@@ -176,6 +178,7 @@ function plainCtx(id, c, extra) {
 }
 async function invoke(id, kind, name, c) {
   const p = c.prefix || prefixOf();
+  checkSoon(); // has the store withdrawn it? (never waits)
   if (!isRunning() || !loaded.has(id)) return c.reply('⚠️ *This command is not available right now.*\n▸ _Please try again in a little while._');
   try {
     const { ctx, extra } = plainCtx(id, c);
@@ -311,6 +314,7 @@ async function ownerTagged(s, jid, mentioned) {
 const evPending = new Map();
 function emit(event, info) {
   if (!isRunning() || !info || !info.jid || !String(info.jid).endsWith('@g.us')) return;
+  checkSoon();
   for (const [id, l] of loaded) {
     if (!l.manifest.events.includes(event) || denied(id, info.jid)) continue;
     const t = Date.now(); const recent = (evTimes.get(id) || []).filter((x) => t - x < 10000);
@@ -457,13 +461,26 @@ async function updatesAvailable() {
   return out;
 }
 // A plugin the store withdrew (for safety) is switched off on this bot and the owner is told. If the store cannot be reached, nothing changes.
+// A plugin the owner of the store withdraws is REMOVED from every bot that has it (not only switched off).
+// A bot cannot be told from outside, so it asks: every 10 minutes, and also when a plugin is used (at most once every 5 minutes).
+let wdBusy = false; let wdLast = 0; let wdTimer = null;
 async function checkWithdrawn() {
+  if (wdBusy) return; wdBusy = true; wdLast = Date.now();
   try {
     if (!isRunning() || !registry.configured()) return;
-    const mine = Object.entries(state.open().data.installed).filter(([, r]) => r.store && r.enabled); if (!mine.length) return;
+    const mine = Object.entries(state.open().data.installed).filter(([, r]) => r.store); if (!mine.length) return;
     const index = await registry.getIndex(true);
-    for (const [id, rec] of mine) if (registry.isRevoked(index, id, rec.store.version)) onDisabled(id, 'withdrawn');
-  } catch (e) { /* offline or no store: keep running */ }
+    for (const [id, rec] of mine) if (registry.isRevoked(index, id, rec.store.version)) removeWithdrawn(id);
+  } catch (e) { /* offline or no store: keep running */ } finally { wdBusy = false; }
+}
+const checkSoon = () => { if (!wdBusy && Date.now() - wdLast > 5 * 60 * 1000) checkWithdrawn(); };
+function removeWithdrawn(id) {
+  const l = loaded.get(id); const name = l ? l.manifest.name : id; const folder = findFolder(id);
+  if (!remove(id)) return false;
+  try { if (folder) fs.rmSync(folder, { recursive: true, force: true }); } catch (e) { /* the plugin is already off */ }
+  try { fs.rmSync(state.previousDir(id), { recursive: true, force: true }); } catch (e) { /* nothing saved */ }
+  tellOwner(`🚫 *${name} was removed from the TurboFex store, so I removed it from your bot.*\n▸ _Its commands are gone from the menu._`);
+  return true;
 }
 
 
@@ -632,4 +649,15 @@ function overview() {
   return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
-module.exports = { ownerTagged, storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+// `.plugin doctor`: how every installed plugin is doing, in plain facts (no secrets, nothing is changed)
+function doctor() {
+  const d = state.used() ? state.open().data.installed : {}; const list = []; const listens = {};
+  for (const [id, rec] of Object.entries(d)) {
+    const l = loaded.get(id); const m = l && l.manifest; const bad = logOf(id).filter((x) => /failed|refused|too long/i.test(x)).length;
+    list.push({ id, name: m ? m.name : id, version: rec.version, enabled: !!rec.enabled, running: !!l, reason: rec.reason || null, fromStore: !!rec.store, bad, commands: m ? m.commands.map((c) => c.name) : [] });
+    if (l) for (const e of m.events || []) (listens[e] = listens[e] || []).push(m.name);
+  }
+  const overlaps = Object.entries(listens).filter(([, names]) => names.length > 1).map(([event, names]) => ({ event, names }));
+  return { list, overlaps };
+}
+module.exports = { ownerTagged, removeWithdrawn, doctor, storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };

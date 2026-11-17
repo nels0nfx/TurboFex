@@ -1,4 +1,4 @@
-# ⚡ TurboFex v1.6.8
+# ⚡ TurboFex v1.6.9
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and more.
@@ -109,7 +109,7 @@ Plugins add extra commands made by other developers. They are **off** until the 
 2. Send `.plugin list`, then `.plugin install <name>`. The bot shows what the plugin asks for and gives you a code.
 3. Send `.plugin confirm <code>`. The plugin's commands now appear in the menu inside their normal category (for example GROUP or TOOLS), each marked with 〔P〕. A plugin can choose its category with an optional `"category"` line in its manifest.
 
-`.plugin off` removes every plugin command at once. Inside a group, `.plugin groups <name> deny` turns a plugin off for that group only.
+`.plugin doctor` shows how every plugin is doing. If a plugin is withdrawn from the TurboFex store, your bot removes it by itself within about 10 minutes and tells you. `.plugin off` removes every plugin command at once. Inside a group, `.plugin groups <name> deny` turns a plugin off for that group only.
 
 ## Several accounts on the same server
 

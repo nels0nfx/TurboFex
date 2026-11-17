@@ -376,3 +376,22 @@ test('v1.6.5: the owner counts as tagged by phone number, hidden ID or the group
   assert.strictEqual(getMentioned({ message: { extendedTextMessage: { contextInfo: { participant: owner + '@s.whatsapp.net', quotedMessage: {} } } } }).length, 0); // a reply alone is not a tag
   assert.deepStrictEqual(getMentioned({ message: { extendedTextMessage: { text: '@1', contextInfo: { mentionedJid: ['1@lid', '1@lid'] } } } }), ['1@lid']);
 });
+
+test('v1.6.9: a plugin withdrawn from the store is removed from the bot (record, folder and saved copy)', () => {
+  const state = require('../core/plugins/state');
+  const f = makePlugin('gone-soon'); assert.ok(fs.existsSync(f));
+  const prev = path.join(state.previousDir('gone-soon'), '1.0.0'); fs.mkdirSync(prev, { recursive: true });
+  state.open().data.installed['gone-soon'] = { version: '1.0.0', sha: 'x', enabled: false, grants: [], store: { version: '1.0.0' } };
+  assert.strictEqual(plugins.removeWithdrawn('gone-soon'), true);
+  assert.ok(!state.open().data.installed['gone-soon']); assert.ok(!fs.existsSync(f)); assert.ok(!fs.existsSync(state.previousDir('gone-soon')));
+  assert.strictEqual(plugins.removeWithdrawn('gone-soon'), false); // asking twice is harmless
+});
+
+test('v1.6.9 doctor: lists installed plugins and what they are doing', () => {
+  const state = require('../core/plugins/state');
+  state.open().data.installed['doc-a'] = { version: '1.0.0', sha: 'x', enabled: false, reason: 'kept failing', grants: [] };
+  const r = plugins.doctor(); const a = r.list.find((x) => x.id === 'doc-a');
+  assert.ok(a && a.enabled === false && a.running === false && a.reason === 'kept failing');
+  assert.ok(Array.isArray(r.overlaps));
+  delete state.open().data.installed['doc-a'];
+});

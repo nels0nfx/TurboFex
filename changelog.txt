@@ -1,3 +1,8 @@
+TurboFex v1.6.9 - withdrawn plugins disappear fast, and a plugin doctor
+CHANGED IN 1.6.9
+- CHANGED: when a plugin is withdrawn from the store, every bot that has it now REMOVES it (commands, files and the saved old copy) instead of only switching it off, and tells the owner. The bot asks the store every 10 minutes, and also when a plugin is used (at most every 5 minutes), so it is usually gone within minutes instead of hours. A bot that is offline removes it the next time it is online. Plugins added by hand or by a test code are never touched.
+- NEW: `.plugin doctor` shows every installed plugin with a plain verdict (fine, off and why, problems lately) and warns when two plugins react to the same thing, for example every group message. It changes nothing.
+
 TurboFex v1.6.8 - tidier reply when there are no plugin commands
 CHANGED IN 1.6.8
 - CHANGED: `.menu plugins` with no plugin commands now answers in the usual TurboFex style (bold title, ▸ line).
