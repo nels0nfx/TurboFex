@@ -47,7 +47,7 @@ test('bot: collectionsOf drops odd shapes; the commands list, show and prepare a
   registry._test.setKey(tool.publicPem()); serve();
   assert.deepStrictEqual(registry.collectionsOf({}), []);
   assert.deepStrictEqual(registry.collectionsOf({ collections: [{ id: 'ok-set', name: 'N', plugins: ['aaa', 'bbb'] }, { id: 'ok-set', name: 'dupe', plugins: ['aaa'] }, { id: 'X', plugins: ['aaa'] }, { id: 'no-list', name: 'x' }] }).map((x) => x.id), ['ok-set']);
-  await run('plugin on');
+  await plugins.start();
   const list = (await run('plugin collections')).join('\n');
   assert.match(list, /Starter set\* `starter-set` \(3 plugins\)/, 'the missing plugin is not counted');
   const one = (await run('plugin collection starter-set')).join('\n');
@@ -79,4 +79,4 @@ test('bot: a collection with a bad signature is not trusted; without collections
   assert.match((await run('plugin collections')).join('\n'), /No collections yet/);
 });
 
-test('the bot version is 1.6.11', () => { assert.strictEqual(require('../package.json').version, '1.6.11'); });
+test('the bot version is 1.7.0', () => { assert.strictEqual(require('../package.json').version, '1.7.0'); });

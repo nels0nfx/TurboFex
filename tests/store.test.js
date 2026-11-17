@@ -32,7 +32,7 @@ const resign = () => { const b = fs.readFileSync(path.join(reg, 'index.json')); 
 test('the store is closed when no public key is set, and the bot says so', async () => {
   registry._test.setKey(''); // pretend no key is installed
   assert.strictEqual(registry.configured(), false);
-  await run('plugin on', {});
+  await plugins.start();
   assert.match(await run('plugin store', {}), /not open yet/);
   assert.match(await run('plugin install nothing-here', {}), /not open yet|could not find/);
 });

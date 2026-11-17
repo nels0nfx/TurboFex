@@ -1,3 +1,11 @@
+TurboFex v1.7.0 - plugins that come with the bot
+CHANGED IN 1.7.0
+- NEW: TurboFex can put a store plugin on EVERY bot by itself. The choice is made in the TurboFex admin dashboard and signed with the store, so a bot only follows it when it is genuine. New bots get the plugin as soon as they start, and bots that already run get it within about 10 minutes of the next check (or after an update). It is installed with the permissions it asks for, without a confirm step, and the owner gets a short message.
+- NEW: a plugin that comes with the bot is either installed AND on, or installed and left for the owner to switch on with `.plugin enable <name>`. Owners cannot remove these plugins, and an "installed and on" plugin cannot be switched off. `.plugin list` and `.plugin info` show "comes with the bot". They update by themselves.
+- NEW: when TurboFex stops sending a plugin, every bot that has it removes it (and the plugin is no longer added to new bots). If it is still in the store, owners can install it themselves.
+- CHANGED: plugins are always on now, so `.plugin on` and `.plugin off` are gone (they just explain this). Use `.plugin enable <name>` and `.plugin disable <name>` for a single plugin you added yourself. Bots that had plugins switched off start them again.
+- CHANGED: README, `.plugin` help and the plugin pages no longer say plugins are off by default.
+
 TurboFex v1.6.11 - sample plugins cleaned out
 CHANGED IN 1.6.11
 - CHANGED: the sample plugins that came with the bot (Hello, Welcome, Lock, Owner tag) are no longer listed or offered by `.plugin list` and `.plugin install`. Plugins now come only from the store or from your own `data/plugins/` folder.

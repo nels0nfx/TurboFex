@@ -6,7 +6,7 @@ const crypto = require('node:crypto');
 const jsonstore = require('../jsonstore');
 const { DATA, ROOT } = require('../paths');
 
-const DEFAULTS = { enabled: false, secret: '', max: 8, guardMb: 96, installed: {} };
+const DEFAULTS = { enabled: true, secret: '', max: 8, guardMb: 96, installed: {} };
 let store = null;
 
 const dir = () => path.join(DATA, 'plugins');
@@ -18,7 +18,8 @@ function open() {
   }
   return store;
 }
-const isEnabled = () => used() && open().data.enabled === true;
+// plugins are always on (there is no switch any more); only the single plugins can be turned on and off
+const isEnabled = () => true;
 // each plugin has its own small saved file; one plugin can never read another one's data
 const dataStore = (id) => jsonstore.open('plugin-data-' + id, { kv: {} });
 // the plugin never sees real chat or phone ids: it gets a short code that is different for every plugin

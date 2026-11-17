@@ -83,6 +83,17 @@ function collectionsOf(index) {
   }
   return out.slice(0, MAX_COLLECTIONS);
 }
+// the plugins TurboFex puts on every bot: [{ id, mode }] with mode 'activate' (installed and on) or 'install' (installed, the owner switches it on).
+// null when the index has no such list (an older store): a bot then changes nothing and removes nothing.
+function preinstallOf(index) {
+  if (!index || !Array.isArray(index.preinstall)) return null;
+  const out = [];
+  for (const e of index.preinstall) {
+    if (!e || typeof e !== 'object' || !/^[a-z0-9-]{3,32}$/.test(String(e.id)) || !['install', 'activate'].includes(e.mode) || out.some((x) => x.id === e.id)) continue;
+    out.push({ id: String(e.id), mode: e.mode });
+  }
+  return out.slice(0, 30);
+}
 const isRevoked = (index, id, version) => (index.revoked || []).some((r) => r.id === id && (!r.version || r.version === version));
 const latestOf = (index, id) => {
   const p = index.plugins[id]; if (!p) return null;
@@ -128,5 +139,5 @@ async function fetchPlugin(id, wanted) {
   return { ok: true, version, folder: to };
 }
 const storeVersionOf = (folder) => { try { return fs.readFileSync(path.join(folder, '.from-store'), 'utf8').trim(); } catch (e) { return null; } };
-module.exports = { collectionsOf, configured, getIndex, verifyIndex, list, latestOf, isRevoked, fetchPlugin, storeVersionOf, semverCmp, sha, BASE,
+module.exports = { preinstallOf, collectionsOf, configured, getIndex, verifyIndex, list, latestOf, isRevoked, fetchPlugin, storeVersionOf, semverCmp, sha, BASE,
   _test: { setFetcher: (f) => { fetcher = f; cache = null; }, setKey: (k, backups) => { keyOverride = k; backupOverride = backups || null; cache = null; }, verifyIndex, reset: () => { cache = null; fetcher = null; keyOverride = null; backupOverride = null; activeBase = null; } } };

@@ -36,7 +36,7 @@ const rec = (id) => plugins.overview().installed[id];
 
 test('setup: a signed store with one plugin, installed', async () => {
   tool.keygen(); registry._test.setKey(tool.publicPem()); tool.init(reg); pubWith('mode-one', '1.0.0'); serve();
-  await run('plugin on', {}); plugins.attach(commands, commandList); await plugins.turnOn(); await plugins.start(sock);
+  plugins.attach(commands, commandList); await plugins.turnOn(); await plugins.start(sock);
   assert.match(await install('mode-one'), /is ready/);
   assert.strictEqual(rec('mode-one').updateMode, undefined, 'default is notify');
 });

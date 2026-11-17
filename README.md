@@ -1,4 +1,4 @@
-# ⚡ TurboFex v1.6.11
+# ⚡ TurboFex v1.7.0
 
 **TurboFex is a WhatsApp bot that helps you run your groups and gives your chats tools, games and fun.**
 It protects groups from spam and links, welcomes new members, answers questions, makes stickers, plays games, and more.
@@ -103,11 +103,12 @@ which is why pm2, systemd or Docker's `restart: unless-stopped` are worth settin
 
 ## Plugins
 
-Plugins add extra commands made by other developers. They are **off** until the owner sends `.plugin on`, and each one runs in a sealed sandbox: it cannot read your files, passwords or other plugins. Plugins need Node.js 22 or newer; on older versions TurboFex works as usual without them.
+Plugins add extra commands made by other developers. Plugins are always ready to use, and each one runs in a sealed sandbox: it cannot read your files, passwords or other plugins. Plugins need Node.js 22 or newer; on older versions TurboFex works as usual without them.
 
-1. Copy a plugin folder into `data/plugins/` (see the plugin guide on the TurboFex site).
-2. Send `.plugin list`, then `.plugin install <name>`. The bot shows what the plugin asks for and gives you a code.
-3. Send `.plugin confirm <code>`. The plugin's commands now appear in the menu inside their normal category (for example GROUP or TOOLS), each marked with 〔P〕. A plugin can choose its category with an optional `"category"` line in its manifest, and you can move any plugin yourself with `.plugin category <name> <category>`.
+1. Send `.plugin store` to see the plugins in the TurboFex store, then `.plugin install <name>`. The bot shows what the plugin asks for and gives you a code.
+2. Send `.plugin confirm <code>`. The plugin's commands now appear in the menu inside their normal category (for example GROUP or TOOLS), each marked with 〔P〕. A plugin can choose its category with an optional `"category"` line in its manifest, and you can move any plugin yourself with `.plugin category <name> <category>`.
+
+Some plugins come with the bot. TurboFex adds them for you (new bots and every update), they cannot be removed, and they are either already on or waiting for you to switch them on with `.plugin enable <name>`. A plugin you added yourself can be switched off with `.plugin disable <name>` or removed with `.plugin remove <name>`.
 
 `.plugin doctor` shows how every plugin is doing. If a plugin is withdrawn from the TurboFex store, your bot removes it by itself within about 10 minutes and tells you. `.plugin off` removes every plugin command at once. Inside a group, `.plugin groups <name> deny` turns a plugin off for that group only.
 

@@ -28,9 +28,9 @@ function makePlugin(folder, over = {}, source) {
 const ctxFor = (over = {}) => { const replies = []; return { replies, c: { jid: '1203630000000@g.us', args: [], rest: '', prefix: '.', isGroup: true, isAdmin: true, isOwner: false, msg: { key: { participant: '27811111111@s.whatsapp.net' }, pushName: 'Sam' }, groupMetadata: { subject: 'Team', participants: [{ id: 'a', admin: 'admin' }, { id: 'b' }] }, reply: async (t) => { replies.push(t); }, ...over } }; };
 const run = async (line, over) => { const r = []; const parts = line.split(/\s+/).slice(1); await pluginCmd.run({ args: parts, rest: line, reply: async (t) => { r.push(t); }, prefix: '.', jid: '1203630000000@g.us', isGroup: true, ...over }); return r.join('\n'); };
 
-test('plugins are off by default and nothing is created on disk', () => {
+test('plugins have no on/off switch (always on), and nothing is created on disk before they start', () => {
   assert.strictEqual(plugins.overview().status.state, 'off');
-  assert.strictEqual(plugins.overview().enabled, false);
+  assert.strictEqual(plugins.overview().enabled, true);
   assert.ok(!fs.existsSync(path.join(dir, 'plugins.json')));
   assert.strictEqual(pluginCmd.ownerOnly, true);
 });
@@ -71,14 +71,15 @@ test('manifest: the entry file cannot leave the plugin folder, and a missing or 
   const h = makePlugin('linked'); fs.rmSync(path.join(h, 'index.js')); fs.writeFileSync(path.join(dir, 'outside.js'), 'x'); fs.symlinkSync(path.join(dir, 'outside.js'), path.join(h, 'index.js')); assert.ok(!manifestLib.validate(h, {}).ok);
 });
 
-test('.plugin: while plugins are off, install is not possible and the owner is told how to turn them on', async () => {
-  assert.match(await run('plugin list', {}), /Plugins are off/);
-  assert.match(await run('plugin install good-one', {}), /Plugins are off/);
+test('.plugin: before the plugin engine is running, install is not possible and the owner is told', async () => {
+  assert.match(await run('plugin list', {}), /not running/);
+  assert.match(await run('plugin install good-one', {}), /not running/);
 });
 
-test('.plugin on: the safety check runs and plugins start', async function () {
-  const r = await run('plugin on', {});
-  assert.match(r, /Plugins are on/, r);
+test('plugins start by themselves, and .plugin on / off only explain that', async function () {
+  assert.match(await run('plugin on', {}), /always on/);
+  assert.match(await run('plugin off', {}), /always on/);
+  await plugins.start();
   assert.ok(plugins.isRunning());
   assert.ok(fs.existsSync(path.join(dir, 'plugins.json')) || true);
 });
@@ -134,7 +135,7 @@ test('a plugin whose files were changed after install is not started until it is
   assert.ok(commands.has('helloeditable'));
   fs.appendFileSync(path.join(f, 'index.js'), '\n// changed');
   plugins.turnOff(); assert.ok(!commands.has('helloeditable'));
-  await run('plugin on', {});
+  await plugins.start();
   assert.ok(!commands.has('helloeditable'));
   assert.match(await run('plugin list', {}), /its files changed/);
   assert.match(await run('plugin enable editable', {}), /could not turn it on/);
@@ -183,8 +184,8 @@ test('only the most recently used plugins stay awake when a limit is set', async
   assert.ok(plugins._internals.hosts.size <= 2);
 });
 
-test('.plugin off removes every plugin command; the bot itself is untouched', async () => {
-  assert.match(await run('plugin off', {}), /Plugins are off/);
+test('stopping the plugins removes every plugin command; the bot itself is untouched', async () => {
+  plugins.turnOff();
   assert.ok(!commands.has('limone')); assert.ok(commands.has('ping')); assert.ok(!commandList.some((c) => c.pluginId));
   assert.strictEqual(plugins.isRunning(), false);
 });
@@ -231,7 +232,7 @@ test('v1.6.6: there is no PLUGINS category; plugin commands sit in normal catego
 test('v1.6.11: the samples in examples are no longer offered to bot owners, and an old Hello sample is removed from a bot that has it', async () => {
   const state = require('../core/plugins/state');
   assert.ok(!state.folders().some((f) => f.includes(path.sep + 'examples' + path.sep)));
-  await run('plugin on', {});
+  await plugins.start();
   assert.ok(!/hello-plugin/.test(await run('plugin list', {})));
   const f = makePlugin('hello-plugin', {}, "tfx.command('hellohelloplugin', (c) => c.reply('hi'));");
   state.open().data.installed['hello-plugin'] = { version: '1.0.0', sha: 'x', enabled: false, grants: [], blocked: [] };
@@ -276,7 +277,7 @@ test('v1.3.7 files: only real pictures, stickers and safe documents are accepted
 });
 
 test('v1.3.7 events: plugins hear joins and group messages only where allowed, never commands, never private chats', async () => {
-  await run('plugin on', {});
+  await plugins.start();
   const g = '1203630000000@g.us';
   makePlugin('listener', { permissions: ['chat.send', 'events.message'], events: ['message'], commands: [{ name: 'listen', who: 'everyone', description: 'x' }] },
     "tfx.on('message', async (c) => { await c.reply('heard:' + c.text + ':' + c.sender.id.length + ':' + c.event); }); tfx.command('listen', (c) => c.reply('cmd'));");
@@ -326,7 +327,7 @@ test('v1.3.7 app.json is valid and lists what a host needs to deploy the bot', (
 });
 
 test('v1.3.8 group management: the bot makes every safety check, a plugin cannot choose whom to remove', async () => {
-  await run('plugin on', {});
+  await plugins.start();
   const G = '1203631111111@g.us'; const BOT = '2799999999@s.whatsapp.net';
   const people = [{ id: BOT, admin: 'admin' }, { id: '27800000001@s.whatsapp.net' }, { id: '27844444444@s.whatsapp.net', admin: 'admin' }, { id: '27833333333@s.whatsapp.net' }, { id: '27855555555@s.whatsapp.net' }];
   const calls = [];
@@ -416,4 +417,33 @@ test('v1.6.10: the owner can choose the menu category of a plugin, or go back to
   assert.strictEqual(plugins.setCategory('cat-x', 'owner').ok, false); assert.strictEqual(plugins.setCategory('cat-x', 'nonsense').why, 'bad'); assert.strictEqual(plugins.setCategory('nope', 'fun').why, 'unknown');
   assert.strictEqual(plugins.setCategory('cat-x', 'auto').ok, true); assert.strictEqual(state.open().data.installed['cat-x'].category, undefined);
   delete state.open().data.installed['cat-x'];
+});
+
+test('v1.7.0: the signed list of preinstalled plugins is read safely and turned into a plan', () => {
+  const registry = require('../core/plugins/registry');
+  const idx = (pre, ids = ['aaa-one', 'bbb-two', 'ccc-three']) => ({ format: 1, plugins: Object.fromEntries(ids.map((i) => [i, { versions: { '1.0.0': {} } }])), revoked: [], preinstall: pre });
+  assert.strictEqual(registry.preinstallOf({ plugins: {} }), null, 'an older store has no list');
+  assert.deepStrictEqual(registry.preinstallOf(idx([{ id: 'aaa-one', mode: 'activate' }, { id: 'aaa-one', mode: 'install' }, { id: 'X!', mode: 'install' }, { id: 'bbb-two', mode: 'wild' }, null, { id: 'ccc-three', mode: 'install' }])), [{ id: 'aaa-one', mode: 'activate' }, { id: 'ccc-three', mode: 'install' }]);
+  // nothing installed: everything on the list is installed; an older store changes nothing
+  assert.deepStrictEqual(plugins.planPreinstall(idx([{ id: 'aaa-one', mode: 'activate' }, { id: 'bbb-two', mode: 'install' }]), {}).install.map((x) => x.id + ':' + x.mode), ['aaa-one:activate', 'bbb-two:install']);
+  assert.deepStrictEqual(plugins.planPreinstall({ plugins: {} }, { 'aaa-one': { preinstalled: { mode: 'activate' } } }), { install: [], adopt: [], remove: [] });
+  // already installed from the store: adopted; the owner's own plugin with the same name: left alone; one that left the list: removed
+  const have = { 'aaa-one': { store: { version: '1.0.0' } }, 'bbb-two': { version: '1.0.0' }, 'old-pre': { preinstalled: { mode: 'install' } }, 'mine-own': { version: '1.0.0' } };
+  const plan = plugins.planPreinstall(idx([{ id: 'aaa-one', mode: 'install' }, { id: 'bbb-two', mode: 'activate' }]), have);
+  assert.deepStrictEqual(plan.adopt.map((x) => x.id), ['aaa-one']); assert.deepStrictEqual(plan.install, []); assert.deepStrictEqual(plan.remove, ['old-pre']);
+  // a plugin the store no longer offers is not installed
+  assert.deepStrictEqual(plugins.planPreinstall({ ...idx([{ id: 'aaa-one', mode: 'install' }]), revoked: [{ id: 'aaa-one' }] }, {}).install, []);
+});
+
+test('v1.7.0: a preinstalled plugin cannot be removed, an activated one cannot be turned off, and the admin can still take it away', () => {
+  const state = require('../core/plugins/state'); const d = state.open().data;
+  d.installed['pre-act'] = { version: '1.0.0', sha: 'x', enabled: true, grants: [], blocked: [], store: { version: '1.0.0' }, preinstalled: { mode: 'activate' } };
+  d.installed['pre-ins'] = { version: '1.0.0', sha: 'x', enabled: false, grants: [], blocked: [], store: { version: '1.0.0' }, preinstalled: { mode: 'install' } };
+  assert.strictEqual(plugins.remove('pre-act'), false); assert.ok(d.installed['pre-act']);
+  assert.strictEqual(plugins.remove('pre-ins'), false); assert.ok(d.installed['pre-ins']);
+  assert.strictEqual(plugins.setEnabled('pre-act', false).why, 'locked'); assert.strictEqual(d.installed['pre-act'].enabled, true);
+  assert.strictEqual(plugins.setEnabled('pre-ins', false).ok, true, 'an install-only plugin can be switched off again');
+  assert.strictEqual(plugins.removeWithdrawn('pre-act', (n) => 'bye ' + n), true); assert.ok(!d.installed['pre-act'], 'the admin side can remove it');
+  assert.strictEqual(plugins.removeWithdrawn('pre-ins'), true); assert.ok(!d.installed['pre-ins']);
+  assert.strictEqual(plugins.doctor().list.some((x) => x.id === 'pre-act'), false);
 });

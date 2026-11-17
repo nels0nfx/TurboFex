@@ -33,7 +33,7 @@ test('manifest and risk: group.admins is a known permission and shown as high ri
 });
 
 test('promote, demote and rename: only in a command used by an admin, never from a listener; protected people and the creator are safe; rate limited', async () => {
-  await run('plugin on', {});
+  await plugins.start();
   const G = '1203632222222@g.us'; const BOT = '2799999999@s.whatsapp.net';
   const people = [{ id: BOT, admin: 'admin' }, { id: '27800000001@s.whatsapp.net' }, { id: '27844444444@s.whatsapp.net', admin: 'admin' }, { id: '27866666666@s.whatsapp.net', admin: 'superadmin' }, { id: '27833333333@s.whatsapp.net' }, { id: '27855555555@s.whatsapp.net' }];
   const calls = [];

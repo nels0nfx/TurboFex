@@ -56,7 +56,7 @@ test('manifest: settings are checked (types, defaults, limits)', () => {
 });
 
 test('setup: plugins on, plugin installed', async () => {
-  await run('plugin on', {}); assert.ok(plugins.isRunning());
+  await plugins.start(); assert.ok(plugins.isRunning());
   const r = await run('plugin install set-plug', {}); assert.match(await run('plugin confirm ' + r.match(/confirm (\w{4})/)[1], {}), /is ready/);
 });
 

@@ -1,6 +1,5 @@
 const plugins = require('../core/plugins');
 
-const NOT_ON = (p) => `ℹ️ *Plugins are off.*\n▸ *Turn them on:* \`${p}plugin on\``;
 const mono = (p, s) => `\`${p}plugin ${s}\``;
 const STORE_WHY = (p, why) => ({
   store_off: '▸ _The store is not open yet._',
@@ -19,21 +18,15 @@ const showInstall = (p, r) => {
 module.exports = {
   name: 'plugin',
   category: 'owner',
-  description: 'Add extra commands made by other developers: on/off, list, install, remove (owner only)',
+  description: 'Add extra commands made by other developers: list, install, enable, disable, remove (owner only)',
   ownerOnly: true,
   async run({ args, rest, reply, prefix: p, jid, isGroup }) {
     const sub = (args[0] || '').toLowerCase();
     const id = (args[1] || '').toLowerCase();
     const o = plugins.overview();
 
-    if (sub === 'on') {
-      const s = await plugins.turnOn();
-      if (s.state === 'ready') return reply(`✅ *Plugins are on.*\n▸ *See what is available:* ${mono(p, 'list')}`);
-      return reply(`⚠️ *Plugins could not be turned on.*\n▸ ${s.reason || 'Please try again in a moment.'}\n_Everything else keeps working as usual._`);
-    }
-    if (sub === 'off') {
-      plugins.turnOff();
-      return reply(`✅ *Plugins are off.*\n▸ _Their commands are gone until you turn them on again._`);
+    if (sub === 'on' || sub === 'off') {
+      return reply(`ℹ️ *Plugins are always on now.*\n▸ *Turn one plugin on or off:* ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ *See them:* ${mono(p, 'list')}`);
     }
 
     if (sub === 'set') {
@@ -46,20 +39,19 @@ module.exports = {
 
     if (!sub || sub === 'help') {
       return reply(
-        `🧩 *Plugins*\n▸ *Status:* ${o.enabled ? (o.status.state === 'ready' ? 'on' : 'on, but not running') : 'off'}\n` +
-          `▸ ${mono(p, 'on')} / ${mono(p, 'off')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'doctor')}  _(how every plugin is doing)_\n▸ ${mono(p, 'category <name> <category>')}  _(where its commands sit in the menu)_\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'collections')} / ${mono(p, 'bundle <name>')}  _(ready-made sets of plugins)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'test <code>')}  _(try a developer's unfinished plugin with a private code)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
+        `🧩 *Plugins*\n▸ *Status:* ${o.status.state === 'ready' ? 'on' : 'not running'}\n` +
+          `▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'list')}\n▸ ${mono(p, 'doctor')}  _(how every plugin is doing)_\n▸ ${mono(p, 'category <name> <category>')}  _(where its commands sit in the menu)_\n▸ ${mono(p, 'info <name>')}\n▸ ${mono(p, 'store')}  _(plugins from the TurboFex store)_\n▸ ${mono(p, 'collections')} / ${mono(p, 'bundle <name>')}  _(ready-made sets of plugins)_\n▸ ${mono(p, 'install <name>')}\n▸ ${mono(p, 'updates')} / ${mono(p, 'update <name>')}\n▸ ${mono(p, 'stats on|off')}  _(anonymous statistics, off by default)_\n▸ ${mono(p, 'rate <name> <1-5>')}  _(rate a store plugin; needs stats on)_\n▸ ${mono(p, 'test <code>')}  _(try a developer's unfinished plugin with a private code)_\n▸ ${mono(p, 'updatemode <name> notify|automatic|manual')}\n▸ ${mono(p, 'options <name>')} / ${mono(p, 'option <name> <option> <value>')}\n▸ ${mono(p, 'rollback <name>')}  _(go back to the version before the last update)_\n▸ ${mono(p, 'enable <name>')} / ${mono(p, 'disable <name>')}\n▸ ${mono(p, 'remove <name>')}\n▸ ${mono(p, 'groups <name> allow|deny|only|all')}  _(inside a group)_\n▸ ${mono(p, 'log <name>')}\n▸ ${mono(p, 'set max 8')} / ${mono(p, 'set guard 96')}\n_Copy a plugin folder into the bot's plugins folder, then install it._`
       );
     }
 
-    if (!o.enabled) return reply(NOT_ON(p));
-    if (!plugins.isRunning()) return reply(`⚠️ *Plugins are not running.*\n▸ ${o.status.reason || 'Please try again in a moment.'}\n_Use ${mono(p, 'on')} to try again._`);
+    if (!plugins.isRunning()) return reply(`⚠️ *Plugins are not running.*\n▸ ${o.status.reason || 'Please try again in a moment.'}\n_Try again in a moment._`);
 
     if (sub === 'list') {
       const lines = [];
       for (const f of o.folders) {
         if (!f.ok) { lines.push(`▸ ⚠️ *A folder is not a usable plugin:* ${f.errors[0]}`); continue; }
         const m = f.manifest; const rec = o.installed[m.id];
-        const st = !rec ? 'not installed' : rec.enabled ? 'on' : `off${rec.reason ? ' (' + rec.reason + ')' : ''}`;
+        const st = (!rec ? 'not installed' : rec.enabled ? 'on' : `off${rec.reason ? ' (' + rec.reason + ')' : ''}`) + (rec && rec.preinstalled ? ' · comes with the bot' : '');
         lines.push(`▸ *${m.name}* ${m.version}  _${st}_  \`${m.id}\``);
       }
       for (const [pid, rec] of Object.entries(o.installed)) if (!o.folders.some((f) => f.ok && f.manifest.id === pid)) lines.push(`▸ *${pid}* ${rec.version}  _folder missing_`);
@@ -188,8 +180,8 @@ module.exports = {
       const r = plugins.setEnabled(id, true);
       return reply(r.ok ? `✅ *${id} is on.*` : `⚠️ *I could not turn it on.*\n▸ ${r.reason ? 'Reason: ' + r.reason + '.' : ''}\n_Install it again with_ ${mono(p, 'install ' + id)}`);
     }
-    if (sub === 'disable') { plugins.setEnabled(id, false); return reply(`✅ *${id} is off.*\n▸ _Turn it on again with_ ${mono(p, 'enable ' + id)}`); }
-    if (sub === 'remove') { plugins.remove(id); return reply(`✅ *${id} was removed.*\n▸ _Its saved notes are kept for 30 days in case you install it again, then erased. The plugin folder can be deleted._`); }
+    if (sub === 'disable') { const r = plugins.setEnabled(id, false); if (!r.ok && r.why === 'locked') return reply(`ℹ️ *${id} comes with the bot and always stays on.*`); return reply(`✅ *${id} is off.*\n▸ _Turn it on again with_ ${mono(p, 'enable ' + id)}`); }
+    if (sub === 'remove') { if (rec.preinstalled) return reply(`ℹ️ *${id} comes with the bot and cannot be removed.*${rec.preinstalled.mode === 'install' ? `\n▸ _You can turn it off with_ ${mono(p, 'disable ' + id)}` : ''}`); plugins.remove(id); return reply(`✅ *${id} was removed.*\n▸ _Its saved notes are kept for 30 days in case you install it again, then erased. The plugin folder can be deleted._`); }
     if (sub === 'groups') {
       const mode = (args[2] || '').toLowerCase();
       if (!isGroup) return reply(`ℹ️ *Use this inside the group you mean.*`);
@@ -216,7 +208,7 @@ module.exports = {
     }
     if (sub === 'info') {
       const l = o.loaded.get(id); const g = rec.allowOnly ? `${rec.allowOnly.length} group(s) only` : 'every group';
-      return reply(`🧩 *${l ? l.manifest.name : id}*\n▸ *Version:* ${rec.version}\n${plugins.categoryOf(id) ? `▸ *Menu category:* ${require('../whatsapp/categories').info[plugins.categoryOf(id)].title}${rec.category ? ' (your choice)' : ''}  _(change: ${mono(p, 'category ' + id + ' <category>')})_\n` : ''}▸ *Status:* ${rec.enabled ? 'on' : 'off' + (rec.reason ? ' (' + rec.reason + ')' : '')}\n${(plugins.settingsList(id, null) || []).length ? `▸ *Options:* ${mono(p, 'options ' + id)}\n` : ''}${rec.store ? `▸ *Updates:* ${rec.updateMode || 'notify'}${rec.previous ? ' (can go back to ' + rec.previous.version + ')' : ''}\n` : ''}▸ *Works in:* ${g}${rec.blocked && rec.blocked.length ? `, ${rec.blocked.length} blocked` : ''}\n▸ *Allowed to:* ${rec.grants.length ? rec.grants.join(', ') : 'nothing special'}`);
+      return reply(`🧩 *${l ? l.manifest.name : id}*\n▸ *Version:* ${rec.version}\n${plugins.categoryOf(id) ? `▸ *Menu category:* ${require('../whatsapp/categories').info[plugins.categoryOf(id)].title}${rec.category ? ' (your choice)' : ''}  _(change: ${mono(p, 'category ' + id + ' <category>')})_\n` : ''}▸ *Status:* ${rec.enabled ? 'on' : 'off' + (rec.reason ? ' (' + rec.reason + ')' : '')}${rec.preinstalled ? ' · comes with the bot' : ''}\n${(plugins.settingsList(id, null) || []).length ? `▸ *Options:* ${mono(p, 'options ' + id)}\n` : ''}${rec.store ? `▸ *Updates:* ${rec.updateMode || 'notify'}${rec.previous ? ' (can go back to ' + rec.previous.version + ')' : ''}\n` : ''}▸ *Works in:* ${g}${rec.blocked && rec.blocked.length ? `, ${rec.blocked.length} blocked` : ''}\n▸ *Allowed to:* ${rec.grants.length ? rec.grants.join(', ') : 'nothing special'}`);
     }
     return reply(`ℹ️ *I did not understand that.*\n▸ _See what you can do with_ ${mono(p, 'help')}`);
   },

@@ -67,9 +67,8 @@ function stop() {
   if (statsTimer) { clearTimeout(statsTimer); statsTimer = null; }
   if (wdTimer) { clearInterval(wdTimer); wdTimer = null; }
   if (revTimer) { clearInterval(revTimer); revTimer = null; } for (const t of timers.values()) clearInterval(t); timers.clear(); for (const h of hosts.values()) h.stop(); hosts.clear(); }
-async function turnOn() { state.open().data.enabled = true; state.open().touch(); return start(sock); }
-function turnOff() {
-  state.open().data.enabled = false; state.open().touch();
+async function turnOn() { return start(sock); }
+function turnOff() { // only stops the plugins (used when the bot shuts down and in tests); nothing is saved, plugins start again by themselves
   stop(); for (const id of [...loaded.keys()]) deactivate(id);
   status = { state: 'off', reason: '' };
 }
@@ -474,21 +473,69 @@ async function checkWithdrawn() {
   if (wdBusy) return; wdBusy = true; wdLast = Date.now();
   try {
     if (!isRunning() || !registry.configured()) return;
-    const mine = Object.entries(state.open().data.installed).filter(([, r]) => r.store); if (!mine.length) return;
     const index = await registry.getIndex(true);
-    for (const [id, rec] of mine) if (registry.isRevoked(index, id, rec.store.version)) removeWithdrawn(id);
+    for (const [id, rec] of Object.entries(state.open().data.installed)) if (rec.store && registry.isRevoked(index, id, rec.store.version)) removeWithdrawn(id);
+    await syncPreinstalled(index);
   } catch (e) { /* offline or no store: keep running */ } finally { wdBusy = false; }
 }
 const checkSoon = () => { if (!wdBusy && Date.now() - wdLast > 5 * 60 * 1000) checkWithdrawn(); };
-function removeWithdrawn(id) {
+function removeWithdrawn(id, text) {
   const l = loaded.get(id); const name = l ? l.manifest.name : id; const folder = findFolder(id);
-  if (!remove(id)) return false;
+  if (!remove(id, true)) return false;
   try { if (folder) fs.rmSync(folder, { recursive: true, force: true }); } catch (e) { /* the plugin is already off */ }
   try { fs.rmSync(state.previousDir(id), { recursive: true, force: true }); } catch (e) { /* nothing saved */ }
-  tellOwner(`🚫 *${name} was removed from the TurboFex store, so I removed it from your bot.*\n▸ _Its commands are gone from the menu._`);
+  tellOwner(text ? text(name) : `🚫 *${name} was removed from the TurboFex store, so I removed it from your bot.*\n▸ _Its commands are gone from the menu._`);
   return true;
 }
 
+
+
+// ---------------------------------------------------------------- preinstalled plugins (chosen by TurboFex in the signed store index)
+// What a bot has to do, decided from the signed list and what is installed. Nothing here touches the disk or the network.
+function planPreinstall(index, installed) {
+  const list = registry.preinstallOf(index); const plan = { install: [], adopt: [], remove: [] };
+  if (!list) return plan; // an older store without the list: change nothing
+  for (const { id, mode } of list) {
+    if (!registry.latestOf(index, id)) continue; // not available (withdrawn): the withdrawal check deals with it
+    const rec = installed[id];
+    if (!rec) plan.install.push({ id, mode });
+    else if (rec.preinstalled || rec.store) plan.adopt.push({ id, mode }); // already here: follow the mode, keep it up to date
+    // a plugin of the owner with the same name that did not come from the store is left alone
+  }
+  for (const [id, rec] of Object.entries(installed)) if (rec.preinstalled && !list.some((x) => x.id === id)) plan.remove.push(id);
+  return plan;
+}
+const preTold = new Set();
+// one plugin is fetched, checked and installed without the owner pressing confirm (TurboFex chose it and signed the list)
+async function installPreinstalled(id, mode, index) {
+  const old = state.open().data.installed[id];
+  const latest = registry.latestOf(index, id); if (!latest) return false;
+  if (old && old.store && registry.semverCmp(latest, old.store.version) <= 0 && old.preinstalled && old.preinstalled.mode === mode) return false;
+  if (!old || !old.store || registry.semverCmp(latest, old.store.version) > 0) {
+    const f = await registry.fetchPlugin(id, latest); if (!f.ok) return false;
+    const pr = prepare(id);
+    if (!pr.ok) { if (pr.why !== 'same' && !preTold.has(id)) { preTold.add(id); tellOwner(`⚠️ *TurboFex wanted to add the plugin ${id}, but could not.*\n▸ _${pr.why === 'invalid' ? 'It cannot be used on this bot.' : 'A command name is already used by another plugin.'}_`); } if (!old) return false; }
+    else { const c = confirm(pr.code); if (!c.ok) return false; }
+  }
+  const rec = state.open().data.installed[id]; if (!rec) return false;
+  const first = !old || !old.preinstalled;
+  if (old) { if (old.category) rec.category = old.category; if (old.updateMode) rec.updateMode = old.updateMode; }
+  rec.preinstalled = { mode, at: (old && old.preinstalled && old.preinstalled.at) || Date.now() };
+  if (mode === 'install') { if (first && !(old && old.enabled && old.store)) { rec.enabled = false; deactivate(id); } else if (old) { rec.enabled = !!old.enabled; if (!rec.enabled) deactivate(id); } }
+  else if (!rec.enabled && !rec.reason) { rec.enabled = true; if (isRunning()) activate(id, rec); }
+  state.open().touch();
+  const l = loaded.get(id); const name = l ? l.manifest.name : id;
+  if (first) tellOwner(mode === 'activate'
+    ? `🧩 *TurboFex added the plugin ${name} to your bot, and it is on.*\n▸ _It comes with the bot and cannot be removed._`
+    : `🧩 *TurboFex added the plugin ${name} to your bot. It is off for now.*\n▸ *Turn it on:* \`${prefixOf()}plugin enable ${id}\`\n▸ _It comes with the bot and cannot be removed._`);
+  return true;
+}
+async function syncPreinstalled(index) {
+  const d = state.open().data; const plan = planPreinstall(index, d.installed);
+  for (const id of plan.remove) removeWithdrawn(id, (name) => `🚫 *TurboFex stopped sending the plugin ${name}, so I removed it from your bot.*\n▸ _You can still install it yourself from the plugin store, if it is there._`);
+  for (const x of [...plan.install, ...plan.adopt]) { try { await installPreinstalled(x.id, x.mode, index); } catch (e) { /* the next check tries again */ } }
+  if (plan.install.length || plan.adopt.length) { try { startTimers(); } catch (e) { /* ignore */ } }
+}
 
 // ---------------------------------------------------------------- settings (typed options the owner changes with `.plugin set`)
 function defsOf(id) {
@@ -590,7 +637,7 @@ const sameSet = (a, b) => a.length === b.length && [...a].sort().join('|') === [
 async function checkUpdates() {
   try {
     if (!isRunning() || !registry.configured()) return;
-    const mine = Object.entries(state.open().data.installed).filter(([, r]) => r.store && r.enabled && (r.updateMode || 'notify') !== 'manual'); if (!mine.length) return;
+    const mine = Object.entries(state.open().data.installed).filter(([, r]) => r.store && !r.preinstalled && r.enabled && (r.updateMode || 'notify') !== 'manual'); if (!mine.length) return;
     const index = await registry.getIndex(true);
     for (const [id, rec] of mine) {
       const v = registry.latestOf(index, id);
@@ -608,6 +655,7 @@ async function checkUpdates() {
 }
 function setEnabled(id, on) {
   const d = state.open().data; const rec = d.installed[id]; if (!rec) return { ok: false, why: 'missing' };
+  if (!on && rec.preinstalled && rec.preinstalled.mode === 'activate') return { ok: false, why: 'locked' };
   if (!on) { rec.enabled = false; rec.reason = ''; deactivate(id); state.open().touch(); return { ok: true }; }
   if (!isRunning()) return { ok: false, why: 'off' };
   if (rec.store && /withdrawn/.test(rec.reason || '')) return { ok: false, why: 'changed', reason: rec.reason };
@@ -626,8 +674,9 @@ function setCategory(id, cat) {
   return { ok: true, category: now };
 }
 function categoryOf(id) { const l = loaded.get(id); const rec = state.used() ? state.open().data.installed[id] : null; return l ? require('../../whatsapp/categories').pluginCategory(l.manifest, rec && rec.category) : null; }
-function remove(id) {
+function remove(id, force) {
   const d = state.open().data; if (!d.installed[id]) return false;
+  if (d.installed[id].preinstalled && !force) return false; // a preinstalled plugin cannot be removed by the owner
   deactivate(id); delete d.installed[id];
   d.removed = d.removed || {}; d.removed[id] = Date.now();   // its saved notes are kept for 30 days in case the owner installs it again
   state.open().touch(); stores.delete(id); logs.delete(id); return true;
@@ -662,8 +711,8 @@ function setOption(key, n) {
   state.open().touch(); for (const h of hosts.values()) h.limits.memoryGuardMb = d.guardMb; return true;
 }
 function overview() {
-  const d = state.used() ? state.open().data : { enabled: false, max: 8, guardMb: 96, installed: {} };
-  return { status, enabled: d.enabled, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
+  const d = state.used() ? state.open().data : { enabled: true, max: 8, guardMb: 96, installed: {} };
+  return { status, enabled: true, max: d.max, guardMb: d.guardMb, installed: d.installed, loaded, running: hosts.size, logs, folders: available() };
 }
 const logOf = (id) => logs.get(id) || [];
 // `.plugin doctor`: how every installed plugin is doing, in plain facts (no secrets, nothing is changed)
@@ -671,10 +720,10 @@ function doctor() {
   const d = state.used() ? state.open().data.installed : {}; const list = []; const listens = {};
   for (const [id, rec] of Object.entries(d)) {
     const l = loaded.get(id); const m = l && l.manifest; const bad = logOf(id).filter((x) => /failed|refused|too long/i.test(x)).length;
-    list.push({ id, name: m ? m.name : id, version: rec.version, enabled: !!rec.enabled, running: !!l, reason: rec.reason || null, fromStore: !!rec.store, bad, commands: m ? m.commands.map((c) => c.name) : [] });
+    list.push({ id, name: m ? m.name : id, version: rec.version, enabled: !!rec.enabled, running: !!l, reason: rec.reason || null, fromStore: !!rec.store, preinstalled: rec.preinstalled ? rec.preinstalled.mode : null, bad, commands: m ? m.commands.map((c) => c.name) : [] });
     if (l) for (const e of m.events || []) (listens[e] = listens[e] || []).push(m.name);
   }
   const overlaps = Object.entries(listens).filter(([, names]) => names.length > 1).map(([event, names]) => ({ event, names }));
   return { list, overlaps };
 }
-module.exports = { _dropSample: () => dropSample(), ownerTagged, removeWithdrawn, doctor, setCategory, categoryOf, storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
+module.exports = { planPreinstall, _dropSample: () => dropSample(), ownerTagged, removeWithdrawn, doctor, setCategory, categoryOf, storeCollections, storeCollection, prepareBundle, prepareTest, ratePlugin, attach, start, stop, emit, prepareStore, storeList, storeInfo, updatesAvailable, checkWithdrawn, storeOpen: () => registry.configured(), turnOn, turnOff, isRunning, prepare, confirm, setEnabled, remove, purgeOldNotes, rollback, statsStatus, setStats, reportStats, setUpdateMode, settingsList, setSetting, settingsFor, checkUpdates, MODES, _onDisabled: (id, why) => onDisabled(id, why), groupRule, setOption, overview, logOf, MIN_NODE, _internals: { loaded, hosts, pending, plainCtx } };
