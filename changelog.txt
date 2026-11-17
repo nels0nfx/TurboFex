@@ -1,3 +1,12 @@
+TurboFex v1.7.1 - a smarter, better coordinated bot
+CHANGED IN 1.7.1
+- NEW: mistyped commands are understood. If someone types a command that does not exist but is close to a real one (".mneu", ".weathr", a plugin command), the bot says "Did you mean .menu?". The owner answers `yes` or `no` (no prefix) and `yes` runs the corrected command, keeping its reply and text. Other people only see the suggestion. It only ever suggests commands that person may use, stays silent in private mode and when nothing is close, and answers at most once every few seconds in a chat. `.autocorrect off` / `on` (owner) switches it.
+- NEW: the bot remembers your last command in a chat for about 10 minutes. `.again` (or `.redo`) runs it again with all the normal checks. Commands that change things (owner and admin commands) are not repeated.
+- NEW: failures are told apart. Network, timeout and busy-service problems get a calm "that service is not answering right now" message, and lookup commands are tried once more, quietly, before giving up. Real bugs still show the usual message (with the reason for the owner).
+- NEW: a command that fails 5 times in 10 minutes rests for 3 minutes, with a short notice for the first person and ONE message to the owner (with the last reason). It starts again by itself, the owner can still use it, and menu, ping, status, update and plugin are never paused. Plugin commands are covered too.
+- NEW: `.status` now shows what needs attention in one place: resting or failing commands and plugins that need a look.
+- CHANGED: the public README command count is now 322.
+
 TurboFex v1.7.0 - plugins that come with the bot
 CHANGED IN 1.7.0
 - NEW: TurboFex can put a store plugin on EVERY bot by itself. The choice is made in the TurboFex admin dashboard and signed with the store, so a bot only follows it when it is genuine. New bots get the plugin as soon as they start, and bots that already run get it within about 10 minutes of the next check (or after an update). It is installed with the permissions it asks for, without a confirm step, and the owner gets a short message.

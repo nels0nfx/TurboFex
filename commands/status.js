@@ -4,6 +4,7 @@ const store = require('../whatsapp/store');
 const health = require('../core/health');
 const watchers = require('../whatsapp/watchers');
 const baileys = require('../core/baileys');
+const resilience = require('../core/resilience');
 
 module.exports = {
   name: 'status',
@@ -13,6 +14,15 @@ module.exports = {
   async run({ reply, commandList, diag, prefix }) {
     const s = diag.stats;
     const problems = diag.loadErrors.length ? diag.loadErrors.map((e) => `• ${e}`).join('\n') : 'None';
+    // one view of what is wrong right now: failing or resting commands, and plugins that need a look
+    const sum = resilience.summary(); const bits = [];
+    if (sum.resting.length) bits.push(`⏸️ Resting after repeated failures: ${sum.resting.map((x) => `${x.name} (${Math.ceil(x.secondsLeft / 60)} min)`).join(', ')}`);
+    if (sum.failing.length) bits.push(`⚠️ Failing lately: ${sum.failing.map((x) => `${x.name} ×${x.count}`).join(', ')}`);
+    try {
+      const sick = require('../core/plugins').doctor().list.filter((x) => (x.enabled && (!x.running || x.bad)) || (!x.enabled && x.reason));
+      if (sick.length) bits.push(`🧩 Plugins that need a look: ${sick.map((x) => x.name).join(', ')} (${prefix}plugin doctor)`);
+    } catch (err) { /* plugins are not in use */ }
+    const attention = bits.length ? `${bits.join('\n')}\n\n` : '';
     await reply(
       `🩺 *Status*\n\n` +
         `📦 Version: v${pkg.version}\n` +
@@ -30,7 +40,7 @@ module.exports = {
         `👁️ View-once seen/saved: ${watchers.stats.viewOnce}/${watchers.stats.viewOnceSaved} • Edits: ${watchers.stats.edited} (events seen ${watchers.stats.editEvents + watchers.stats.editSecret}, sealed ${watchers.stats.editSecret}, unreadable ${watchers.stats.editUnreadable}) • Deletes: ${watchers.stats.deleted}${watchers.stats.lastError ? ` (last problem: ${watchers.stats.lastError})` : ''}\n` +
         `📚 WhatsApp library: ${baileys.version()}\n` +
         `🔐 Decryption errors since start: ${health.stats().total} (if this keeps growing, send ${prefix}repair)\n\n` +
-        `⚠️ Commands that failed to load:\n${problems}`
+        `${attention}⚠️ Commands that failed to load:\n${problems}`
     );
   },
 };

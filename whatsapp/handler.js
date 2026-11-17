@@ -36,6 +36,9 @@ const { runPassive } = require('./passive');
 const { peel } = require('./unwrap');
 const chatlog = require('../core/chatlog');
 const ownerInfo = require('./owner');
+const intent = require('./intent');
+const context = require('./context');
+const resilience = require('../core/resilience');
 const { getText, num, whoIds, whoJid, participantIds, senderIds, isCommandText } = require('./utils');
 
 const commands = new Map(); // name or alias -> command
@@ -168,6 +171,7 @@ async function handleMessageInner(sock, msg) {
   const prefix = store.effectivePrefix(); // empty in "no prefix" mode
 
   const botIds = [sock.user?.id, sock.user?.lid].filter(Boolean).map(num);
+  const meKey = senderIds(msg)[0] || jid; // who is talking: the key of the short-term memory (last command, waiting question)
 
   // the console shows every message (gold, white and black lines; switch off with CONSOLE_CHAT=off)
   if (!synthetic) chatlog.incoming({ msg, jid, isGroup, text, content: early, prefix, isCommand: isCommandText(text, prefix, isKnownCommand) });
@@ -233,6 +237,15 @@ async function handleMessageInner(sock, msg) {
     }
   }
 
+  // the owner answers "Did you mean ...?" with a plain yes or no (no prefix): yes runs the corrected command as if it was typed
+  if (!synthetic && text && context.hasAsk(jid)) {
+    const got = context.answer(jid, meKey, text);
+    if (got) {
+      if (got.answer === 'no') { sock.sendMessage(jid, { text: '👍 *Okay, I will leave it.*' }, { quoted: msg }).catch(() => {}); return; }
+      return handleMessageInner(sock, got.ask.fixed);
+    }
+  }
+
   let isCommand = isCommandText(text, prefix, isKnownCommand);
   if (isCommand && !prefix && !synthetic && require('./play').claims({ sock, msg, jid, text, botIds })) isCommand = false; // a game word, not a command
   if (!synthetic) presence.onIncoming(sock, msg, jid); // "typing..." / "recording..." when someone writes to the bot (only when switched on)
@@ -253,9 +266,15 @@ async function handleMessageInner(sock, msg) {
     return passive;
   }
 
-  const body = text.slice(prefix.length).trim();
-  const [rawName, ...args] = body.split(/\s+/);
-  const cmdName = (rawName || '').toLowerCase();
+  let body = text.slice(prefix.length).trim();
+  let [rawName, ...args] = body.split(/\s+/);
+  let cmdName = (rawName || '').toLowerCase();
+  // "again": the last command of this person in this chat is run again (all the normal checks apply to it, as if it was typed now)
+  if (!synthetic && commands.get(cmdName)?.name === 'again') {
+    const prev = context.recall(jid, meKey);
+    if (prev && !prev.repeatable) return sock.sendMessage(jid, { text: `ℹ️ *That command cannot be repeated with again.*\n▸ _It changes things, so please type it yourself._` }, { quoted: msg }).catch(() => {});
+    if (prev) { body = prev.body; [rawName, ...args] = body.split(/\s+/); cmdName = (rawName || '').toLowerCase(); }
+  }
   const cmd = commands.get(cmdName);
   // run by a sticker and marked silent (vv): nothing is answered or reacted in this chat; problems are told in the owner's own chat
   const silent = !!sticker && !!cmd?.silentOnSticker;
@@ -266,6 +285,26 @@ async function handleMessageInner(sock, msg) {
     const failed = diag.loadErrors.find((e) => e.startsWith(`${cmdName}.js:`));
     if (failed && (await roles()).isOwner) {
       return rawReply(`⚠️ The command "${cmdName}" could not be loaded.\nReason: ${failed.slice(failed.indexOf(':') + 1).trim().slice(0, 150)}`);
+    }
+    // a mistyped command: say what was probably meant (only commands this person may use). The owner answers yes or no.
+    if (!synthetic && !sticker && prefix && store.getAuto('autocorrect', true) !== false) {
+      let rr = null;
+      try { rr = await roles(); } catch (err) { return; }
+      if (!rr.isOwner && store.getAuto('maintenance')) return;
+      const allowed = (c) => !(
+        (c.deniedIn && c.deniedIn(jid)) || (store.getMode() === 'private' && !rr.isOwner && !c.everyone) ||
+        (c.realOwnerOnly && !rr.isRealOwner) || (c.ownerOnly && !rr.isOwner) || (c.adminOnly && !(rr.isAdmin || rr.isOwner)) ||
+        (c.groupOnly && !isGroup) || (!rr.isOwner && isGroup && store.getGroup(jid).disabled.includes(c.name))
+      );
+      const hit = intent.suggest(cmdName, commands, allowed);
+      if (!hit || !context.mayOffer(jid)) return;
+      const tail = body.slice((rawName || '').length);
+      const shown = `${prefix}${hit.name}${tail.trim() ? ' ' + tail.trim().slice(0, 40) : ''}`;
+      if (rr.isOwner) {
+        context.ask(jid, meKey, { fixed: context.withText(msg, prefix + hit.name + tail) });
+        return rawReply(`🤔 *Did you mean* \`${shown}\`?\n▸ _Send_ *yes* _to run it, or_ *no* _to cancel._`);
+      }
+      return rawReply(`🤔 *Did you mean* \`${shown}\`?\n▸ _Send it again like that._`);
     }
     return;
   }
@@ -329,6 +368,14 @@ async function handleMessageInner(sock, msg) {
   };
 
   const execute = async () => {
+    // 0) a command that failed again and again is resting for a few minutes (the owner can still use it)
+    const resting = isOwner ? null : resilience.hold(cmd.name);
+    if (resting) {
+      if (resting.first) await rawReply(`⏸️ *${cmd.name} is resting for a few minutes.*\n▸ _It failed several times in a row. Please try again a little later._`).catch(() => {});
+      return;
+    }
+    if (!synthetic && cmd.name !== 'again') context.remember(jid, meKey, { body, name: cmd.name, repeatable: !cmd.noAgain && !cmd.botAdminRequired && cmd.category !== 'owner' });
+
     // 1) can the server really handle this command right now? (tools, memory, load, parallel jobs)
     const who = isOwner ? null : r.sIds[0] || jid;
     const gate = store.getGuard() ? await capacity.enter(cmd, who) : { ok: true, release() {} };
@@ -345,10 +392,12 @@ async function handleMessageInner(sock, msg) {
     const mark = watermark.applies(cmd) ? watermark.text() : null;
     const styled = fmt.mode(cmd);
     let warned = false;
+    let sentAny = false; // the command already showed something in the chat: it is then never run a second time
     const pending = new Set(); // everything the command is still sending: the ✅ waits for it, so it never comes before the answer
     const answers = []; // the messages the command sent in the chat (cleanup.js deletes them later, when the owner wants that)
     const csock = Object.create(sock);
     csock.sendMessage = (to, content, opts) => {
+      sentAny = true;
       if (synthetic && opts?.quoted) opts = { ...opts, quoted: undefined }; // there is no real message to reply to
       if (typeof content?.text === 'string' && /^\s*(⚠️|❌|🚫)/.test(content.text)) warned = true;
       // stickers made by commands carry the pack name and author
@@ -366,19 +415,39 @@ async function handleMessageInner(sock, msg) {
 
     let outcome = 'ok';
     try {
-      await cmd.run({
+      const runCmd = () => cmd.run({
         sock: csock, msg, jid, args, rest, reply, cmdName, prefix, silent, config, commandList, botIds, diag, timing,
         myIds: whoIds(msg, botIds), myJid: whoJid(msg, sock),
         isGroup, isAdmin, isOwner, isRealOwner, isBotAdmin, groupMetadata,
       });
-      if (warned) outcome = 'warn';
+      try {
+        await runCmd();
+      } catch (first) {
+        // a lookup that failed for a temporary reason (network, timeout, busy service) and has shown nothing yet gets one more try
+        if ((cmd.category === 'lookup' || cmd.retry) && !sentAny && resilience.classify(first) === 'temporary') {
+          await new Promise((res) => setTimeout(res, resilience.retryMs()));
+          await runCmd();
+        } else throw first;
+      }
+      if (warned) outcome = 'warn'; else resilience.ok(cmd.name);
     } catch (err) {
       outcome = 'fail';
       stats.error(cmd.name, err?.message || err);
       console.error(`Error in command ${cmd.name}:`, err);
       // only the owner sees the reason (it is technical); everybody else gets a simple message
-      const detail = isOwner ? `\nReason: ${String(err?.message || err).slice(0, 150)}` : '\nPlease try again in a moment.';
-      await rawReply(`❌ Something went wrong running that command.${detail}`).catch(() => {});
+      const kind = resilience.classify(err);
+      context.markFailed(jid, meKey);
+      const rest5 = resilience.fail(cmd.name, kind, err?.message || err);
+      if (rest5.opened) { // the same failure over and over: the command rests, and the owner is told once
+        Promise.resolve(sock.sendMessage(ownerInfo.ownerChat(sock), { text: `⏸️ *${cmd.name} is resting for ${rest5.minutes} minutes.*\n▸ _It failed several times in a row._\n▸ *Last reason:* ${rest5.why}\n▸ _It starts again by itself. You can still use it yourself._` })).catch(() => {});
+      }
+      if (kind === 'temporary') {
+        const why = isOwner ? `\nReason: ${String(err?.message || err).slice(0, 150)}` : '\nPlease try again in a minute.';
+        await rawReply(`⏳ That service is not answering right now.${why}`).catch(() => {});
+      } else {
+        const detail = isOwner ? `\nReason: ${String(err?.message || err).slice(0, 150)}` : '\nPlease try again in a moment.';
+        await rawReply(`❌ Something went wrong running that command.${detail}`).catch(() => {});
+      }
     } finally {
       gate.release();
       if (pending.size) await withTimeout(Promise.allSettled([...pending]), 8000, 'the answer is still being sent').catch(() => {}); // the ✅ comes after the answer
