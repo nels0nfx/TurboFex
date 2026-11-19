@@ -113,3 +113,36 @@ test('old statuses (a backlog) are viewed but not liked; fresh ones are liked', 
   assert.strictEqual(log[0], 'view');
   assert.ok(log.length >= 2 && log[1] !== 'view', 'a fresh status is liked (by a list or directly, depending on what earlier tests broke)');
 });
+
+// v1.7.2: likes WhatsApp never answered are counted separately, and the waiting for the answer always stops
+test('v1.7.2: a like with no answer from WhatsApp is counted as unconfirmed', async () => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'whatsapp', 'status.js'), 'utf8');
+  assert.match(src, /'unconfirmed'/);
+  assert.match(src, /confirmed === false/);
+  const info = require('fs').readFileSync(require('path').join(__dirname, '..', 'commands', 'statuscmds.js'), 'utf8');
+  assert.match(info, /Likes without an answer/);
+});
+test('v1.7.2: react() stops listening for the answer when the send fails', () => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'whatsapp', 'status.js'), 'utf8');
+  const body = src.slice(src.indexOf('async function react('), src.indexOf('const lidOf'));
+  assert.match(body, /catch \(err\)/);
+  assert.match(body, /answer\(\)\.catch/);
+});
+
+// v1.7.2: the owner sees each like and what WhatsApp answered
+test('v1.7.2: statusinfo lists the last likes as confirmed, no answer, or failed', async () => {
+  const statusEngine = require('../whatsapp/status');
+  const cmd = require('../commands/statuscmds').find((c) => c.name === 'statusinfo');
+  const h = statusEngine.store.data.history;
+  const before = h.length;
+  h.push({ at: Date.now(), action: 'like', who: '111', ok: true, confirmed: true });
+  h.push({ at: Date.now(), action: 'like', who: '222', ok: true, confirmed: false });
+  h.push({ at: Date.now(), action: 'like', who: '333', ok: false });
+  let out = '';
+  await cmd.run({ reply: async (t) => { out = t; } });
+  h.splice(before); // leave the saved history as it was
+  assert.match(out, /Last likes/);
+  assert.match(out, /✅ confirmed · @111/);
+  assert.match(out, /❔ sent, no answer · @222/);
+  assert.match(out, /❌ failed · @333/);
+});

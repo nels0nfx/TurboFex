@@ -138,6 +138,12 @@ module.exports = [
     async run({ reply }) {
       const s = store.statusCfg();
       const st = statusEngine.stats;
+      // The last likes, with what WhatsApp answered for each. WhatsApp itself shows the owner nothing when the account has
+      // read receipts off, so this is where the owner sees that a like went through.
+      const likes = statusEngine.history(60).filter((h) => h.action === 'like').slice(0, 6);
+      const recent = likes.length
+        ? `\n\n*Last likes*\n${likes.map((h) => `${!h.ok ? '❌ failed' : h.confirmed === false ? '❔ sent, no answer' : '✅ confirmed'} · @${h.who} · ${clock.stamp(h.at)}`).join('\n')}`
+        : '';
       const delay = s.delayMax > s.delayMin ? `${s.delayMin}-${s.delayMax}s random` : s.delayMin ? `${s.delayMin}s` : 'none';
       const on = (v) => (v ? 'ON' : 'OFF');
       await reply(
@@ -153,10 +159,12 @@ module.exports = [
           `▸ *Viewed:* ${st.viewed}  *Liked:* ${st.liked}  *Saved:* ${st.saved}\n` +
           `▸ *Likes today:* ${statusEngine.likeToday()}/${s.dailyLikeLimit || '∞'}\n` +
           `▸ *Refused by WhatsApp:* ${st.rejected}\n` +
+          `▸ *Likes without an answer:* ${st.unconfirmed || 0}\n` +
           `▸ *Like route:* ${st.route}\n` +
           `▸ *Problems:* ${st.errors}${st.lastError ? ` (last: ${st.lastError})` : ''}` +
           `${st.viewMs != null ? `\n▸ *View took:* ${st.viewMs} ms` : ''}` +
           `${st.lagSec != null ? `\n▸ *Last status reached the bot:* ${st.lagSec}s after it was posted` : ''}` +
+          recent +
           (st.seen ? '' : `\n\n_No status has arrived yet. WhatsApp only sends the bot the statuses of people saved as contacts on the bot's phone._`)
       );
     },

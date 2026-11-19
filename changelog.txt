@@ -1,3 +1,9 @@
+TurboFex v1.7.2 - you can see that a like went through
+CHANGED IN 1.7.2
+- NEW: `.statusinfo` now lists the last likes: ✅ confirmed by WhatsApp, ❔ sent but WhatsApp gave no answer, or ❌ failed, with who and when. Before, the bot kept this record but never showed it, so with read receipts off on the bot account you saw nothing at all.
+- CHANGED: `.statusinfo` has a new line, "Likes without an answer", and "Liked" no longer hides them.
+- FIXED: when a like timed out, the bot kept waiting for WhatsApp's answer in the background and never stopped. It now cleans up every time.
+
 TurboFex v1.7.1 - a smarter, better coordinated bot
 CHANGED IN 1.7.1
 - NEW: mistyped commands are understood. If someone types a command that does not exist but is close to a real one (".mneu", ".weathr", a plugin command), the bot says "Did you mean .menu?". The owner answers `yes` or `no` (no prefix) and `yes` runs the corrected command, keeping its reply and text. Other people only see the suggestion. It only ever suggests commands that person may use, stays silent in private mode and when nothing is close, and answers at most once every few seconds in a chat. `.autocorrect off` / `on` (owner) switches it.

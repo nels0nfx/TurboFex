@@ -18,12 +18,12 @@ const clockCore = require('../core/clock');
 //   progress  what was already done for each status id { t: time, v: viewed, l: liked, s: saved, n: failed tries }
 //   history   the last interactions (newest last)
 const js = jsonstore.open('status-activity', () => ({ likes: { day: '', count: 0, lastAt: 0 }, totals: {}, progress: {}, history: [], last: null, lastError: null }), { delay: 500 });
-const COUNTERS = ['seen', 'viewed', 'liked', 'saved', 'errors', 'rejected', 'limited'];
+const COUNTERS = ['seen', 'viewed', 'liked', 'saved', 'errors', 'rejected', 'limited', 'unconfirmed'];
 const MAX_PROGRESS = 1500;
 const MAX_HISTORY = 200;
 
 const settings = { minimumDelayMs: 0 }; // tests can shorten delays
-const stats = { seen: 0, viewed: 0, liked: 0, saved: 0, errors: 0, rejected: 0, limited: 0, viewMs: null, route: '-', lagSec: null, last: js.data.last || null, lastError: js.data.lastError || null }; // shown by !statusinfo
+const stats = { seen: 0, viewed: 0, liked: 0, saved: 0, errors: 0, rejected: 0, limited: 0, unconfirmed: 0, viewMs: null, route: '-', lagSec: null, last: js.data.last || null, lastError: js.data.lastError || null }; // shown by !statusinfo
 for (const k of COUNTERS) stats[k] = Number(js.data.totals[k]) || 0; // the totals come back after a restart
 
 // adds one to a counter and saves it
@@ -153,7 +153,12 @@ function releaseLike(day) {
 async function react(sock, to, key, emoji, opts) {
   const id = ack.newId(sock);
   const answer = ack.listen(sock, id, 4000);
-  await within(sock.sendMessage(to, { react: { key, text: emoji } }, { ...opts, ...(id ? { messageId: id } : {}) }), 15000, 'like');
+  try {
+    await within(sock.sendMessage(to, { react: { key, text: emoji } }, { ...opts, ...(id ? { messageId: id } : {}) }), 15000, 'like');
+  } catch (err) {
+    answer().catch(() => {}); // the send failed or timed out: stop listening, so nothing is left behind
+    throw err;
+  }
   return answer();
 }
 
@@ -180,7 +185,7 @@ async function likeStatus(sock, msg, who, emoji) {
         const r = await react(sock, 'status@broadcast', key, emoji, { statusJidList: list });
         if (r.ok !== false) {
           stats.route = `status (${list.every((j) => j.endsWith('@lid')) ? 'lid' : list.some((j) => j.endsWith('@lid')) ? 'mixed' : 'number'} list)`;
-          return;
+          return r.ok === true; // true = WhatsApp confirmed it, false = it gave no answer
         }
         bump('rejected');
         console.log(`⚠️ WhatsApp refused a like with the list [${list.map((j) => j.split('@')[1]).join(', ')}] (error ${r.error}), trying the next way...`);
@@ -198,6 +203,7 @@ async function likeStatus(sock, msg, who, emoji) {
     throw new Error(`WhatsApp refused the like (error ${r.error}). This is a known problem of the WhatsApp library with some accounts.`);
   }
   stats.route = 'direct';
+  return r.ok === true;
 }
 
 // Statuses are handled a few at a time: after a reconnect WhatsApp can hand over dozens at once, and sending views and
@@ -324,11 +330,12 @@ async function handleStatus(sock, msg) {
       likeDay.lastAt = Date.now();
       if (settings.likeGapMs) await sleep(settings.likeGapMs);
       try {
-        await likeStatus(sock, msg, who, pick(store.statusCfg().emojis));
+        const confirmed = await likeStatus(sock, msg, who, pick(store.statusCfg().emojis));
         bump('liked');
+        if (confirmed === false) bump('unconfirmed'); // sent, but WhatsApp gave no answer: it may not have arrived
         prog.l = 1;
-        record('like', who, true, { id });
-        console.log(`❤️ Liked the status of ${num(who)} (${stats.route})`);
+        record('like', who, true, { id, confirmed: confirmed !== false });
+        console.log(`❤️ Liked the status of ${num(who)} (${stats.route})${confirmed === false ? ' (no answer from WhatsApp)' : ''}`);
       } catch (err) {
         releaseLike(reserved);
         record('like', who, false, { id });
