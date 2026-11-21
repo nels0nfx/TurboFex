@@ -37,12 +37,12 @@ const withFakeWeb = async (fake, fn) => {
 };
 
 // ---------------------------------------------------------------- menu
-test('the menu header and categories open and close with a symbol, one detail per line, no "WhatsApp Assistant"', async () => {
+test('the menu header is a framed box with one ◈ detail per line, the categories open and close with a symbol, no "WhatsApp Assistant"', async () => {
   const out = [];
   await menu.run({ reply: async (t) => out.push(t), commandList: all(), prefix: '.', args: [], isOwner: false, isAdmin: false, timing: { receivedAt: Date.now() } });
   const text = out[0];
-  assert.match(text, /^╔═+\n║ +✦ ◈ \*TURBOFEX\* ◈ ✦\n╠═+\n║ 👤 \*ᴜꜱᴇʀ\* ▸ Member\n╟─+\n║ ⌨️ \*ᴘʀᴇꜰɪx\* ▸ \[ \. \]\n║ (?:🔒|🌍) \*ᴍᴏᴅᴇ\* ▸ \w+\n║ 📋 \*ᴄᴏᴍᴍᴀɴᴅꜱ\* ▸ \d+\n║ 🏷️ \*ᴠᴇʀꜱɪᴏɴ\* ▸ v\d+\.\d+\.\d+\n╟─+\n║ ⚡ \*ꜱᴘᴇᴇᴅ\* ▸ \d+ ms\n║ ⏱️ \*ᴜᴘᴛɪᴍᴇ\* ▸ [^\n]+\n╚═+\n\n┏/);
-  assert.ok(!/WhatsApp Assistant/.test(text) && !/ʜᴏꜱᴛ/.test(text), 'no subtitle; host and memory are for the owner only');
+  assert.match(text, /^┏━━─『 TURBOFEX 』─━━\n┃ ◈ User: Member\n┃ ◈ Prefix: \[ \. \]\n┃ ◈ Mode: \w+\n┃ ◈ Commands: \d+\n┃ ◈ Version: \[ \d+\.\d+\.\d+ \]\n┃ ◈ Speed: \d+ ms\n┃ ◈ Uptime: [^\n]+\n┃\n┃\n┗━━━━━━━━━━━━─···\n\n┏/);
+  assert.ok(!/WhatsApp Assistant/.test(text) && !/Platform|Usage|RAM/.test(text), 'no subtitle; platform and memory are for the owner only');
   assert.ok(!text.includes('```'), 'no code block (WhatsApp pads it with empty space)');
   const lines = text.split('\n');
   const heads = lines.map((l, i) => [l, i]).filter(([l]) => /^┏ ❏ [A-Z ]+ ❏$/.test(l)).slice(1); // (the first one is the header)
@@ -56,7 +56,7 @@ test('the menu header and categories open and close with a symbol, one detail pe
   assert.ok(new Set(heads.map(([, i]) => [...lines[i + 1]][2])).size > 8, 'categories have different symbols');
   const owner = [];
   await menu.run({ reply: async (t) => owner.push(t), commandList: all(), prefix: '.', args: [], isOwner: true, isAdmin: true, timing: { receivedAt: Date.now() } });
-  assert.match(owner[0], /║ 🖥️ \*ʜᴏꜱᴛ\* ▸ .+\n║ 💾 \*ᴜꜱᴀɢᴇ\* ▸ \d+ MB of .+\n║ 📊 \*ʀᴀᴍ\* ▸ \[[█░]{10}\] \d+%\n╚═/);
+  assert.match(owner[0], /┃ ◈ Platform: .+\n┃ ◈ Usage: [\d.]+ [MG]B of .+\n┃ ◈ RAM: \[[█░]{10}\] \d+%\n┃\n┃\n┗━/);
 });
 
 test('menu <category> is the old look: the name, then the description under it', async () => {

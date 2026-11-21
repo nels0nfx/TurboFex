@@ -9,12 +9,6 @@ const ownername = require('../whatsapp/ownername');
 
 const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
 const RULE = '────────────────'; // short on purpose: long lines wrap on phones
-// the menu header frame (double lines; the category boxes below use single lines)
-const TOP = '╔═══════════════════';
-const MID = '╠═══════════════════';
-const SPLIT = '╟───────────────────';
-const END = '╚═══════════════════';
-
 // a block of aligned lines in WhatsApp monospace
 const mono = (rows) => {
   const w = Math.max(...rows.map(([k]) => k.length)) + 2;
@@ -75,38 +69,36 @@ module.exports = {
       return reply(`*${c.name.toUpperCase()}*${mark(c)}\n_${c.description}_\n${RULE}\n${mono(rows)}`);
     }
 
-    // full menu: a header that opens and closes with a symbol, one detail on every line
+    // full menu: the header box, then the categories
     const custom = store.getAuto('menu') || {};
     const title = String(custom.title || brand.botName).toUpperCase();
     const mem = capacity.memory();
     const pct = mem.limitMB ? Math.min(100, Math.round((mem.usedMB / mem.limitMB) * 100)) : 0;
     const ms = timing && timing.receivedAt ? Math.max(0, Date.now() - timing.receivedAt) : 0;
-    // The header is a banner of its own: a DOUBLE-line frame (╔ ║ ╠ ╚), so it never looks like the single-line category boxes (┏ ┃ ┗)
-    // below it. Every name in it starts with an emoji that fits it; the bot name has none. Three groups, split by thin lines.
-    const owner = ownername.get(sock); // the owner's name from WhatsApp (the line is left out until WhatsApp has told it)
-    const who = [...(owner ? [['👑', 'Owner', owner]] : []), ['👤', 'User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member']];
-    const info = [
-      ['⌨️', 'Prefix', `[ ${prefix || 'none'} ]`],
-      [store.getMode() === 'private' ? '🔒' : '🌍', 'Mode', store.getMode() === 'private' ? 'Private' : 'Public'],
-      ['📋', 'Commands', String(all.length)],
-      ['🏷️', 'Version', `v${pkg.version}`],
+    // The header: a framed box with the bot name in the top bar (『 NAME 』) and one ◈ line per detail. The category boxes below it
+    // use "┏ ❏ NAME ❏", so the two never look the same. The Owner line is left out until WhatsApp has told the owner's name.
+    // Platform, Usage and RAM are for the owner only. There is no picture or sticker: the menu is one text message.
+    const owner = ownername.get(sock);
+    const rows = [
+      ...(owner ? [['Owner', owner]] : []),
+      ['User', isOwner ? 'Owner' : isAdmin ? 'Group admin' : 'Member'],
+      ['Prefix', `[ ${prefix || 'none'} ]`],
+      ['Mode', store.getMode() === 'private' ? 'Private' : 'Public'],
+      ['Commands', String(all.length)],
+      ['Version', `[ ${pkg.version} ]`],
+      ['Speed', `${ms} ms`],
+      ['Uptime', clock.uptime()],
     ];
-    const live = [['⚡', 'Speed', `${ms} ms`], ['⏱️', 'Uptime', clock.uptime()]];
     if (isOwner) {
-      live.push(['🖥️', 'Host', host()], ['💾', 'Usage', `${size(mem.usedMB)} of ${size(mem.limitMB)}`], ['📊', 'RAM', `[${'█'.repeat(Math.round(pct / 10))}${'░'.repeat(10 - Math.round(pct / 10))}] ${pct}%`]);
+      rows.push(['Platform', host()], ['Usage', `${size(mem.usedMB)} of ${size(mem.limitMB)}`], ['RAM', `[${'█'.repeat(Math.round(pct / 10))}${'░'.repeat(10 - Math.round(pct / 10))}] ${pct}%`]);
     }
-    const line = ([icon, k, v]) => `║ ${icon} *${sc(k)}* ▸ ${v}`;
     const head = [
-      TOP,
-      `║   ✦ ◈ *${title}* ◈ ✦`,
-      ...(custom.subtitle ? [`║   _${custom.subtitle}_`] : []),
-      MID,
-      ...who.map(line),
-      SPLIT,
-      ...info.map(line),
-      SPLIT,
-      ...live.map(line),
-      END,
+      `┏━━─『 ${title} 』─━━`,
+      ...(custom.subtitle ? [`┃ ◈ ${custom.subtitle}`] : []),
+      ...rows.map(([k, v]) => `┃ ◈ ${k}: ${v}`),
+      '┃',
+      '┃',
+      '┗━━━━━━━━━━━━─···',
     ].join('\n');
     const body = sections.map((s) => block(s, s.cmds.map((c) => sc(c.name) + mark(c)))).join('\n\n');
     const tips =

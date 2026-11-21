@@ -1,3 +1,7 @@
+TurboFex v1.7.8 - a new menu header
+CHANGED IN 1.7.8
+- CHANGED: the menu header has a new look: a framed box with the bot name in the top bar, then one line per detail, each starting with ◈ (Owner, User, Prefix, Mode, Commands, Version, Speed, Uptime; Platform, Usage and RAM for the owner only), and a closing line. The details are our own words and data. The title and subtitle you set with `setmenu` are still used. The menu stays ONE text message: no sticker, picture or video. The category boxes below the header are unchanged.
+
 TurboFex v1.7.7 - ytcookies works
 CHANGED IN 1.7.7
 - FIXED: `.ytcookies` never saved a cookies file. The bot only looked for pictures, videos, stickers and audio, so it never found a text file, and a file sent with `.ytcookies` as its caption was not read as a command at all. Both ways now work: send the cookies.txt with `.ytcookies` as its caption, or reply to the file with `.ytcookies`. Captions of files (documents) are now read like the captions of pictures and videos, so a file sent with a command as its caption runs that command.
