@@ -1,3 +1,8 @@
+TurboFex v1.7.3 - status likes work for every poster
+CHANGED IN 1.7.3
+- FIXED: likes on statuses of people who have read receipts OFF were refused when the bot account had read receipts ON. The bot now also registers each view privately (the receipt WhatsApp itself sends), and when a like is refused it registers the view again and tries once more before giving up.
+- FIXED: one refused status could switch the normal like route off for ten minutes for everybody. The route is now only skipped after three statuses in a row are refused on every list, and one success puts it right again.
+
 TurboFex v1.7.2 - you can see that a like went through
 CHANGED IN 1.7.2
 - NEW: `.statusinfo` now lists the last likes: ✅ confirmed by WhatsApp, ❔ sent but WhatsApp gave no answer, or ❌ failed, with who and when. Before, the bot kept this record but never showed it, so with read receipts off on the bot account you saw nothing at all.

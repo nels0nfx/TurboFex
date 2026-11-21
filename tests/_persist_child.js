@@ -32,7 +32,7 @@ const makeSock = () => {
   const log = [];
   const sock = {
     ws, user: { id: '27899999999:1@s.whatsapp.net', lid: '999888777:1@lid' },
-    sendReceipt: async () => { log.push('view'); }, readMessages: async () => {},
+    sendReceipt: async (j, pt, ids, type) => { if (type !== 'read-self') log.push('view'); }, readMessages: async () => {},
     sendMessage: async (to, c, o) => {
       log.push(to === 'status@broadcast' ? 'like' : 'direct');
       setTimeout(() => ws.emit(`CB:ack,id:${o.messageId}`, { attrs: {} }), 2);

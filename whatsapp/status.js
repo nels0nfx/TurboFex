@@ -82,15 +82,28 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const within = (promise, ms, label) =>
   Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} timed out`)), ms))]);
 
-// Marks a status as viewed IN A WAY THE POSTER CAN SEE.
+// Marks a status as viewed IN A WAY THE POSTER CAN SEE, and ALSO registers the view for the bot's own account.
 // sock.readMessages() only tells the poster when the bot account has "read receipts" on; otherwise it sends a private
 // "read-self" receipt. So the real "read" receipt is sent directly (it is instant), and readMessages() runs in the
 // background afterwards so the bot's own devices know it was seen. Nothing here can hold up the like.
+// The private "read-self" receipt is sent too, every time. When the POSTER has read receipts off, WhatsApp does not pass
+// the normal "read" receipt on, so the view could stay unregistered and WhatsApp then refused the like. "read-self" is the
+// receipt WhatsApp itself sends in that case, and it is harmless when the poster has read receipts on.
+async function registerOwnView(sock, key, poster) {
+  try {
+    await within(sock.sendReceipt('status@broadcast', poster, [key.id], 'read-self'), 5000, 'private view receipt');
+    return true;
+  } catch (err) {
+    return false; // never stops anything: it is a safety net
+  }
+}
 async function markViewed(sock, msg, who) {
   const key = msg.key;
   let lastErr = null;
   let ok = false;
-  for (const p of [...new Set([who, key.participantPn, key.participantAlt].filter(Boolean))]) {
+  const posters = [...new Set([who, key.participantPn, key.participantAlt].filter(Boolean))];
+  const own = registerOwnView(sock, key, posters[0]); // runs next to the real receipt, never rejects
+  for (const p of posters) {
     try {
       await within(sock.sendReceipt('status@broadcast', p, [key.id], 'read'), 8000, 'view receipt');
       ok = true;
@@ -99,6 +112,7 @@ async function markViewed(sock, msg, who) {
       lastErr = err;
     }
   }
+  await own;
   within(sock.readMessages([key]), 10000, 'readMessages').catch(() => {}); // background, never awaited
   if (!ok) throw lastErr || new Error('could not mark the status as viewed');
 }
@@ -165,6 +179,29 @@ async function react(sock, to, key, emoji, opts) {
 const lidOf = (j) => (j && idmap.isLid(j) ? `${num(j)}@lid` : null);
 const pnOf = (j) => (j && idmap.isPn(j) ? `${num(j)}@s.whatsapp.net` : null);
 
+// Tries every recipient list once. Returns { confirmed } as soon as WhatsApp accepts one, or null when all were refused.
+async function tryLists(sock, key, emoji, lists) {
+  for (const list of lists) {
+    try {
+      const r = await react(sock, 'status@broadcast', key, emoji, { statusJidList: list });
+      if (r.ok !== false) {
+        stats.route = `status (${list.every((j) => j.endsWith('@lid')) ? 'lid' : list.some((j) => j.endsWith('@lid')) ? 'mixed' : 'number'} list)`;
+        return { confirmed: r.ok === true }; // true = WhatsApp confirmed it, false = it gave no answer
+      }
+      bump('rejected');
+      console.log(`⚠️ WhatsApp refused a like with the list [${list.map((j) => j.split('@')[1]).join(', ')}] (error ${r.error}), trying the next way...`);
+    } catch (err) {
+      // try the next list
+    }
+  }
+  return null;
+}
+
+// Every list refused for several statuses in a row = the list route itself is broken (not just one poster). One poster
+// whose status is refused (for example a poster with read receipts off) must never switch the good route off for everybody.
+let refusedRun = 0;
+const ROUTE_BROKEN_AFTER = 3;
+
 async function likeStatus(sock, msg, who, emoji) {
   const key = msg.key;
   const mePn = selfJid(sock);
@@ -180,20 +217,23 @@ async function likeStatus(sock, msg, who, emoji) {
   lists.push(uniq([who, key.participantPn, key.participantAlt, mePn])); // what old library versions accepted
 
   if (Date.now() > routeBrokenUntil) {
-    for (const list of lists) {
-      try {
-        const r = await react(sock, 'status@broadcast', key, emoji, { statusJidList: list });
-        if (r.ok !== false) {
-          stats.route = `status (${list.every((j) => j.endsWith('@lid')) ? 'lid' : list.some((j) => j.endsWith('@lid')) ? 'mixed' : 'number'} list)`;
-          return r.ok === true; // true = WhatsApp confirmed it, false = it gave no answer
-        }
-        bump('rejected');
-        console.log(`⚠️ WhatsApp refused a like with the list [${list.map((j) => j.split('@')[1]).join(', ')}] (error ${r.error}), trying the next way...`);
-      } catch (err) {
-        // try the next list
-      }
+    let r = await tryLists(sock, key, emoji, lists);
+    if (!r) {
+      // Refused everywhere. A common reason: WhatsApp has not registered our view of this status (it does not pass a view
+      // on when the poster has read receipts off). Register the view privately again, give WhatsApp a moment, and try once more.
+      await registerOwnView(sock, key, who);
+      await sleep(settings.retryWaitMs != null ? settings.retryWaitMs : 1200);
+      r = await tryLists(sock, key, emoji, lists);
     }
-    routeBrokenUntil = Date.now() + 10 * 60 * 1000; // every list refused: skip straight to the last resort for a while
+    if (r) {
+      refusedRun = 0;
+      return r.confirmed;
+    }
+    refusedRun += 1;
+    if (refusedRun >= ROUTE_BROKEN_AFTER) {
+      refusedRun = 0;
+      routeBrokenUntil = Date.now() + 10 * 60 * 1000; // the list route is broken for everybody: skip straight to the last resort for a while
+    }
   }
 
   // last resort: straight to the poster

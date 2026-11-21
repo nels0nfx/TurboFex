@@ -5,6 +5,7 @@ const EventEmitter = require('events');
 const baileys = require('../core/baileys');
 const store = require('../whatsapp/store');
 const status = require('../whatsapp/status');
+console.log = () => {}; // the status engine prints emoji lines; they can upset Node's test runner, and the tests do not need them
 
 baileys.setForTests({ generateMessageIDV2: () => 'ID' + Math.random().toString(36).slice(2, 10).toUpperCase() });
 
@@ -15,7 +16,7 @@ const makeSock = (refuse = 'none') => {
   const log = [];
   const sock = {
     ws, user: { id: '27899999999:1@s.whatsapp.net', lid: '999888777:1@lid' },
-    sendReceipt: async () => { log.push('view'); }, readMessages: async () => {},
+    sendReceipt: async (j, pt, ids, type) => { if (type !== 'read-self') log.push('view'); }, readMessages: async () => {},
     sendMessage: async (to, c, o) => {
       const list = o.statusJidList;
       log.push(to === 'status@broadcast' ? `list[${list.map((x) => x.split('@')[1]).join(',')}]` : 'direct');
@@ -31,6 +32,7 @@ test('the view goes out at once, also when a delay is set, and the like uses a L
   const cfg = store.statusCfg();
   cfg.view = true; cfg.like = true; cfg.delayMin = 1; cfg.delayMax = 1;
   status.settings.likeGapMs = 0;
+  status.settings.retryWaitMs = 0;
   const { sock, log } = makeSock();
   const t = Date.now();
   await status.handleStatus(sock, post('S1'));
@@ -145,4 +147,60 @@ test('v1.7.2: statusinfo lists the last likes as confirmed, no answer, or failed
   assert.match(out, /✅ confirmed · @111/);
   assert.match(out, /❔ sent, no answer · @222/);
   assert.match(out, /❌ failed · @333/);
+});
+
+
+// v1.7.3: likes work for posters with read receipts off, and the owner sees the like
+test('v1.7.3: the view also sends the private "read-self" receipt, next to the normal one', async () => {
+  const types = [];
+  const sock = { sendReceipt: async (j, p, ids, type) => { types.push(type); }, readMessages: async () => {} };
+  await status.markViewed(sock, post('V1'), '222488650874994@lid');
+  assert.ok(types.includes('read'), 'the poster still gets the real view receipt');
+  assert.ok(types.includes('read-self'), 'WhatsApp also gets the private view receipt');
+});
+test('v1.7.3: a failing private receipt never breaks the view', async () => {
+  const sock = { sendReceipt: async (j, p, ids, type) => { if (type === 'read-self') throw new Error('nope'); }, readMessages: async () => {} };
+  await status.markViewed(sock, post('V2'), '222488650874994@lid');
+});
+test('v1.7.3: a like refused at first is tried again after the view is registered again', async () => {
+  status.settings.retryWaitMs = 0;
+  const ws = new EventEmitter();
+  const sent = [];
+  const receipts = [];
+  let refuseUntil = 3; // the first round (3 lists) is refused, the second round is accepted
+  const sock = {
+    ws, user: { id: '27899999999:1@s.whatsapp.net', lid: '999888777:1@lid' },
+    sendReceipt: async (j, p, ids, type) => { receipts.push(type); },
+    sendMessage: async (to, c, o) => {
+      sent.push(to);
+      const bad = sent.length <= refuseUntil;
+      setTimeout(() => ws.emit(`CB:ack,id:${o.messageId}`, { attrs: { error: bad ? '479' : undefined } }), 5);
+      return { key: { id: o.messageId } };
+    },
+  };
+  const confirmed = await status.likeStatus(sock, post('R1'), '222488650874994@lid', '❤️');
+  assert.strictEqual(confirmed, true);
+  assert.ok(receipts.includes('read-self'), 'the view was registered again before the second try');
+  assert.ok(sent.length > 3 && sent.every((t) => t === 'status@broadcast'), 'it never needed the last resort');
+});
+test('v1.7.3: one refused poster does not switch the good like route off for everybody', async () => {
+  status.settings.retryWaitMs = 0;
+  const run = async (refuse) => {
+    const ws = new EventEmitter();
+    const sent = [];
+    const sock = {
+      ws, user: { id: '27899999999:1@s.whatsapp.net', lid: '999888777:1@lid' },
+      sendReceipt: async () => {},
+      sendMessage: async (to, c, o) => {
+        sent.push(to);
+        setTimeout(() => ws.emit(`CB:ack,id:${o.messageId}`, { attrs: { error: refuse && to === 'status@broadcast' ? '479' : undefined } }), 5);
+        return { key: { id: o.messageId } };
+      },
+    };
+    await status.likeStatus(sock, post('P' + Math.random()), '222488650874994@lid', '❤️');
+    return sent;
+  };
+  await run(true); // one poster is refused on every list (and liked directly)
+  const next = await run(false); // the next poster must still use the normal lists
+  assert.strictEqual(next[0], 'status@broadcast', 'the normal route is still used');
 });
