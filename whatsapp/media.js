@@ -44,6 +44,23 @@ function findMedia(msg, jid, botIds) {
   };
 }
 
+// A FILE (a document of any kind, for example a cookies.txt): in the command message itself (a file sent with the command as its
+// caption), or in the message it replies to. findMedia() only knows pictures, videos, stickers and audio, so it never saw a text file.
+function findDocument(msg, jid, botIds) {
+  const own = unwrap(msg.message);
+  if (own && own.documentMessage) return { kind: 'document', name: own.documentMessage.fileName || '', source: msg };
+
+  const q = getQuoted(msg);
+  if (!q) return null;
+  const inner = unwrap(q.message);
+  if (!inner || !inner.documentMessage) return null;
+  return {
+    kind: 'document',
+    name: inner.documentMessage.fileName || '',
+    source: { key: { remoteJid: jid, id: q.id, participant: q.participant, fromMe: botIds.includes(num(q.participant)) }, message: q.message },
+  };
+}
+
 async function download(sock, source) {
   const { downloadMediaMessage } = baileys.get();
   const buffer = await downloadMediaMessage(source, 'buffer', {}, { logger: silent, reuploadRequest: sock.updateMediaMessage });
@@ -134,4 +151,4 @@ async function handle(ctx, kinds, usage, worker) {
   }
 }
 
-module.exports = { handle, toSticker, download, kindOf, findMedia, unwrap, loadSharp, ffmpeg, ffmpegBinary, MAX_BYTES, NOT_HERE };
+module.exports = { handle, toSticker, download, kindOf, findMedia, findDocument, unwrap, loadSharp, ffmpeg, ffmpegBinary, MAX_BYTES, NOT_HERE };

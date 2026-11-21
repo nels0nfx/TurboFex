@@ -182,3 +182,57 @@ test('v1.7.6: the group list is loaded early and tried again when WhatsApp does 
   assert.ok(/primeGroups\(tryNo \+ 1\)/.test(src) && /5000 \* 3 \*\* tryNo/.test(src), 'a failed load is tried again 5, 15 and 45 seconds later');
   assert.ok(/setTimeout\(\(\) => primeGroups\(0\), 1000\)/.test(src), 'the first try is 1 second after connecting');
 });
+
+// ---- ytcookies: the bot never found a text file (only pictures, videos, stickers and audio)
+const fs = require('fs');
+const path = require('path');
+const COOKIES = path.join(require('../core/paths').DATA, 'cookies.txt');
+const GOOD = '# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t1893456000\tSID\tabc123\n.youtube.com\tTRUE\t/\tTRUE\t1893456000\tHSID\tdef456\n';
+const docMsg = (caption) => ({ documentWithCaptionMessage: { message: { documentMessage: { mimetype: 'text/plain', fileName: 'cookies.txt', fileLength: 3000, caption } } } });
+const withFile = (content) => baileys.setForTests({ downloadMediaMessage: async () => Buffer.from(content, 'utf8') });
+const says = (re) => sent.some((x) => x.j === OWNER && re.test(x.c.text || ''));
+
+test('v1.7.6 ytcookies: a cookies.txt sent with the command as its caption is saved', async () => {
+  fs.rmSync(COOKIES, { force: true });
+  withFile(GOOD);
+  sent.length = 0;
+  await handler.handleMessage(sock, { key: { remoteJid: OWNER, id: `D${++n}`, fromMe: false }, message: docMsg(`${P()}ytcookies`), messageTimestamp: now() });
+  await settle();
+  assert.ok(says(/Cookies saved/), 'the owner is told it worked');
+  assert.strictEqual(fs.readFileSync(COOKIES, 'utf8'), GOOD, 'the file is saved as it was');
+});
+
+test('v1.7.6 ytcookies: replying to the file with the command saves it too', async () => {
+  fs.rmSync(COOKIES, { force: true });
+  withFile(GOOD);
+  sent.length = 0;
+  const reply = { key: { remoteJid: OWNER, id: `D${++n}`, fromMe: false }, messageTimestamp: now(), message: { extendedTextMessage: { text: `${P()}ytcookies`, contextInfo: { stanzaId: 'FILE1', participant: OWNER, quotedMessage: docMsg('') } } } };
+  await handler.handleMessage(sock, reply);
+  await settle();
+  assert.ok(says(/Cookies saved/));
+  assert.ok(fs.existsSync(COOKIES));
+});
+
+test('v1.7.6 ytcookies: a file that is not a YouTube cookies file is refused and nothing is saved', async () => {
+  fs.rmSync(COOKIES, { force: true });
+  withFile('just some notes, nothing to see here');
+  sent.length = 0;
+  await handler.handleMessage(sock, { key: { remoteJid: OWNER, id: `D${++n}`, fromMe: false }, message: docMsg(`${P()}ytcookies`), messageTimestamp: now() });
+  await settle();
+  assert.ok(says(/does not look like a cookies\.txt/));
+  assert.strictEqual(fs.existsSync(COOKIES), false);
+});
+
+test('v1.7.6 ytcookies: with no file it explains, and "remove" deletes the saved cookies', async () => {
+  fs.mkdirSync(path.dirname(COOKIES), { recursive: true });
+  fs.writeFileSync(COOKIES, GOOD);
+  sent.length = 0;
+  await handler.handleMessage(sock, dm(OWNER, `${P()}ytcookies`));
+  await settle();
+  assert.ok(says(/Cookies for play:\* saved/), 'it says the cookies are saved');
+  sent.length = 0;
+  await handler.handleMessage(sock, dm(OWNER, `${P()}ytcookies remove`));
+  await settle();
+  assert.ok(says(/Cookies removed/));
+  assert.strictEqual(fs.existsSync(COOKIES), false);
+});

@@ -20,8 +20,8 @@ module.exports = {
       fs.rmSync(FILE, { force: true });
       return reply('✅ Cookies removed.');
     }
-    const found = media.findMedia(msg, jid, botIds);
-    if (!found || found.kind !== 'document') {
+    const found = media.findDocument(msg, jid, botIds); // a file: findMedia() only knows pictures, videos, stickers and audio
+    if (!found) {
       return reply(
         `🍪 *Cookies for play:* ${fs.existsSync(FILE) ? 'saved ✅' : 'none'}\n\n` +
           `YouTube often blocks servers ("confirm you are not a bot"). With a cookies file from a browser where you are logged in to YouTube it works again.\n\n` +

@@ -25,6 +25,7 @@ function getText(msg) {
     m.extendedTextMessage?.text ||
     m.imageMessage?.caption ||
     m.videoMessage?.caption ||
+    m.documentMessage?.caption || // a file sent with a command as its caption (for example a cookies.txt with ytcookies)
     ''
   );
 }

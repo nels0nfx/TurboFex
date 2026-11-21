@@ -1,3 +1,7 @@
+TurboFex v1.7.7 - ytcookies works
+CHANGED IN 1.7.7
+- FIXED: `.ytcookies` never saved a cookies file. The bot only looked for pictures, videos, stickers and audio, so it never found a text file, and a file sent with `.ytcookies` as its caption was not read as a command at all. Both ways now work: send the cookies.txt with `.ytcookies` as its caption, or reply to the file with `.ytcookies`. Captions of files (documents) are now read like the captions of pictures and videos, so a file sent with a command as its caption runs that command.
+
 TurboFex v1.7.6 - auto tag, and a faster first reply in groups
 CHANGED IN 1.7.6
 - NEW: `.autotag on` / `.autotag off` (owner only). While it is on for a group, writing there tags everybody in the group silently. The bot does NOT send a second message: it edits YOUR OWN message and adds the tag (same text, no names listed, no empty bubble). WhatsApp only lets an account edit its own messages, so messages of other people are not changed, and pictures or stickers are left alone (a text or a reply is edited, a reply keeps the message it answers).
