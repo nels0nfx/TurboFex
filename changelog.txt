@@ -1,3 +1,10 @@
+TurboFex v1.7.4 - stability fixes
+CHANGED IN 1.7.4
+- FIXED: the bot could stay offline for good. When a reconnect failed to even START twice in a row (a disk error, too many open files), nothing tried again. It now keeps trying, waiting longer each time (5 s up to 1 minute) (`core/backoff.js`).
+- FIXED: one stuck command could block all others of its kind until a restart. A "medium" or "heavy" command (downloads, media work) now gives up its slot after 10 minutes at most and counts as failed, so the next command is not refused as "busy". A command can set its own limit with `maxMs`.
+- FIXED: a fatal error that nobody caught was only logged, so the bot could keep running half broken. One is still survived; when it happens 3 times in 10 minutes the bot restarts cleanly, with everything saved first and the login kept (`core/crashguard.js`).
+- FIXED: in a chat that sends messages faster than the bot can handle them, the waiting line grew without end (memory, and later and later answers). A chat's line now keeps the newest 100 waiting messages and skips the oldest, in order (`core/chatqueue.js`). Commands were never in this line and are not affected.
+
 TurboFex v1.7.3 - status likes work for every poster
 CHANGED IN 1.7.3
 - FIXED: likes on statuses of people who have read receipts OFF were refused when the bot account had read receipts ON. The bot now also registers each view privately (the receipt WhatsApp itself sends), and when a like is refused it registers the view again and tries once more before giving up.

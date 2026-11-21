@@ -41,6 +41,7 @@ const context = require('./context');
 const resilience = require('../core/resilience');
 const { getText, num, whoIds, whoJid, participantIds, senderIds, isCommandText } = require('./utils');
 
+const SLOT_LIMIT_MS = 10 * 60 * 1000; // the longest a medium or heavy command may hold its slot (a command can set its own `maxMs`)
 const commands = new Map(); // name or alias -> command
 const commandList = [];
 const diag = {
@@ -420,15 +421,24 @@ async function handleMessageInner(sock, msg) {
         myIds: whoIds(msg, botIds), myJid: whoJid(msg, sock),
         isGroup, isAdmin, isOwner, isRealOwner, isBotAdmin, groupMetadata,
       });
-      try {
-        await runCmd();
-      } catch (first) {
-        // a lookup that failed for a temporary reason (network, timeout, busy service) and has shown nothing yet gets one more try
-        if ((cmd.category === 'lookup' || cmd.retry) && !sentAny && resilience.classify(first) === 'temporary') {
-          await new Promise((res) => setTimeout(res, resilience.retryMs()));
+      const attempt = async () => {
+        try {
           await runCmd();
-        } else throw first;
-      }
+        } catch (first) {
+          // a lookup that failed for a temporary reason (network, timeout, busy service) and has shown nothing yet gets one more try
+          if ((cmd.category === 'lookup' || cmd.retry) && !sentAny && resilience.classify(first) === 'temporary') {
+            await new Promise((res) => setTimeout(res, resilience.retryMs()));
+            await runCmd();
+          } else throw first;
+        }
+      };
+      // A command that holds a "medium" or "heavy" slot must never hold it forever: one stuck download used to keep the only heavy slot
+      // until the bot restarted, and every later heavy command was refused as "busy". When the time is up the slot is freed and the
+      // command counts as failed. (The work itself cannot be cancelled from here; its own limits stop it in the end.)
+      const weight = cmd.capacity && cmd.capacity.weight;
+      const limitMs = cmd.maxMs || (weight === 'medium' || weight === 'heavy' ? SLOT_LIMIT_MS : 0);
+      if (limitMs) await withTimeout(attempt(), limitMs, `The command timed out after ${limitMs >= 60000 ? Math.round(limitMs / 60000) + ' minutes' : Math.round(limitMs / 1000) + ' seconds'}`);
+      else await attempt();
       if (warned) outcome = 'warn'; else resilience.ok(cmd.name);
     } catch (err) {
       outcome = 'fail';

@@ -43,7 +43,9 @@ let current = null;
 let reconnectTimer = null;
 let attempts = 0; // failed connection attempts in a row (the wait between attempts grows, so we never hammer WhatsApp)
 let watchdog = null;
-const queues = new Map(); // one line of waiting messages per chat
+const chatqueue = require('../core/chatqueue');
+const backoff = require('../core/backoff');
+const chatQueues = chatqueue.createQueues(); // one line of waiting messages per chat
 
 const FRESH_SECONDS = 120; // a message that arrived while the bot was reconnecting is still answered if it is this young
 
@@ -107,13 +109,14 @@ const isFresh = (msg) => {
   return ts > 0 && Date.now() / 1000 - ts < FRESH_SECONDS;
 };
 
-// messages of ONE chat are handled in order, different chats never wait for each other
+// messages of ONE chat are handled in order, different chats never wait for each other (core/chatqueue.js: the line has a limit)
+let lastDropNote = 0;
 function enqueue(jid, task) {
-  const previous = queues.get(jid) || Promise.resolve();
-  const next = previous.then(task).catch(() => {}).finally(() => {
-    if (queues.get(jid) === next) queues.delete(jid);
-  });
-  queues.set(jid, next);
+  const dropped = chatQueues.enqueue(jid, task);
+  if (dropped && Date.now() - lastDropNote > 60000) {
+    lastDropNote = Date.now();
+    console.log(`⚠️ A chat is sending messages faster than the bot can handle them. ${dropped} old waiting message(s) were skipped (the newest ${chatqueue.MAX_WAITING} are kept).`);
+  }
 }
 
 const closeTimes = []; // when the connection closed (last hour)
@@ -130,6 +133,23 @@ function startLagWatch() {
     if (late > 5000) console.log(`⏱️ The bot was frozen for about ${Math.round(late / 1000)} seconds (heavy work). A long freeze can make WhatsApp drop the connection.`);
   }, 1000);
   if (lagTimer.unref) lagTimer.unref();
+}
+
+// Starts the connection after `delay`. When the START itself fails (a disk error, too many open files...) it tries again and again
+// with a growing wait (core/backoff.js). Before, two failed starts in a row left the bot offline for good with nothing left to retry.
+let startFailures = 0;
+function scheduleStart(delay) {
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(() => {
+    startWhatsApp().then(() => {
+      startFailures = 0;
+    }).catch((e) => {
+      startFailures += 1;
+      const wait = backoff.delayAfter(startFailures);
+      console.error(`Reconnect failed (${startFailures} in a row): ${e && e.message}. Trying again in ${Math.round(wait / 1000)}s...`);
+      scheduleStart(wait);
+    });
+  }, delay);
 }
 
 async function startWhatsApp() {
@@ -428,11 +448,7 @@ async function startWhatsApp() {
         delay = Math.min(30000, 2000 * 2 ** Math.min(attempts - 1, 4)) + Math.random() * 1000;
         console.log(`Connection closed (code ${status}). Reconnecting in ${Math.round(delay / 1000)}s...`);
       }
-      clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(() => startWhatsApp().catch((e) => {
-        console.error('Reconnect failed:', e.message);
-        reconnectTimer = setTimeout(() => startWhatsApp().catch(console.error), 10000);
-      }), delay);
+      scheduleStart(delay);
     }
   });
 

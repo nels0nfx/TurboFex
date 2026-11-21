@@ -38,7 +38,16 @@ async function start() {
 
   require('./flush').installSignals(); // every saved file is written when the host stops or restarts the bot
   process.on('unhandledRejection', (err) => console.error('Unhandled error:', err));
-  process.on('uncaughtException', (err) => console.error('Crash prevented:', err));
+  let crashRestart = false;
+  process.on('uncaughtException', (err) => {
+    console.error('Crash prevented:', err);
+    // one is survived; the same thing again and again means the bot is not healthy: restart cleanly (everything is saved first)
+    if (!crashRestart && require('./crashguard').record()) {
+      crashRestart = true;
+      console.error('💥 Fatal errors keep happening. Restarting the bot now (your login and saved data are kept).');
+      require('./restart').restartBot(1000);
+    }
+  });
   installAutoRepair();
 
   // One bot per data folder: a second copy would overwrite the first one's saved settings and records
