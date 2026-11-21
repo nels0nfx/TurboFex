@@ -1,3 +1,7 @@
+TurboFex v1.7.5 - auto tag
+CHANGED IN 1.7.5
+- NEW: `.autotag on` / `.autotag off` (owner only, used inside the group). While it is on in a group, every message written there makes the bot tag everybody in the group silently: one message with an invisible text, so no names are listed but everybody is notified. The bot does not react to, quote or answer the message. Reactions, system notices, private chats and the `autotag` command itself never tag. It is OFF everywhere until switched on and is saved per group (`whatsapp/autotag.js`, `commands/autotag.js`).
+
 TurboFex v1.7.4 - stability fixes
 CHANGED IN 1.7.4
 - FIXED: the bot could stay offline for good. When a reconnect failed to even START twice in a row (a disk error, too many open files), nothing tried again. It now keeps trying, waiting longer each time (5 s up to 1 minute) (`core/backoff.js`).

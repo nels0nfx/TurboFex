@@ -3,6 +3,7 @@ const config = require('../config');
 const store = require('./store');
 const games = require('./play');
 const clock = require('../core/clock');
+const autotag = require('./autotag');
 const { num, whoIds, getTargets, hasPhrase } = require('./utils');
 
 const cooldown = new Map();
@@ -82,6 +83,7 @@ async function greet({ sock, msg, jid, text, isGroup, isCommand, botIds }) {
 
 async function runPassive(ctx) {
   const { sock, msg, jid, text, isCommand, botIds } = ctx;
+  autotag.maybe(ctx).catch((err) => console.error('Auto tag error:', err.message)); // silent, on its own: it never delays or stops the other features
   try {
     if (!isCommand && text && games.get(jid)) await games.route({ sock, msg, jid, text, botIds });
     await afk(ctx);
