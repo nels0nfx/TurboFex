@@ -1,6 +1,8 @@
-TurboFex v1.7.5 - auto tag
-CHANGED IN 1.7.5
-- NEW: `.autotag on` / `.autotag off` (owner only, used inside the group). While it is on in a group, every message written there makes the bot tag everybody in the group silently: one message with an invisible text, so no names are listed but everybody is notified. The bot does not react to, quote or answer the message. Reactions, system notices, private chats and the `autotag` command itself never tag. It is OFF everywhere until switched on and is saved per group (`whatsapp/autotag.js`, `commands/autotag.js`).
+TurboFex v1.7.6 - auto tag, and a faster first reply in groups
+CHANGED IN 1.7.6
+- NEW: `.autotag on` / `.autotag off` (owner only). While it is on for a group, writing there tags everybody in the group silently. The bot does NOT send a second message: it edits YOUR OWN message and adds the tag (same text, no names listed, no empty bubble). WhatsApp only lets an account edit its own messages, so messages of other people are not changed, and pictures or stickers are left alone (a text or a reply is edited, a reply keeps the message it answers).
+- In a private chat, `.autotag on` switches it on for ALL groups, also groups you join later; `.autotag off` switches it off everywhere. For one group use its number from `.gjids`, its id or part of its name: `.autotag on 3`, `.autotag off 3` (with "all" on, this leaves one group out). `.autotag` shows what is on. Inside a group the command works on that group only. It is OFF until switched on.
+- FASTER: the group list is now loaded 1 second after connecting (it was 3) and tried again 5, 15 and 45 seconds later if WhatsApp does not answer. Before, one failure meant every group was loaded one by one by the first person to write in it, which made the first reply in a group slow (the time inside the bot before a command starts, shown in the first `.ping`).
 
 TurboFex v1.7.4 - stability fixes
 CHANGED IN 1.7.4

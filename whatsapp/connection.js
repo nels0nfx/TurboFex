@@ -370,16 +370,23 @@ async function startWhatsApp() {
       }, 30000);
       if (stable.unref) stable.unref();
 
-      // load the group list once, so the first command in a group never waits for WhatsApp
-      setTimeout(async () => {
+      // load the group list as early as possible, so the first command in a group never waits for WhatsApp (that wait is what made the
+      // first reply in a group slow). If it fails it is tried again 5, 15 and 45 seconds later; before, one failure meant every group
+      // was loaded one by one, by the first person to write in it.
+      const primeGroups = async (tryNo) => {
         if (!alive()) return;
         try {
           const all = await withTimeout(sock.groupFetchAllParticipating(), 30000, 'group list timed out');
           meta.prime(all);
         } catch (err) {
-          // not important: groups are loaded one by one when needed
+          if (tryNo < 3 && alive()) {
+            const again = setTimeout(() => primeGroups(tryNo + 1), 5000 * 3 ** tryNo);
+            if (again.unref) again.unref();
+          }
         }
-      }, 3000);
+      };
+      const firstPrime = setTimeout(() => primeGroups(0), 1000);
+      if (firstPrime.unref) firstPrime.unref();
 
       updatewatch.start(sock, alive); // tells the owner when a new version is out, and what changed
       // an update that was just installed leaves a marker: turn it into an "update complete" note (once)
