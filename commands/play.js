@@ -74,16 +74,23 @@ module.exports = {
     // ---- A song name: look at SEVERAL results and pick the one that really is the song (not a cover, remix or 1 hour mix)
     let picks = [];
     if (query && !isLink) {
+      // The YouTube search page is one plain web request (about a second). The downloader's own search has to start the downloader
+      // program first, which alone takes several seconds, and then the download starts it a second time. So the search page goes
+      // first and the downloader's search is the backup (before, it was the other way round).
+      let found = [];
       try {
-        picks = songmatch.rank(await searchFlat(query, { source: 'youtube', limit: 6, onSetup: setup.onSetup }), query);
+        found = await ytsearch.search(query, 6);
       } catch (err) {
-        log('search', err);
+        log('search page', err);
+      }
+      if (!found.length) {
         try {
-          picks = songmatch.rank(await ytsearch.search(query, 6), query); // the search page itself, when the downloader cannot search
-        } catch (err2) {
-          log('search page', err2);
+          found = await searchFlat(query, { source: 'youtube', limit: 6, onSetup: setup.onSetup });
+        } catch (err) {
+          log('search', err);
         }
       }
+      picks = songmatch.rank(found, query);
       const good = picks.filter((p) => p.coverage >= 0.5);
       if (good.length) picks = good;
       // download the best two (the first one can be blocked or too long while the second is fine)

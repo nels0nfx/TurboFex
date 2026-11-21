@@ -12,6 +12,7 @@ const dltemp = require('./dltemp');
 
 const BIN_DIR = path.join(DATA, 'bin');
 const COOKIES = path.join(DATA, 'cookies.txt');
+const STATE = path.join(DATA, 'ytdlp-state.json');
 const MAX_MB = Number(process.env.PLAY_MAX_MB) || 60;
 const MAX_SECONDS = Number(process.env.PLAY_MAX_SECONDS) || 3600;
 const WIN = process.platform === 'win32';
@@ -51,6 +52,12 @@ async function findBinary() {
   return null;
 }
 
+// Called a few seconds after the bot is connected: starts the tool once in the background, so the first real download does not pay for
+// finding it and for reading its 35 MB from the disk. It never installs anything and never fails.
+function warmUp() {
+  return findBinary().catch(() => null);
+}
+
 // downloads the tool once (about 35 MB)
 async function install() {
   if (installing) return installing;
@@ -77,10 +84,36 @@ async function install() {
   return installing;
 }
 
-// the tool updates itself when sites change (at most once every 6 hours)
+// What the downloader has learned is kept in data/ytdlp-state.json, so a restart does not start from zero: the way that worked
+// last time (it is tried first) and when the tool was last updated. Before, both lived only in memory, so the first download after
+// every restart tried the slow ways one by one and ran a slow self-update again. Never a reason for a download to fail.
+let state = null;
+function readState() {
+  if (state) return state;
+  try {
+    state = JSON.parse(fs.readFileSync(STATE, 'utf8')) || {};
+  } catch (err) {
+    state = {};
+  }
+  return state;
+}
+function saveState() {
+  try {
+    fs.mkdirSync(DATA, { recursive: true });
+    fs.writeFileSync(`${STATE}.tmp`, JSON.stringify(state));
+    fs.renameSync(`${STATE}.tmp`, STATE);
+  } catch (err) {
+    // not saved: it is only a speed-up
+  }
+}
+
+// the tool updates itself when sites change (at most once every 6 hours, also across restarts)
 async function selfUpdate(bin) {
-  if (Date.now() - lastUpdate < 6 * 3600 * 1000) return false;
+  const st = readState();
+  if (Date.now() - Math.max(lastUpdate, Number(st.updatedAt) || 0) < 6 * 3600 * 1000) return false;
   lastUpdate = Date.now();
+  st.updatedAt = lastUpdate;
+  saveState();
   if (bin === 'yt-dlp') return false; // a system install is updated by the system
   return new Promise((resolve) => execFile(bin, ['-U'], { timeout: 120000, env: dltemp.env() }, (err) => resolve(!err)));
 }
@@ -134,7 +167,8 @@ function classify(text) {
 
 // Runs the downloader, and when a site changes or blocks us tries other ways: other clients, then a self-update.
 // The YouTube ways are only used for YouTube: on any other site they repeat the same request and just cost time.
-let goodWay = 0; // the number of the way that worked last time
+let goodWay = 0; // the number of the way that worked last time (also remembered across restarts, see readState)
+let wayLoaded = false;
 async function runWithRetries(bin, build, limits = {}) {
   let out;
   const youtube = limits.youtube !== false;
@@ -148,36 +182,58 @@ async function runWithRetries(bin, build, limits = {}) {
         ['--js-runtimes', 'node'],
       ]
     : [[]];
+  if (!wayLoaded) {
+    wayLoaded = true;
+    const st = readState();
+    if (st.bin === bin && Number.isInteger(st.way) && st.way >= 0) goodWay = st.way; // the same tool: the way that worked is still the best guess
+  }
   // the same ways, but the one that worked last time is first
   const first = youtube && goodWay < ways.length ? goodWay : 0;
   const order = [first, ...ways.map((_, n) => n).filter((n) => n !== first)];
   const attempts = order.map((n) => ways[n]);
   let lastErr;
   let cleaned = false;
-  for (let i = 0; i < attempts.length && out === undefined; i++) {
-    try {
-      if (!dltemp.ensureSpace()) throw Object.assign(new Error('no space'), { code: 'NO_SPACE', stderr: 'No space left on device' });
-      out = await run(bin, build(attempts[i]), 180000);
-      if (youtube) goodWay = order[i];
-    } catch (err) {
-      lastErr = err;
-      const text = String(err.stderr || err.message);
-      const kind = err.code && err.code !== 'TIMEOUT' && !err.stderr ? err.code : classify(text);
-      if (kind === 'TOO_LONG') throw Object.assign(new Error(`That video is longer than ${limits.minutes || 60} minutes.`), { code: 'TOO_LONG' });
-      if (kind === 'TOO_BIG') throw Object.assign(new Error(`That file is bigger than ${limits.mb || MAX_MB} MB.`), { code: 'TOO_BIG' });
-      if (err.code === 'TIMEOUT') throw err;
-      if (kind === 'NO_SPACE') {
-        // the disk is full: clean old leftovers and try the same way once more; if that fails it is reported, no other way can help
-        if (cleaned) throw Object.assign(new Error('no space'), { code: 'NO_SPACE' });
-        cleaned = true;
-        dltemp.cleanStale(0);
-        i -= 1;
-        continue;
+  let updated = false;
+  for (let pass = 0; pass < 2 && out === undefined; pass++) {
+    for (let i = 0; i < attempts.length && out === undefined; i++) {
+      try {
+        if (!dltemp.ensureSpace()) throw Object.assign(new Error('no space'), { code: 'NO_SPACE', stderr: 'No space left on device' });
+        out = await run(bin, build(attempts[i]), 180000);
+        if (youtube) {
+          goodWay = order[i];
+          const st = readState();
+          if (st.bin !== bin || st.way !== goodWay) {
+            st.bin = bin;
+            st.way = goodWay;
+            saveState();
+          }
+        }
+      } catch (err) {
+        lastErr = err;
+        const text = String(err.stderr || err.message);
+        const kind = err.code && err.code !== 'TIMEOUT' && !err.stderr ? err.code : classify(text);
+        if (kind === 'TOO_LONG') throw Object.assign(new Error(`That video is longer than ${limits.minutes || 60} minutes.`), { code: 'TOO_LONG' });
+        if (kind === 'TOO_BIG') throw Object.assign(new Error(`That file is bigger than ${limits.mb || MAX_MB} MB.`), { code: 'TOO_BIG' });
+        if (err.code === 'TIMEOUT') throw err;
+        if (kind === 'NO_SPACE') {
+          // the disk is full: clean old leftovers and try the same way once more; if that fails it is reported, no other way can help
+          if (cleaned) throw Object.assign(new Error('no space'), { code: 'NO_SPACE' });
+          cleaned = true;
+          dltemp.cleanStale(0);
+          i -= 1;
+          continue;
+        }
+        // these cannot be fixed by trying again another way
+        if (['LOGIN_REQUIRED', 'UNSUPPORTED', 'GONE'].includes(kind)) throw Object.assign(new Error(String(text.trim().split('\n').pop() || kind).slice(0, 200)), { code: kind });
       }
-      // these cannot be fixed by trying again another way
-      if (['LOGIN_REQUIRED', 'UNSUPPORTED', 'GONE'].includes(kind)) throw Object.assign(new Error(String(text.trim().split('\n').pop() || kind).slice(0, 200)), { code: kind });
-      if (i === 0 && (await selfUpdate(bin))) i = -1; // the site changed: update the tool and try again from the start
     }
+    // No way worked: the site may have changed. Only NOW is the (slow) update tried, then every way once more. Before, the update ran
+    // after the very first failure, before the quick ways (other clients) had been tried at all.
+    if (out === undefined && !updated && (await selfUpdate(bin))) {
+      updated = true;
+      continue;
+    }
+    break;
   }
   if (out === undefined) {
     const text = String(lastErr?.stderr || lastErr?.message || '');
@@ -389,4 +445,4 @@ async function titleOf(url) {
   }
 }
 
-module.exports = { explain, classify, cleanLink, downloadVideo, titleOf, downloadAudio, searchFlat, youtubeId, findBinary, install, MAX_MB, MAX_SECONDS };
+module.exports = { warmUp, explain, classify, cleanLink, downloadVideo, titleOf, downloadAudio, searchFlat, youtubeId, findBinary, install, MAX_MB, MAX_SECONDS };

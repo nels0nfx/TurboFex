@@ -166,7 +166,7 @@ function releaseLike(day) {
 
 async function react(sock, to, key, emoji, opts) {
   const id = ack.newId(sock);
-  const answer = ack.listen(sock, id, 4000);
+  const answer = ack.listen(sock, id, settings.ackWaitMs || 4000); // how long to wait for WhatsApp's answer
   try {
     await within(sock.sendMessage(to, { react: { key, text: emoji } }, { ...opts, ...(id ? { messageId: id } : {}) }), 15000, 'like');
   } catch (err) {
@@ -179,20 +179,39 @@ async function react(sock, to, key, emoji, opts) {
 const lidOf = (j) => (j && idmap.isLid(j) ? `${num(j)}@lid` : null);
 const pnOf = (j) => (j && idmap.isPn(j) ? `${num(j)}@s.whatsapp.net` : null);
 
-// Tries every recipient list once. Returns { confirmed } as soon as WhatsApp accepts one, or null when all were refused.
+const routeName = (list) => `status (${list.every((j) => j.endsWith('@lid')) ? 'lid' : list.some((j) => j.endsWith('@lid')) ? 'mixed' : 'number'} list)`;
+
+// Tries the recipient lists one after the other. Returns { confirmed } or null when all were refused.
+//   WhatsApp ACCEPTED it (an answer without an error)  -> done, confirmed.
+//   WhatsApp REFUSED it (an error)                      -> the next list.
+//   WhatsApp gave NO ANSWER at all                      -> also the next list (at most 2 tries in all). A like that WhatsApp silently
+//     drops looks exactly like this, and before, the first silence was taken as "done" and no other way was ever tried. The same like
+//     sent twice is harmless: it replaces the first. If no list ever gets an answer, the like counts as sent but unconfirmed.
 async function tryLists(sock, key, emoji, lists) {
+  let silent = null;
+  let silentTries = 0;
   for (const list of lists) {
     try {
       const r = await react(sock, 'status@broadcast', key, emoji, { statusJidList: list });
-      if (r.ok !== false) {
-        stats.route = `status (${list.every((j) => j.endsWith('@lid')) ? 'lid' : list.some((j) => j.endsWith('@lid')) ? 'mixed' : 'number'} list)`;
-        return { confirmed: r.ok === true }; // true = WhatsApp confirmed it, false = it gave no answer
+      if (r.ok === true) {
+        stats.route = routeName(list);
+        return { confirmed: true };
+      }
+      if (r.ok === null) {
+        if (!silent) silent = list;
+        silentTries += 1;
+        if (silentTries >= 2) break;
+        continue;
       }
       bump('rejected');
       console.log(`⚠️ WhatsApp refused a like with the list [${list.map((j) => j.split('@')[1]).join(', ')}] (error ${r.error}), trying the next way...`);
     } catch (err) {
       // try the next list
     }
+  }
+  if (silent) {
+    stats.route = routeName(silent);
+    return { confirmed: false };
   }
   return null;
 }

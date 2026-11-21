@@ -387,6 +387,9 @@ async function startWhatsApp() {
       };
       const firstPrime = setTimeout(() => primeGroups(0), 1000);
       if (firstPrime.unref) firstPrime.unref();
+      // get the downloader ready in the background, so the first download after a start does not have to find it first
+      const warm = setTimeout(() => { try { require('../core/ytdlp').warmUp(); } catch (err) { /* only a speed-up */ } }, 8000);
+      if (warm.unref) warm.unref();
 
       updatewatch.start(sock, alive); // tells the owner when a new version is out, and what changed
       // an update that was just installed leaves a marker: turn it into an "update complete" note (once)

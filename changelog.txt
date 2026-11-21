@@ -1,3 +1,12 @@
+TurboFex v1.7.9 - faster downloads, and a like WhatsApp did not answer is tried again
+CHANGED IN 1.7.9
+- FASTER downloads (dl, play, ig, tiktok and the others). Four slow spots were found in the download engine:
+  1) The way that worked last time (which YouTube client the downloader uses) was only kept in memory, so the first download after EVERY restart tried the slow ways one by one. It is now saved (`data/ytdlp-state.json`) and used first after a restart. In a test with a downloader that needs 0.3 s to start and only works on its last way, the first download after a restart went from about 2.7 s to 0.6 s.
+  2) When the first try failed, the slow self-update of the downloader ran BEFORE the quick alternatives were tried, and again after every restart. The update now runs only after every way has failed (then all ways are tried once more), and the 6-hour limit between updates also holds across restarts.
+  3) `play <song name>` started the downloader program twice (once to search, once to download), and each start takes seconds. The YouTube search page (one web request) is now used first and the downloader's own search is the backup.
+  4) A few seconds after the bot connects, the downloader is started once in the background, so the first real download does not have to find it and read it from the disk.
+- FIXED: a status like that WhatsApp did NOT answer at all was taken as done, and no other way was tried, although that is exactly what a like that WhatsApp silently drops looks like. The bot now tries one more way (at most 2 tries); if WhatsApp still gives no answer, the like counts as sent but unconfirmed, as before. The same like sent twice is harmless.
+
 TurboFex v1.7.8 - a new menu header
 CHANGED IN 1.7.8
 - CHANGED: the menu header has a new look: a framed box with the bot name in the top bar, then one line per detail, each starting with ◈ (Owner, User, Prefix, Mode, Commands, Version, Speed, Uptime; Platform, Usage and RAM for the owner only), and a closing line. The details are our own words and data. The title and subtitle you set with `setmenu` are still used. The menu stays ONE text message: no sticker, picture or video. The category boxes below the header are unchanged.
