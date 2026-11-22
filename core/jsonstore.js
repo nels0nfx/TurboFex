@@ -14,6 +14,41 @@ const path = require('path');
 const { DATA } = require('./paths');
 const { onFlushSync } = require('./flush');
 const safefile = require('./safefile');
+const { AsyncLocalStorage } = require('async_hooks');
+
+// A "probe" lets ONE command find out whether what it saved is really different from what was saved before. It is used to answer
+// "already ON" when a switch is repeated. Only code running inside that command counts (other chats cannot disturb it), and only
+// what was saved before the command's first answer.
+const probes = new AsyncLocalStorage();
+function probe() {
+  // changes that are still waiting to be written are written now, so "what was saved before" is exact (a switch is not a hot path)
+  for (const st of stores.values()) {
+    try {
+      if (st.dirty) st.flush();
+    } catch (err) {
+      // that store is checked as "cannot be told"
+    }
+  }
+  const p = { pre: new Map(), closed: false };
+  p.run = (fn) => probes.run(p, fn);
+  p.close = () => { p.closed = true; };
+  // 'none' = nothing was saved, 'same' = it was saved but is exactly as before, 'changed' = something is different (or cannot be told)
+  p.verdict = () => {
+    if (!p.pre.size) return 'none';
+    for (const [st, text] of p.pre) {
+      if (text === null) return 'changed';
+      let now;
+      try {
+        now = JSON.stringify(st.data);
+      } catch (err) {
+        return 'changed';
+      }
+      if (now !== text) return 'changed';
+    }
+    return 'same';
+  };
+  return p;
+}
 
 
 const DEFAULT_DELAY = 1000; // a change is written this long after it happens
@@ -142,12 +177,17 @@ function open(name, initial, opts = {}) {
     get data() {
       return data;
     },
+    get dirty() {
+      return dirty;
+    },
     // replaces the whole content (a restore, a reset the owner asked for)
     replace(next) {
       data = next;
       store.touch();
     },
     touch() {
+      const p = probes.getStore();
+      if (p && !p.closed && !p.pre.has(store)) p.pre.set(store, dirty ? null : last); // the text saved before this command (null: unsaved changes were waiting)
       dirty = true;
       if (!timer) {
         timer = setTimeout(() => {
@@ -159,6 +199,8 @@ function open(name, initial, opts = {}) {
     },
     // writes now (use it for changes that must not be lost: owner settings, money)
     save() {
+      const p = probes.getStore();
+      if (p && !p.closed && !p.pre.has(store)) p.pre.set(store, dirty ? null : last);
       dirty = true;
       return write();
     },
@@ -170,4 +212,4 @@ function open(name, initial, opts = {}) {
 
 const all = () => [...stores.values()];
 
-module.exports = { open, fillDefaults, all };
+module.exports = { open, fillDefaults, all, probe };

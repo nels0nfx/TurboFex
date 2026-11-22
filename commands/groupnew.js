@@ -269,7 +269,10 @@ module.exports = [
       const w = (args[0] || '').toLowerCase();
       if (w === 'on' || w === 'off') {
         if (!mayAdmin(ctx)) return; // not allowed: stay silent
-        for (const s of store.schedules().filter((x) => x.jid === jid && x.cmd === 'weeklyrecap')) store.removeSchedule(s.id);
+        const existing = store.schedules().filter((x) => x.jid === jid && x.cmd === 'weeklyrecap');
+        if (w === 'on' && existing.length) return reply(`ℹ️ *The weekly recap is already ON in this group.*\n▸ Nothing was changed. It is posted every Sunday at 20:00 _(${clock.zone()} time)_.`);
+        if (w === 'off' && !existing.length) return reply('ℹ️ *The weekly recap is already OFF in this group.*\n▸ Nothing was changed.');
+        for (const s of existing) store.removeSchedule(s.id);
         if (w === 'off') return reply('✅ *The weekly recap is OFF.*');
         const parsed = repeat.parse('weekly sun 20:00 x');
         store.addSchedule({ jid, time: parsed.time, text: `${prefix}weeklyrecap`, repeat: parsed.repeat, cmd: 'weeklyrecap' });

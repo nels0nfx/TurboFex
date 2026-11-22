@@ -40,7 +40,7 @@ test('the view goes out at once, also when a delay is set, and the like uses a L
   assert.strictEqual(log[0], 'view');
   assert.ok(Date.now() - t >= 1000);
   assert.strictEqual(log[1], 'list[lid,lid]');
-  assert.strictEqual(status.stats.route, 'status (lid list)');
+  assert.strictEqual(status.stats.route, 'status (lid list) + direct', 'the list first, then the like straight to the poster');
 });
 test('when WhatsApp refuses the LID-only list, the next list is tried', async () => {
   const cfg = store.statusCfg();
@@ -50,7 +50,7 @@ test('when WhatsApp refuses the LID-only list, the next list is tried', async ()
   await wait(3200);
   assert.strictEqual(log[1], 'list[lid,lid]');
   assert.ok(log[2].startsWith('list[') && log[2] !== 'list[lid,lid]');
-  assert.strictEqual(status.stats.route, 'status (mixed list)');
+  assert.strictEqual(status.stats.route, 'status (mixed list) + direct');
   assert.ok(status.stats.rejected >= 1);
 });
 test('when every list is refused, the like goes straight to the poster', async () => {
@@ -181,7 +181,8 @@ test('v1.7.3: a like refused at first is tried again after the view is registere
   const confirmed = await status.likeStatus(sock, post('R1'), '222488650874994@lid', '❤️');
   assert.strictEqual(confirmed, true);
   assert.ok(receipts.includes('read-self'), 'the view was registered again before the second try');
-  assert.ok(sent.length > 3 && sent.every((t) => t === 'status@broadcast'), 'it never needed the last resort');
+  assert.ok(sent.length > 3 && sent.slice(0, -1).every((t) => t === 'status@broadcast'), 'every list try is a broadcast');
+  assert.notStrictEqual(sent[sent.length - 1], 'status@broadcast', 'and the last send is the like straight to the poster');
 });
 test('v1.7.3: one refused poster does not switch the good like route off for everybody', async () => {
   status.settings.retryWaitMs = 0;

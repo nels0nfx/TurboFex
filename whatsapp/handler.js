@@ -33,6 +33,7 @@ const { addExif } = require('../core/webpexif');
 const capacity = require('../core/capacity');
 const { runProtections } = require('./protect');
 const { runPassive } = require('./passive');
+const toggles = require('../core/toggles');
 const { peel } = require('./unwrap');
 const chatlog = require('../core/chatlog');
 const ownerInfo = require('./owner');
@@ -397,8 +398,13 @@ async function handleMessageInner(sock, msg) {
     const pending = new Set(); // everything the command is still sending: the ✅ waits for it, so it never comes before the answer
     const answers = []; // the messages the command sent in the chat (cleanup.js deletes them later, when the owner wants that)
     const csock = Object.create(sock);
+    const switchWatch = toggles.watch(cmd, args, isGroup); // a single on/off word: a repeated switch says "already" instead of "done"
     csock.sendMessage = (to, content, opts) => {
       sentAny = true;
+      if (switchWatch && typeof content?.text === 'string') {
+        const same = switchWatch.decide(content.text);
+        if (same) content = { ...content, text: same };
+      }
       if (synthetic && opts?.quoted) opts = { ...opts, quoted: undefined }; // there is no real message to reply to
       if (typeof content?.text === 'string' && /^\s*(⚠️|❌|🚫)/.test(content.text)) warned = true;
       // stickers made by commands carry the pack name and author
@@ -416,11 +422,12 @@ async function handleMessageInner(sock, msg) {
 
     let outcome = 'ok';
     try {
-      const runCmd = () => cmd.run({
+      const callCmd = () => cmd.run({
         sock: csock, msg, jid, args, rest, reply, cmdName, prefix, silent, config, commandList, botIds, diag, timing,
         myIds: whoIds(msg, botIds), myJid: whoJid(msg, sock),
         isGroup, isAdmin, isOwner, isRealOwner, isBotAdmin, groupMetadata,
       });
+      const runCmd = () => (switchWatch ? switchWatch.run(callCmd) : callCmd());
       const attempt = async () => {
         try {
           await runCmd();

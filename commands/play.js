@@ -91,10 +91,12 @@ module.exports = {
         }
       }
       picks = songmatch.rank(found, query);
-      const good = picks.filter((p) => p.coverage >= 0.5);
-      if (good.length) picks = good;
+      // Only a result that really is the asked song is downloaded (all the asked words up to 3 words, three quarters after that).
+      // Before, half the words were enough, and when NOTHING matched the best of the bad results was sent anyway: that is how a song
+      // that was not asked for arrived. Now the answer is "not found", with the closest results to choose from.
+      const right = picks.filter(songmatch.isRight);
       // download the best two (the first one can be blocked or too long while the second is fine)
-      for (const pick of picks.slice(0, 2)) {
+      for (const pick of right.slice(0, 2)) {
         try {
           return await sendAudio(sock, jid, msg, await downloadAudio(pick.url, setup));
         } catch (err) {
@@ -104,7 +106,7 @@ module.exports = {
         }
       }
       // YouTube blocks this server (no cookies): the same video through a Piped server
-      for (const pick of picks.slice(0, 2)) {
+      for (const pick of right.slice(0, 2)) {
         try {
           return await sendAudio(sock, jid, msg, await piped.getAudio(pick.id, { maxBytes: MAX_BYTES, maxSeconds: MAX_SECONDS }));
         } catch (err) {
@@ -137,6 +139,11 @@ module.exports = {
       return reply(isOwner ? `⚠️ *I could not get that song.*\n▸ YouTube blocks this server and no other source had it.\n▸ *Fix:* send a cookies.txt with \`${prefix}ytcookies\`.` : '⚠️ *I could not find that song right now.*\n▸ Try another name, add the artist, or try again later.');
     }
     if (problem && ['NO_SPACE', 'TOO_LONG', 'TOO_BIG', 'TIMEOUT'].includes(problem.code)) return reply(ytdlp.explain(problem, { isOwner, prefix, what: 'that song' }));
-    return reply(`⚠️ *I could not find that exact song.*\n▸ Try the artist and the title, for example \`${prefix}play rema calm down\`.`);
+    // nothing matched well enough: say so, and show the closest results so the right one can be chosen by its link
+    const closest = picks.slice(0, 3).filter((p) => p.url);
+    const hint = closest.length
+      ? `\n\n▸ *Closest I found:*\n${closest.map((p, i) => `${i + 1}. ${p.title}${p.channel ? ` - ${p.channel}` : ''}\n${p.url}`).join('\n')}\n▸ _If one of these is it, send its link: ${prefix}play <link>_`
+      : '';
+    return reply(`⚠️ *I could not find that exact song.*\n▸ Try the artist and the title, for example \`${prefix}play rema calm down\`.${hint}`);
   },
 };

@@ -23,6 +23,7 @@ module.exports = [
       const cmd = handler().resolveCommand(word);
       if (!cmd) return reply(`⚠️ *I do not know the command "${word.slice(0, 20)}".*`);
       if (KEEP.includes(cmd.name)) return reply(`⚠️ *The command ${cmd.name} cannot be turned off.*`);
+      if (g.disabled.includes(cmd.name)) return reply(`ℹ️ *${cmd.name} is already turned off in this group.*\n▸ Nothing was changed. Turn it on again with \`${prefix}enable ${cmd.name}\``);
       store.update(jid, (x) => { x.disabled = [...new Set([...x.disabled, cmd.name])]; });
       await reply(`✅ *${cmd.name} is now turned off in this group.*\n_Members get a notice when they try it. Turn it on again with_ \`${prefix}enable ${cmd.name}\``);
     },
@@ -36,11 +37,13 @@ module.exports = [
       const word = (args[0] || '').toLowerCase();
       if (!word) return reply(`*Usage:* \`${prefix}enable <command>\` or \`${prefix}enable all\``);
       if (word === 'all') {
+        if (!store.getGroup(jid).disabled.length) return reply('ℹ️ *All commands are already on in this group.*\n▸ Nothing was changed.');
         store.update(jid, (x) => { x.disabled = []; });
         return reply('✅ *All commands are on again in this group.*');
       }
       const cmd = handler().resolveCommand(word);
       const name = cmd ? cmd.name : word;
+      if (!store.getGroup(jid).disabled.includes(name)) return reply(`ℹ️ *${name} is already on in this group.*\n▸ Nothing was changed.`);
       store.update(jid, (x) => { x.disabled = x.disabled.filter((c) => c !== name); });
       await reply(`✅ *${name} is on again in this group.*`);
     },

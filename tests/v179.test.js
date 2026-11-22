@@ -162,27 +162,30 @@ test('v1.7.9 status like: when WhatsApp does not answer, another way is tried, a
   const { sock, sent } = statusSock(['silent', 'ok']);
   const confirmed = await status.likeStatus(sock, post('S1'), '222488650874994@lid', '❤️');
   assert.strictEqual(confirmed, true, 'the second way was answered: confirmed');
-  assert.strictEqual(sent.length, 2);
+  assert.strictEqual(sent.length, 3, 'two list tries, then the like straight to the poster');
   assert.notDeepStrictEqual(sent[0].list, sent[1].list, 'another list, not the same again');
+  assert.notStrictEqual(sent[2].to, 'status@broadcast', 'the last one goes straight to the poster');
 });
 
-test('v1.7.9 status like: no answer anywhere = sent, unconfirmed, after only two tries (never a flood)', async () => {
+test('v1.7.9 status like: no answer anywhere = sent, unconfirmed, after only two list tries and one direct (never a flood)', async () => {
   const { sock, sent } = statusSock(['silent', 'silent', 'silent', 'silent']);
   const confirmed = await status.likeStatus(sock, post('S2'), '222488650874994@lid', '❤️');
   assert.strictEqual(confirmed, false, 'unconfirmed');
-  assert.strictEqual(sent.length, 2, 'two sends at most');
-  assert.ok(sent.every((x) => x.to === 'status@broadcast'));
+  assert.strictEqual(sent.length, 3, 'three sends at most');
+  assert.ok(sent.slice(0, 2).every((x) => x.to === 'status@broadcast'));
 });
 
-test('v1.7.9 status like: an answered like is still sent once', async () => {
+test('v1.7.9 status like: an answered like is sent on the list and once straight to the poster', async () => {
   const { sock, sent } = statusSock(['ok']);
   assert.strictEqual(await status.likeStatus(sock, post('S3'), '222488650874994@lid', '❤️'), true);
-  assert.strictEqual(sent.length, 1);
+  assert.strictEqual(sent.length, 2);
+  assert.strictEqual(sent[0].to, 'status@broadcast');
+  assert.notStrictEqual(sent[1].to, 'status@broadcast');
 });
 
 test('v1.7.9 status like: a refusal then silence still ends as sent-but-unconfirmed, not a failure', async () => {
-  const { sock, sent } = statusSock(['refuse', 'silent', 'silent']);
+  const { sock, sent } = statusSock(['refuse', 'silent', 'silent', 'silent']);
   const confirmed = await status.likeStatus(sock, post('S4'), '222488650874994@lid', '❤️');
   assert.strictEqual(confirmed, false);
-  assert.ok(sent.length <= 3);
+  assert.ok(sent.length <= 4);
 });

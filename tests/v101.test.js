@@ -50,7 +50,7 @@ test('a limit set while likes are waiting counts: the waiting likes are dropped,
   const sock = {
     ws, user: { id: '27899999999:1@s.whatsapp.net', lid: '999888777:1@lid' },
     sendReceipt: async () => {}, readMessages: async () => {},
-    sendMessage: async (to, c, o) => { sent.push(c.react?.text); setTimeout(() => ws.emit(`CB:ack,id:${o.messageId}`, { attrs: {} }), 5); return { key: { id: o.messageId } }; },
+    sendMessage: async (to, c, o) => { sent.push(to); setTimeout(() => ws.emit(`CB:ack,id:${o.messageId}`, { attrs: {} }), 5); return { key: { id: o.messageId } }; },
   };
   const now = Math.floor(Date.now() / 1000);
   const post = (id) => ({ key: { remoteJid: 'status@broadcast', id, participant: '222488650874994@lid', fromMe: false }, message: { imageMessage: {} }, messageTimestamp: now });
@@ -60,7 +60,9 @@ test('a limit set while likes are waiting counts: the waiting likes are dropped,
   for (let i = 0; i < 4; i++) await status.handleStatus(sock, post(`LIM${i}-${Date.now()}`));
   store.updateStatusCfg((s) => { s.dailyLikeLimit = before + 1; }); // set right after the statuses arrived
   await wait(9000);
-  assert.ok(sent.length <= 1, `at most one like went out after the limit was set (${sent.length})`);
+  // one like = the list on status@broadcast + the same like straight to the poster (v1.8.0)
+  assert.ok(sent.filter((t) => t === 'status@broadcast').length <= 1, `at most one like went out after the limit was set (${sent.length} sends)`);
+  assert.ok(sent.length <= 2);
   assert.ok(status.likeToday() <= before + 1);
   store.updateStatusCfg((s) => { s.like = false; s.view = false; s.dailyLikeLimit = 200; });
   } finally {

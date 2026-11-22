@@ -235,6 +235,7 @@ async function likeStatus(sock, msg, who, emoji) {
   if (posterPn) lists.push(uniq([posterPn, mePn]));
   lists.push(uniq([who, key.participantPn, key.participantAlt, mePn])); // what old library versions accepted
 
+  let viaList = null;
   if (Date.now() > routeBrokenUntil) {
     let r = await tryLists(sock, key, emoji, lists);
     if (!r) {
@@ -246,23 +247,42 @@ async function likeStatus(sock, msg, who, emoji) {
     }
     if (r) {
       refusedRun = 0;
-      return r.confirmed;
+      viaList = r;
+    } else {
+      refusedRun += 1;
+      if (refusedRun >= ROUTE_BROKEN_AFTER) {
+        refusedRun = 0;
+        routeBrokenUntil = Date.now() + 10 * 60 * 1000; // the list route is broken for everybody: only the direct way is used for a while
+      }
     }
-    refusedRun += 1;
-    if (refusedRun >= ROUTE_BROKEN_AFTER) {
-      refusedRun = 0;
-      routeBrokenUntil = Date.now() + 10 * 60 * 1000; // the list route is broken for everybody: skip straight to the last resort for a while
+  }
+  const listRoute = stats.route;
+
+  // ALSO straight to the poster, every time. That is how WhatsApp's own apps send a like: a reaction addressed to the person, which also
+  // reaches your own phone and lights the heart there. The list above is a broadcast that only imitates it, and WhatsApp's own phone did
+  // not show it as liked. Before, the direct way was only a last resort, used when every list had been refused. Sending the same like
+  // twice is harmless: the second replaces the first.
+  let viaDirect = null;
+  let directError = null;
+  for (const to of uniq([posterLid, posterPn, who])) {
+    try {
+      const r = await react(sock, to, key, emoji, {});
+      if (r.ok !== false) {
+        viaDirect = r;
+        break;
+      }
+      bump('rejected');
+      directError = r.error;
+    } catch (err) {
+      directError = err && err.message;
     }
   }
 
-  // last resort: straight to the poster
-  const r = await react(sock, posterLid || who, key, emoji, {});
-  if (r.ok === false) {
-    bump('rejected');
-    throw new Error(`WhatsApp refused the like (error ${r.error}). This is a known problem of the WhatsApp library with some accounts.`);
+  if (viaList || viaDirect) {
+    stats.route = viaList && viaDirect ? `${listRoute} + direct` : viaDirect ? 'direct' : listRoute;
+    return !!((viaList && viaList.confirmed) || (viaDirect && viaDirect.ok === true));
   }
-  stats.route = 'direct';
-  return r.ok === true;
+  throw new Error(`WhatsApp refused the like (error ${directError || 'unknown'}). This is a known problem of the WhatsApp library with some accounts.`);
 }
 
 // Statuses are handled a few at a time: after a reconnect WhatsApp can hand over dozens at once, and sending views and

@@ -9,19 +9,38 @@ function saved() {
   }
 }
 
+// Creating a date formatter is slow (about 0.1 ms) and every message in a group asks for the time several times, so each formatter is made
+// once and reused. This was about three quarters of all the work the bot did for a message in a group.
+const formatters = new Map();
+function formatter(locale, timeZone, opts) {
+  const key = `${locale}|${timeZone}|${JSON.stringify(opts)}`;
+  let f = formatters.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale, { timeZone, ...opts });
+    formatters.set(key, f);
+  }
+  return f;
+}
+
+const known = new Map(); // zone name -> is it a real time zone
 function zone() {
   const z = saved() || process.env.TIMEZONE || config.timezone || 'Africa/Johannesburg';
-  try {
-    new Intl.DateTimeFormat('en-GB', { timeZone: z });
-    return z;
-  } catch (err) {
-    return 'UTC';
+  let ok = known.get(z);
+  if (ok === undefined) {
+    try {
+      new Intl.DateTimeFormat('en-GB', { timeZone: z });
+      ok = true;
+    } catch (err) {
+      ok = false;
+    }
+    known.set(z, ok);
   }
+  return ok ? z : 'UTC';
 }
 
 function parts(date = new Date()) {
   const timeZone = zone();
-  const fmt = (locale, opts) => new Intl.DateTimeFormat(locale, { timeZone, ...opts }).format(date);
+  const fmt = (locale, opts) => formatter(locale, timeZone, opts).format(date);
   return {
     zone: timeZone,
     time: fmt('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
@@ -54,17 +73,17 @@ function uptime(seconds = process.uptime()) {
 
 // "2026-10" for the month a timestamp falls in (in the bot's time zone)
 function monthOf(ts = Date.now()) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: zone(), year: 'numeric', month: '2-digit' }).format(new Date(ts));
+  return formatter('en-CA', zone(), { year: 'numeric', month: '2-digit' }).format(new Date(ts));
 }
 
 // "Oct 2026"
 function monthLabel(ts = Date.now()) {
-  return new Intl.DateTimeFormat('en-GB', { timeZone: zone(), month: 'short', year: 'numeric' }).format(new Date(ts));
+  return formatter('en-GB', zone(), { month: 'short', year: 'numeric' }).format(new Date(ts));
 }
 
 // "3 Oct"
 function shortDate(ts) {
-  return new Intl.DateTimeFormat('en-GB', { timeZone: zone(), day: 'numeric', month: 'short' }).format(new Date(ts));
+  return formatter('en-GB', zone(), { day: 'numeric', month: 'short' }).format(new Date(ts));
 }
 
 // 5400000 -> "1h 30m"
@@ -81,8 +100,8 @@ function duration(ms) {
 // "3 Oct, 18:30"
 function stamp(ts) {
   const d = new Date(ts);
-  const day = new Intl.DateTimeFormat('en-GB', { timeZone: zone(), day: 'numeric', month: 'short' }).format(d);
-  const time = new Intl.DateTimeFormat('en-GB', { timeZone: zone(), hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+  const day = formatter('en-GB', zone(), { day: 'numeric', month: 'short' }).format(d);
+  const time = formatter('en-GB', zone(), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
   return `${day}, ${time}`;
 }
 
