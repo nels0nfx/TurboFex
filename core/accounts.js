@@ -45,6 +45,7 @@ const build = (root, env, name, e = {}) => {
     timezone: e.timezone ? String(e.timezone) : '',
     number: String(e.number || '').replace(/\D/g, ''),
     sessionId: String(e.sessionId || '').trim() || String(env[`SESSION_ID_${upper(name)}`] || '').trim(),
+    link: e.link === 'code' ? 'code' : '', // "code": this account links itself with a pairing code for its number (core/pairing.js)
   };
 };
 
@@ -109,6 +110,10 @@ function envFor(acc, index, base = process.env) {
     env.NUMBER = acc.number;
     env.PAIRING_NUMBER = '';
     env.OWNER_NUMBER = '';
+    if (acc.link === 'code' && acc.number && !acc.sessionId) {
+      env.CONSOLE_LINK = '1'; // the normal linking of the bot, with a pairing code for that number
+      env.PAIR_METHOD = 'code';
+    }
   } else {
     if (acc.sessionId) env.SESSION_ID = acc.sessionId;
     if (acc.idAssigned) env.TURBOFEX_ID_ASSIGNED = '1'; // the shared file has several IDs: main only uses its own

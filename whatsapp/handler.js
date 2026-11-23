@@ -34,6 +34,8 @@ const capacity = require('../core/capacity');
 const { runProtections } = require('./protect');
 const { runPassive } = require('./passive');
 const toggles = require('../core/toggles');
+const ignored = require('./ignored');
+const warm = require('./warm');
 const { peel } = require('./unwrap');
 const chatlog = require('../core/chatlog');
 const ownerInfo = require('./owner');
@@ -210,6 +212,13 @@ async function handleMessageInner(sock, msg) {
     if (r.isBanned && !r.isOwner) return;
   }
 
+  // An ignored chat (the owner switched it on with `ignore on`): nothing is done for what other people write there. The owner's own
+  // commands still work, so it can be switched off again; everything else the owner writes there is ignored too.
+  if (!synthetic && ignored.isIgnored(jid)) {
+    if (!msg.key.fromMe && !(await roles()).isOwner) return;
+    if (!isCommandText(text, prefix, isKnownCommand)) return;
+  }
+
   // private message blocker: strangers who write to the bot in private are told (or blocked); the owner and sudo users are never affected
   if (!isGroup && !synthetic && !msg.key.fromMe && jid !== 'status@broadcast' && store.getAuto('pm', 'off') !== 'off') {
     const r = await roles();
@@ -250,6 +259,7 @@ async function handleMessageInner(sock, msg) {
 
   let isCommand = isCommandText(text, prefix, isKnownCommand);
   if (isCommand && !prefix && !synthetic && require('./play').claims({ sock, msg, jid, text, botIds })) isCommand = false; // a game word, not a command
+  if (!synthetic && (isCommand || msg.key.fromMe)) warm.touch(jid); // a chat in use: its device lists are kept fresh in the background (whatsapp/warm.js)
   if (!synthetic) presence.onIncoming(sock, msg, jid); // "typing..." / "recording..." when someone writes to the bot (only when switched on)
   if (!isCommand && !synthetic) presence.reactTo(sock, msg, jid, isGroup ? [num(msg.key.participant), levels.keyOf(msg.key.participant || '')] : [num(jid), levels.keyOf(jid)]); // auto reactions (only when switched on)
 

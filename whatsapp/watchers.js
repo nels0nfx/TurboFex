@@ -70,8 +70,12 @@ async function sendCopy(sock, to, item, header, quoted) {
   const mentions = [...new Set([item.sender, ...(item.mentions || [])].filter(Boolean))];
   const opts = quoted ? { quoted } : undefined;
   if (item.buffer && item.kind) {
-    if (item.kind === 'picture') return sock.sendMessage(to, { image: item.buffer, caption, mentions }, opts);
-    if (item.kind === 'video') return sock.sendMessage(to, { video: item.buffer, caption, mentions }, opts);
+    // WhatsApp sent a small preview, the size and the length along with the original. Handing them over means the library does not have to make
+    // them itself, which is slow on a weak host (resizing a big picture, or starting ffmpeg for a video) and delayed every copy.
+    const thumb = item.thumb && item.thumb.length ? { jpegThumbnail: Buffer.from(item.thumb) } : {};
+    const size = item.width && item.height ? { width: item.width, height: item.height } : {};
+    if (item.kind === 'picture') return sock.sendMessage(to, { image: item.buffer, caption, mentions, ...thumb, ...size }, opts);
+    if (item.kind === 'video') return sock.sendMessage(to, { video: item.buffer, caption, mentions, ...thumb, ...size, ...(item.seconds ? { seconds: item.seconds } : {}) }, opts);
     if (item.kind === 'sticker') {
       await sock.sendMessage(to, { text: header, mentions }, opts);
       return sock.sendMessage(to, { sticker: item.buffer });
@@ -110,7 +114,7 @@ async function fetchMedia(sock, source) {
     return await media.download(sock, source);
   } catch (err) {
     if (err.code === 'TOO_BIG') throw err;
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 500)); // a failed first download is usually a blip: try again soon (it waited 1.5 s)
     try {
       return await media.download(sock, source);
     } catch (err2) {
@@ -244,7 +248,7 @@ async function viewOnce(sock, msg, isGroup, assume = false) {
     const header = vo.guessed
       ? `👁️ *Hidden ${kind}*\n▸ It arrived without its content, so it may have been a view-once.\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`
       : `👁️ *View-once ${kind}*\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`;
-    await sendCopy(sock, dest(sock, cfg, jid), { kind, buffer, mime: vo.node.mimetype, text: vo.node.caption || '', sender }, header);
+    await sendCopy(sock, dest(sock, cfg, jid), { kind, buffer, mime: vo.node.mimetype, text: vo.node.caption || '', sender, thumb: vo.node.jpegThumbnail, width: Number(vo.node.width) || 0, height: Number(vo.node.height) || 0, seconds: Number(vo.node.seconds) || 0 }, header);
     if (id) voState.set(id, Date.now());
     stats.viewOnceSaved += 1;
   } catch (err) {
@@ -305,7 +309,9 @@ function early(sock, msg) {
     const id = msg.key.id;
     // Only a message that really carries the view-once flag is opened. (The phone's answer to our request used to be opened
     // even without the flag, so an ordinary picture that had arrived late was reported as a view-once.)
-    const assume = store.watchCfg('viewonce').guess !== false && !!(id && voAsked.has(id)); // the phone's answer to our request: opened, but only called a view-once when it carries the flag
+    // `guess` is OFF unless the owner switched it on (`autoviewonce guess on`). It used to be ON, so an ordinary picture that had arrived
+    // empty (common after a reconnect or in a busy group) was copied as a "Hidden picture", and looked like a view-once that never was.
+    const assume = store.watchCfg('viewonce').guess === true && !!(id && voAsked.has(id)); // the phone's answer to our request: opened, but only called a view-once when it carries the flag
     const vo = findViewOnce(msg.message, assume);
     if (!vo) {
       if (id && voAsked.has(id) && peel(msg.message).content && Object.keys(peel(msg.message).content).some((k) => /^(image|video|audio)Message$/.test(k))) {

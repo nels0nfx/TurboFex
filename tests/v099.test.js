@@ -49,7 +49,8 @@ test('view-once: group events (a stub type) are not chased, and nothing is asked
   store.updateWatch('viewonce', (w) => { w.mode = 'all'; });
 });
 
-test('view-once: the phone answers our request with a picture WITHOUT the flag: it is kept but labelled Hidden, never View-once', async () => {
+test('view-once: with "guess on" the phone answers our request with a picture WITHOUT the flag: it is kept but labelled Hidden, never View-once', async () => {
+  store.updateWatch('viewonce', (w) => { w.guess = true; }); // it is OFF by default since v1.8.1
   const sock = mkSock({ requestPlaceholderResend: async () => {} });
   watchers.early(sock, empty('E4'));
   await settle();
@@ -68,7 +69,6 @@ test('view-once: with "guess off" a picture without the flag is ignored', async 
   await settle();
   await handler.handleMessage(sock, withMedia('E4c', { imageMessage: IMG }));
   await settle();
-  store.updateWatch('viewonce', (w) => { w.guess = true; });
   assert.strictEqual(sent.filter((s) => s.c.image).length, 0);
 });
 
@@ -195,4 +195,28 @@ test('view-once: when the phone never answers the request, the owner is told aft
     assert.strictEqual(note.j, OWNER_CHAT);
     assert.match(note.c.text, /\*vv\*/);
   } finally { watchers.timing.answerWait = 20000; delete process.env.EMPTY_NOTICE; }
+});
+
+test('v1.8.1 view-once: by DEFAULT an ordinary picture that arrived empty is never copied as a "Hidden picture"', async () => {
+  store.updateWatch('viewonce', (w) => { delete w.guess; }); // the default: the owner never switched `guess` on
+  sent.length = 0;
+  const sock = mkSock({ requestPlaceholderResend: async () => {} });
+  watchers.early(sock, empty('E9'));
+  await settle();
+  await handler.handleMessage(sock, withMedia('E9', { imageMessage: IMG })); // the phone answers: no view-once flag
+  await settle();
+  assert.strictEqual(sent.filter((x) => x.c.image).length, 0, 'an ordinary picture is not copied');
+});
+
+test('v1.8.1 view-once: a real one is copied with the preview, size WhatsApp sent along (nothing to make again)', async () => {
+  sent.length = 0;
+  const sock = mkSock({});
+  const thumb = Buffer.from('tiny-preview');
+  await handler.handleMessage(sock, withMedia('E10', { imageMessage: { ...IMG, viewOnce: true, jpegThumbnail: thumb, width: 640, height: 480 } }));
+  await settle();
+  const img = sent.find((x) => x.c.image);
+  assert.ok(img, 'copied');
+  assert.deepStrictEqual(Buffer.from(img.c.jpegThumbnail), thumb, 'the preview from WhatsApp is reused');
+  assert.strictEqual(img.c.width, 640);
+  assert.strictEqual(img.c.height, 480);
 });

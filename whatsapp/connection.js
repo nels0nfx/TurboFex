@@ -160,6 +160,7 @@ async function startWhatsApp() {
   const gen = ++generation;
   clearTimeout(reconnectTimer);
   stopWatchdog();
+  try { require('./warm').stop(); } catch (err) { /* never a reason to fail */ }
   // never keep two connections open (two copies fight each other and cause "Bad MAC")
   if (current) {
     try {
@@ -216,7 +217,7 @@ async function startWhatsApp() {
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 60000,
     getMessage: async (key) => outbox.get(key), // lets WhatsApp ask for a message again ("Waiting for this message" fix)
-    userDevicesCache: makeCache(30 * 60 * 1000), // who has which devices: remembered for 30 min (faster group replies)
+    userDevicesCache: makeCache(3 * 3600 * 1000), // who has which devices: remembered for 3 hours; the chats in use are refreshed every 15 minutes (whatsapp/warm.js), so the first reply after a break is not slow
     msgRetryCounterCache: makeCache(10 * 60 * 1000),
     // stops the library from asking the phone to resend every message it cannot decrypt: each request makes the phone show
     // "Finished syncing with WhatsApp on Google Chrome (Ubuntu)" (see core/placeholder.js)
@@ -311,6 +312,7 @@ async function startWhatsApp() {
         }
         current = null;
         stopWatchdog();
+        try { require('./warm').stop(); } catch (err) { /* never a reason to fail */ }
         scheduler.stop();
         sessionid.forget();
         setup.waitForSession(config, 'invalid');
@@ -332,9 +334,11 @@ async function startWhatsApp() {
             console.log(`\n⚠️ WhatsApp REFUSED the pairing code request (${lastIqError.code || '?'} ${lastIqError.text || ''}).`);
             console.log('   Codes are refused by WhatsApp at the moment. Here is the QR code instead, scan it:\n');
             qrFallback = true;
+            require('../core/pairing').note(DATA, 'refused', { number: config.pairingNumber });
             if (latestQr) showQr(latestQr);
           } else {
             const code = raw?.match(/.{1,4}/g)?.join('-') || raw;
+            require('../core/pairing').note(DATA, 'code', { code, number: config.pairingNumber }); // for `pair`: the owner gets this code
             console.log('\n==============================================');
             console.log(`  PAIRING CODE:  ${code}`);
             console.log('  WhatsApp > Linked devices > Link a device >');
@@ -350,6 +354,7 @@ async function startWhatsApp() {
     }
 
     if (connection === 'open') {
+      require('../core/pairing').noteOnline(DATA, String(sock.user?.id || '').split('@')[0].split(':')[0].replace(/\D/g, '')); // a pairing that was waiting is finished
       require('../core/chatlog').banner(`${brand.botName} is online as ${sock.user?.id}`);
       scheduler.start(sock);
       Promise.resolve()
@@ -387,6 +392,8 @@ async function startWhatsApp() {
       };
       const firstPrime = setTimeout(() => primeGroups(0), 1000);
       if (firstPrime.unref) firstPrime.unref();
+      require('./warm').start(sock); // keeps the device lists of the chats in use fresh (the first ping after a break stays fast)
+      require('./pairflow').resume(sock); // a pairing for somebody else that was waiting when the bot restarted goes on
       // get the downloader ready in the background, so the first download after a start does not have to find it first
       const warm = setTimeout(() => { try { require('../core/ytdlp').warmUp(); } catch (err) { /* only a speed-up */ } }, 8000);
       if (warm.unref) warm.unref();
