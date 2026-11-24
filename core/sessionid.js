@@ -10,7 +10,6 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const zlib = require('zlib');
 const { DATA } = require('./paths');
 
 const ID_RE = /^TFX-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/;
@@ -23,26 +22,6 @@ function normalize(raw) {
   if (s.length !== 12) return null;
   const id = `TFX-${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}`;
   return ID_RE.test(id) ? id : null;
-}
-
-
-// ----- a session ID that carries the login itself (made by the owner's `pair` command, no pairing site needed)
-//   TFXS.<the login file, compressed and written in letters>     It is as secret as a password: whoever has it controls that linked device.
-const SELF = 'TFXS.';
-const isSelfContained = (raw) => String(raw || '').trim().startsWith(SELF);
-
-function encode(creds) {
-  return SELF + zlib.gzipSync(Buffer.from(JSON.stringify(creds), 'utf8'), { level: 9 }).toString('base64url');
-}
-function decode(raw) {
-  try {
-    const body = String(raw || '').trim().slice(SELF.length);
-    if (!body || body.length > 400000) return null;
-    const creds = JSON.parse(zlib.gunzipSync(Buffer.from(body, 'base64url')).toString('utf8'));
-    return creds && typeof creds === 'object' ? creds : null;
-  } catch (err) {
-    return null;
-  }
 }
 
 // ----- the session ID file: session_id.txt, one line  SESSION_ID=TFX-XXXX-XXXX-XXXX  (lines starting with # are notes)
@@ -182,48 +161,6 @@ async function download(url, fetchFn, log, { timeoutMs, tries, pauseMs }) {
   return { error: last };
 }
 
-// writes the login as session/creds.json (a different login that is in the way is kept aside, never mixed); false when it could not be saved
-function installCreds(config, creds, log) {
-  try {
-    if (hasFiles(config.sessionDir)) {
-      // a different login (or leftovers) is in the way: keep a copy aside, never mix two accounts in one folder
-      fs.rmSync(ASIDE(), { recursive: true, force: true });
-      fs.mkdirSync(path.dirname(ASIDE()), { recursive: true });
-      fs.cpSync(config.sessionDir, ASIDE(), { recursive: true });
-      fs.rmSync(config.sessionDir, { recursive: true, force: true });
-      try {
-        require('./sessionbackup').markLoggedOut(); // copies of the old login must not come back
-      } catch (err) {
-        // not important
-      }
-    }
-    fs.mkdirSync(config.sessionDir, { recursive: true });
-    const file = path.join(config.sessionDir, 'creds.json');
-    fs.writeFileSync(file + '.tmp', JSON.stringify(creds));
-    fs.renameSync(file + '.tmp', file);
-    return true;
-  } catch (err) {
-    log(`⚠️ The login could not be saved (${err.message}). Is the session folder writable?`);
-    return false;
-  }
-}
-
-// a TFXS... ID: the login is inside the ID, nothing is downloaded
-function restoreLocal(raw, config, log) {
-  const linked = alreadyLinked(config.sessionDir);
-  if (linked && usedBefore(raw)) return 'skipped'; // this ID already gave the current login
-  const creds = decode(raw);
-  if (creds && creds.me && creds.me.id) creds.registered = true;
-  if (!creds || !creds.registered || !(creds.me && creds.me.id)) {
-    log('⚠️ The session ID is not complete or was damaged when it was copied. Ask for it again and copy all of it.');
-    return 'failed';
-  }
-  if (!installCreds(config, creds, log)) return 'failed';
-  markUsed(raw);
-  log('✅ Login restored from the session ID.');
-  return 'restored';
-}
-
 // returns 'restored' | 'skipped' | 'failed'. Never throws: a problem here must not stop the normal start.
 //   restored = a login from the site was saved      skipped = nothing to do (no ID, or this ID was already used)
 //   failed   = an ID is set but could not be used (the caller shows what to do)
@@ -231,7 +168,6 @@ async function restore(config, log = console.log, fetchFn = globalThis.fetch, op
   // the host variable first, then the file. When several accounts share the file, the launcher gives each its own ID (TURBOFEX_ID_ASSIGNED)
   const raw = String(config.sessionId || '').trim() || (config.sessionIdFile && process.env.TURBOFEX_ID_ASSIGNED !== '1' ? readFile(config.sessionIdFile) : '');
   if (!raw) return 'skipped';
-  if (isSelfContained(raw)) return restoreLocal(raw, config, log);
 
   const id = normalize(raw);
   if (!id) {
@@ -270,10 +206,30 @@ async function restore(config, log = console.log, fetchFn = globalThis.fetch, op
     return 'failed';
   }
 
-  if (!installCreds(config, creds, log)) return 'failed';
+  try {
+    if (hasFiles(config.sessionDir)) {
+      // a different login (or leftovers) is in the way: keep a copy aside, never mix two accounts in one folder
+      fs.rmSync(ASIDE(), { recursive: true, force: true });
+      fs.mkdirSync(path.dirname(ASIDE()), { recursive: true });
+      fs.cpSync(config.sessionDir, ASIDE(), { recursive: true });
+      fs.rmSync(config.sessionDir, { recursive: true, force: true });
+      try {
+        require('./sessionbackup').markLoggedOut(); // copies of the old login must not come back
+      } catch (err) {
+        // not important
+      }
+    }
+    fs.mkdirSync(config.sessionDir, { recursive: true });
+    const file = path.join(config.sessionDir, 'creds.json');
+    fs.writeFileSync(file + '.tmp', JSON.stringify(creds));
+    fs.renameSync(file + '.tmp', file);
+  } catch (err) {
+    log(`⚠️ The login was downloaded but could not be saved (${err.message}). Is the session folder writable?`);
+    return 'failed';
+  }
   markUsed(id);
   log('✅ Login restored from the session ID.');
   return 'restored';
 }
 
-module.exports = { restore, encode, decode, isSelfContained, normalize, forget, alreadyLinked, readFile, readAll, parseIds, hashOf, ensureFile, TEMPLATE };
+module.exports = { restore, normalize, forget, alreadyLinked, readFile, readAll, parseIds, hashOf, ensureFile, TEMPLATE };

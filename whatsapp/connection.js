@@ -334,11 +334,9 @@ async function startWhatsApp() {
             console.log(`\n⚠️ WhatsApp REFUSED the pairing code request (${lastIqError.code || '?'} ${lastIqError.text || ''}).`);
             console.log('   Codes are refused by WhatsApp at the moment. Here is the QR code instead, scan it:\n');
             qrFallback = true;
-            require('../core/pairing').note(DATA, 'refused', { number: config.pairingNumber });
             if (latestQr) showQr(latestQr);
           } else {
             const code = raw?.match(/.{1,4}/g)?.join('-') || raw;
-            require('../core/pairing').note(DATA, 'code', { code, number: config.pairingNumber }); // for `pair`: the owner gets this code
             console.log('\n==============================================');
             console.log(`  PAIRING CODE:  ${code}`);
             console.log('  WhatsApp > Linked devices > Link a device >');
@@ -354,12 +352,6 @@ async function startWhatsApp() {
     }
 
     if (connection === 'open') {
-      require('../core/pairing').noteOnline(DATA, String(sock.user?.id || '').split('@')[0].split(':')[0].replace(/\D/g, '')); // a pairing that was waiting is finished
-      if (process.env.TURBOFEX_PAIR_ONLY === '1') {
-        // the temporary process of `pair` only links and delivers: the person's session ID goes to THEIR OWN chat, nothing else starts
-        require('../core/pairdeliver').deliver({ sock, sessionDir: config.sessionDir, dataDir: DATA });
-        return;
-      }
       require('../core/chatlog').banner(`${brand.botName} is online as ${sock.user?.id}`);
       scheduler.start(sock);
       Promise.resolve()
@@ -472,14 +464,6 @@ async function startWhatsApp() {
       scheduleStart(delay);
     }
   });
-
-  // The temporary process of `pair` only links. It must not read or answer a single message (WhatsApp syncs old ones right after linking,
-  // and they would be answered from the person's account), and it ends itself after 8 minutes if nobody stops it.
-  if (process.env.TURBOFEX_PAIR_ONLY === '1') {
-    const end = setTimeout(() => process.exit(0), 8 * 60 * 1000);
-    if (end.unref) end.unref();
-    return;
-  }
 
   sock.ev.on('messages.upsert', ({ messages, type }) => {
     if (!alive()) return;
