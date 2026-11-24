@@ -31,7 +31,7 @@ const notesFile = () => notesStore || (notesStore = jsonstore.open('chatbot-note
 const listNotes = () => (notesFile().data.notes = Array.isArray(notesFile().data.notes) ? notesFile().data.notes : []);
 
 // anything that looks like a key, a session ID or a password is never kept: every person who asks the AI could hear it
-const LOOKS_SECRET = /(TFX-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}|AIza[0-9A-Za-z_-]{20,}|gsk_[0-9A-Za-z]{20,}|sk-[0-9A-Za-z_-]{20,}|\b\d{8,12}:[0-9A-Za-z_-]{30,}|password\s*[:=]|passcode\s*[:=])/i;
+const LOOKS_SECRET = /(TFX-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}|TFXS\.[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{20,}|gsk_[0-9A-Za-z]{20,}|sk-[0-9A-Za-z_-]{20,}|\b\d{8,12}:[0-9A-Za-z_-]{30,}|password\s*[:=]|passcode\s*[:=])/i;
 
 function addNote(text) {
   const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, NOTE_LEN);

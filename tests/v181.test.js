@@ -11,6 +11,8 @@ const ignored = require('../whatsapp/ignored');
 const warm = require('../whatsapp/warm');
 const pairing = require('../core/pairing');
 const accounts = require('../core/accounts');
+const sessionid = require('../core/sessionid');
+const EventEmitter = require('events');
 
 baileys.setForTests({});
 console.log = () => {};
@@ -127,123 +129,256 @@ test('v1.8.1 warm: the device list is remembered for 3 hours and kept fresh ever
   assert.strictEqual(warm.EVERY_MS, 15 * 60 * 1000);
 });
 
-// ------------------------------------------------------------------ pair for somebody else
-const tmpRoot = () => fs.mkdtempSync(path.join(os.tmpdir(), 'pair181-'));
-const readAccounts = (root) => JSON.parse(fs.readFileSync(path.join(root, 'accounts.json'), 'utf8'));
-
-test('v1.8.1 pair: a new number becomes an account that links itself with a code, and the main bot stays', () => {
-  const root = tmpRoot();
-  const r = pairing.start(root, '27811111111', '27899999999');
-  assert.deepStrictEqual({ s: r.status, name: r.name, once: r.restartsOnce }, { s: 'started', name: 'p27811111111', once: true });
-  assert.deepStrictEqual(readAccounts(root).accounts, [{ name: 'main' }, { name: 'p27811111111', number: '27811111111', link: 'code' }]);
-  // the same number again: it is waiting, not added twice
-  const again = pairing.start(root, '27811111111', '27899999999');
-  assert.strictEqual(again.status, 'waiting');
-  assert.strictEqual(readAccounts(root).accounts.length, 2);
-  // the bot's own number is refused
-  assert.strictEqual(pairing.start(root, '27899999999', '27899999999').status, 'own');
+// ------------------------------------------------------------------ ignore: the help says how to name a chat from anywhere
+test('v1.8.2 ignore: the description and the help explain how to name a chat from anywhere', async () => {
+  const cmd = require('../commands/ignore');
+  const sentence = 'From anywhere: you can name a group by its number from gjids, its id or part of its name, or a phone number, e.g. ignore on 3 or ignore on 27821234567';
+  assert.ok(cmd.description.includes(sentence), 'the description (menu and help) says it');
+  const out = (await say(dm(OWNER, `${P()}ignore`))).join(' ') + ' ' + sent.map((x) => x.c.text || '').join(' ');
+  assert.match(out, /From anywhere:/);
+  assert.match(out, /ignore on 3/);
+  assert.match(out, /ignore on 27821234567/);
+  assert.match(out, /number from .*gjids/);
 });
 
-test('v1.8.1 pair: an existing accounts.json is kept and added to (and a damaged one is not touched)', () => {
-  const root = tmpRoot();
-  fs.writeFileSync(path.join(root, 'accounts.json'), JSON.stringify({ accounts: [{ name: 'main' }, { name: 'shop', prefix: '!' }] }));
-  const r = pairing.start(root, '27822222222', '');
-  assert.strictEqual(r.restartsOnce, false, 'several accounts already: no restart');
-  assert.deepStrictEqual(readAccounts(root).accounts.map((a) => a.name), ['main', 'shop', 'p27822222222']);
-  assert.strictEqual(readAccounts(root).accounts[1].prefix, '!');
-  const bad = tmpRoot();
-  fs.writeFileSync(path.join(bad, 'accounts.json'), '{ not json');
-  assert.strictEqual(pairing.start(bad, '27833333333', '').status, 'broken');
-  assert.strictEqual(fs.readFileSync(path.join(bad, 'accounts.json'), 'utf8'), '{ not json');
+// ------------------------------------------------------------------ session IDs that carry the login
+const CREDS = { me: { id: '27811111111:12@s.whatsapp.net', name: '~' }, registered: true, noiseKey: { private: { type: 'Buffer', data: 'AAAA' }, public: { type: 'Buffer', data: 'BBBB' } }, advSecretKey: 'abc123' };
+const tmp = (p = 'v182-') => fs.mkdtempSync(path.join(os.tmpdir(), p));
+
+test('v1.8.2 session ID: the login goes into the ID and comes out unchanged', () => {
+  const id = sessionid.encode(CREDS);
+  assert.ok(id.startsWith('TFXS.') && id.length < 2000, `a short ID of letters only (${id.length})`);
+  assert.match(id, /^TFXS\.[A-Za-z0-9_-]+$/);
+  assert.deepStrictEqual(sessionid.decode(id), CREDS);
+  assert.strictEqual(sessionid.isSelfContained(id), true);
+  assert.strictEqual(sessionid.isSelfContained('TFX-ABCD-EFGH-JKLM'), false);
+  assert.strictEqual(sessionid.decode('TFXS.not-a-login'), null);
 });
 
-test('v1.8.1 pair: the new account is started to link with a pairing code for its number, and owns itself', () => {
-  const root = tmpRoot();
-  fs.writeFileSync(path.join(root, 'accounts.json'), JSON.stringify({ accounts: [{ name: 'main' }, { name: 'p27811111111', number: '27811111111', link: 'code' }] }));
-  const plan = accounts.load(root, {});
-  const acc = plan.accounts.find((a) => a.name === 'p27811111111');
-  assert.strictEqual(acc.link, 'code');
-  const env = accounts.envFor(acc, 1, {});
-  assert.strictEqual(env.CONSOLE_LINK, '1');
-  assert.strictEqual(env.PAIR_METHOD, 'code');
-  assert.strictEqual(env.NUMBER, '27811111111');
-  assert.strictEqual(env.OWNER_NUMBER, '', 'the person becomes the owner of their own bot');
-  const main = accounts.envFor(plan.accounts.find((a) => a.main), 0, {});
-  assert.ok(!main.CONSOLE_LINK, 'the main bot is not changed');
+test('v1.8.2 session ID: the bot logs in with it (no pairing site), once, and refuses a damaged one', async () => {
+  const dir = tmp();
+  const config = { sessionId: sessionid.encode(CREDS), sessionDir: path.join(dir, 'session'), sessionIdFile: path.join(dir, 'none.txt'), pairSiteUrl: 'https://nowhere.invalid' };
+  const logs = [];
+  const fetchFn = async () => { throw new Error('the site must not be asked'); };
+  assert.strictEqual(await sessionid.restore(config, (t) => logs.push(t), fetchFn), 'restored');
+  const saved = JSON.parse(fs.readFileSync(path.join(config.sessionDir, 'creds.json'), 'utf8'));
+  assert.strictEqual(saved.me.id, CREDS.me.id);
+  assert.strictEqual(saved.registered, true);
+  assert.strictEqual(await sessionid.restore(config, () => {}, fetchFn), 'skipped', 'the same ID on the next start changes nothing');
+  const bad = { ...config, sessionDir: path.join(dir, 'other'), sessionId: sessionid.encode(CREDS).slice(0, 60) };
+  assert.strictEqual(await sessionid.restore(bad, (t) => logs.push(t), fetchFn), 'failed');
+  assert.ok(logs.some((l) => /not complete or was damaged/.test(l)));
+  assert.strictEqual(fs.existsSync(path.join(dir, 'other', 'creds.json')), false, 'nothing was saved from a damaged ID');
 });
 
-test('v1.8.1 pair: the code, then "linked", reach the owner\'s private chat (and only there)', async () => {
-  const root = tmpRoot();
-  const name = 'p27811111111';
-  const dataDir = path.join(root, 'accounts', name, 'data');
+test('v1.8.2 session ID: it can be pasted in session_id.txt too, and is never shown to the AI chat', () => {
+  const dir = tmp();
+  const file = path.join(dir, 'session_id.txt');
+  const id = sessionid.encode(CREDS);
+  fs.writeFileSync(file, `# note\nSESSION_ID=${id}\n`);
+  assert.strictEqual(sessionid.readFile(file), id);
+  const src = fs.readFileSync(path.join(__dirname, '..', 'whatsapp', 'botknowledge.js'), 'utf8');
+  assert.match(src, /TFXS\\\.\[A-Za-z0-9_-\]\{20,\}/, 'the secret filter knows the new ID');
+});
+
+// ------------------------------------------------------------------ pair: a session ID for THEIR host
+const fakeChild = () => {
+  const c = new EventEmitter();
+  c.exitCode = null;
+  c.killed = false;
+  c.signals = [];
+  c.kill = (sig) => { c.killed = true; c.exitCode = 0; c.signals.push(sig); setImmediate(() => c.emit('exit', 0)); return true; };
+  return c;
+};
+function fakeSpawn(log) {
+  return (exe, args, opts) => { const child = fakeChild(); log.push({ exe, args, opts, child }); return child; };
+}
+const writeStatus = (folder, state, extra = {}) => pairing.note(path.join(folder, 'data'), state, extra);
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+test('v1.8.2 pair: the linking runs in its own folder with its own settings, and never touches accounts or the real bot', () => {
+  const root = tmp('root-');
+  const base = tmp('data-');
+  const calls = [];
+  const env = { SESSION_ID: 'TFX-REAL-REAL-REAL', NUMBER: '27800000001', OWNER_NUMBER: '27800000001', BOT_PREFIX: '!', PORT: '3000' };
+  const run = pairing.startLinker({ root, base, number: '27811111111', spawnFn: fakeSpawn(calls), execPath: '/usr/bin/node', env });
+  const { opts } = calls[0];
+  assert.strictEqual(opts.env.TURBOFEX_PAIR_ONLY, '1');
+  assert.strictEqual(opts.env.TURBOFEX_ISOLATED, '1');
+  assert.strictEqual(opts.env.TURBOFEX_NO_UPDATE, '1');
+  assert.strictEqual(opts.env.SESSION_ID, '', 'the real login is not passed on');
+  assert.strictEqual(opts.env.OWNER_NUMBER, '', 'and neither is the real owner');
+  assert.strictEqual(opts.env.NUMBER, '27811111111');
+  assert.strictEqual(opts.env.PAIR_METHOD, 'code');
+  for (const k of ['TURBOFEX_DATA', 'SESSION_DIR', 'SESSION_ID_FILE']) assert.ok(opts.env[k].startsWith(run.folder), `${k} is inside the temporary folder`);
+  assert.ok(run.folder.startsWith(base));
+  assert.strictEqual(fs.existsSync(path.join(root, 'accounts.json')), false, 'accounts.json is never made');
+  assert.deepStrictEqual(fs.readdirSync(root), [], 'nothing was written in the program folder');
+});
+
+// the person's own account (the temporary process), as a fake: it records what it sends
+const personSock = (number) => { const out = []; return { out, user: { id: `${number}:12@s.whatsapp.net` }, sendMessage: async (to, c) => { out.push({ to, text: c.text }); return { key: { id: 'P' } }; } }; };
+
+test('v1.8.2 pair: the owner gets the CODE; the session ID goes to the PERSON\'s own chat, never to the owner', async () => {
+  const base = tmp('data-');
+  const calls = [];
   const pairflow = require('../whatsapp/pairflow');
+  const pairdeliver = require('../core/pairdeliver');
   sent.length = 0;
-  const done = pairflow.begin(sock, name, '27811111111', { root, intervalMs: 15, maxMs: 4000 });
-  await new Promise((r) => setTimeout(r, 60));
-  assert.strictEqual(sent.length, 0, 'nothing before the account has a code');
-  pairing.note(dataDir, 'code', { code: 'ABCD-EFGH', number: '27811111111' }); // what the new account writes
-  await new Promise((r) => setTimeout(r, 120));
+  const done = pairflow.begin(sock, '27811111111', { root: tmp('root-'), base, spawnFn: fakeSpawn(calls), intervalMs: 15, maxMs: 5000, deliverMs: 4000 });
+  const folder = pairing.folderFor(base, '27811111111');
+  await wait(60);
+  assert.strictEqual(sent.length, 0, 'nothing before there is a code');
+
+  writeStatus(folder, 'code', { code: 'ABCD-EFGH', number: '27811111111' }); // what the temporary process writes
+  await wait(100);
   const codeMsg = sent.find((x) => /ABCD-EFGH/.test(x.c.text || ''));
-  assert.ok(codeMsg, 'the owner gets the code');
-  assert.ok(!String(codeMsg.j).endsWith('@g.us'), 'never to a group');
+  assert.ok(codeMsg && !String(codeMsg.j).endsWith('@g.us'), 'the code goes to the owner\'s private chat');
   assert.match(codeMsg.c.text, /Link with phone number instead/);
-  // the person enters the code: the login is saved
-  fs.mkdirSync(path.join(root, 'accounts', name, 'session'), { recursive: true });
-  fs.writeFileSync(path.join(root, 'accounts', name, 'session', 'creds.json'), JSON.stringify({ registered: true }));
-  assert.strictEqual(await done, 'linked');
-  assert.ok(sent.some((x) => /is linked/.test(x.c.text || '')));
+  assert.match(codeMsg.c.text, /THEIR OWN WhatsApp, not here/);
+
+  // the person enters the code: the temporary process is online, saves the login and sends it to its own chat
+  fs.writeFileSync(path.join(folder, 'session', 'creds.json'), JSON.stringify(CREDS));
+  writeStatus(folder, 'linked', { number: '27811111111' });
+  await wait(80);
+  assert.ok(sent.some((x) => /is linked/.test(x.c.text || '') && /their own WhatsApp/.test(x.c.text)), 'the owner is told it is linked');
+  const person = personSock('27811111111');
+  await pairdeliver.deliver({ sock: person, sessionDir: path.join(folder, 'session'), dataDir: path.join(folder, 'data'), settleMs: 5, gapMs: 5 });
+  assert.strictEqual(await done, 'delivered');
+
+  // what the PERSON got: in their own chat, the steps and then the ID alone
+  assert.strictEqual(person.out.length, 2);
+  assert.ok(person.out.every((m) => m.to === '27811111111@s.whatsapp.net'), 'to their own number (the chat with themselves)');
+  assert.match(person.out[0].text, /session ID/);
+  assert.match(person.out[0].text, /SESSION_ID/);
+  assert.match(person.out[0].text, /never share it/);
+  assert.match(person.out[0].text, /ONE place only/);
+  assert.deepStrictEqual(sessionid.decode(person.out[1].text).me, CREDS.me, 'the second message is their login, as a session ID');
+
+  // what the OWNER got: never the ID
+  const ownerTexts = sent.map((x) => x.c.text || '');
+  assert.ok(!ownerTexts.some((t) => /TFXS\./.test(t)), 'the owner never receives the session ID');
+  assert.ok(ownerTexts.some((t) => /Delivered to \+27811111111/.test(t)), 'only that it was delivered');
+  assert.ok(sent.every((x) => !String(x.j).endsWith('@g.us')));
+  assert.ok(calls[0].child.signals.includes('SIGTERM'), 'the temporary process was stopped');
+  assert.strictEqual(fs.existsSync(folder), false, 'the temporary folder, with the login, is deleted');
 });
 
-test('v1.8.1 pair: a refused code and a code nobody entered are told to the owner', async () => {
+test('v1.8.2 pair: the delivery sends exactly once, even if the process comes online twice', async () => {
+  const dir = tmp('folder-');
+  fs.mkdirSync(path.join(dir, 'session'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'session', 'creds.json'), JSON.stringify(CREDS));
+  const person = personSock('27811111111');
+  const args = { sock: person, sessionDir: path.join(dir, 'session'), dataDir: path.join(dir, 'data'), settleMs: 1, gapMs: 1 };
+  const pairdeliver = require('../core/pairdeliver');
+  await Promise.all([pairdeliver.deliver(args), pairdeliver.deliver(args)]);
+  await pairdeliver.deliver(args);
+  assert.strictEqual(person.out.length, 2, 'two messages, once');
+  assert.strictEqual(pairing.statusOf(dir).state, 'delivered');
+  pairing.noteOnline(path.join(dir, 'data'), '27811111111'); // a reconnect later
+  assert.strictEqual(pairing.statusOf(dir).state, 'delivered', 'a reconnect does not undo it');
+});
+
+test('v1.8.2 pair: when the ID cannot be sent, the owner is told what to do (and never gets the ID instead)', async () => {
+  const pairdeliver = require('../core/pairdeliver');
   const pairflow = require('../whatsapp/pairflow');
-  const r1 = tmpRoot();
-  pairing.note(path.join(r1, 'accounts', 'p27811111112', 'data'), 'refused', { number: '27811111112' });
+  const base = tmp('data-');
+  const folder = pairing.folderFor(base, '27811111114');
   sent.length = 0;
-  assert.strictEqual(await pairflow.begin(sock, 'p27811111112', '27811111112', { root: r1, intervalMs: 10, maxMs: 500 }), 'refused');
-  assert.ok(sent.some((x) => /refused the pairing code/.test(x.c.text || '')));
-  const r2 = tmpRoot();
-  sent.length = 0;
-  assert.strictEqual(await pairflow.begin(sock, 'p27811111113', '27811111113', { root: r2, intervalMs: 10, maxMs: 120 }), 'timeout');
-  assert.ok(sent.some((x) => /not linked yet/.test(x.c.text || '')));
+  const done = pairflow.begin(sock, '27811111114', { root: tmp('root-'), base, spawnFn: fakeSpawn([]), intervalMs: 10, maxMs: 2000, deliverMs: 2000 });
+  writeStatus(folder, 'linked', { number: '27811111114' });
+  const broken = { user: { id: '27811111114:1@s.whatsapp.net' }, sendMessage: async () => { throw new Error('not connected'); } };
+  fs.writeFileSync(path.join(folder, 'session', 'creds.json'), JSON.stringify(CREDS));
+  await pairdeliver.deliver({ sock: broken, sessionDir: path.join(folder, 'session'), dataDir: path.join(folder, 'data'), settleMs: 1, gapMs: 1 });
+  assert.strictEqual(await done, 'failed');
+  const texts = sent.map((x) => x.c.text || '');
+  assert.ok(texts.some((t) => /could not send them their session ID \(not connected\)/.test(t)));
+  assert.ok(texts.some((t) => /Log out/.test(t)), 'it says what to do');
+  assert.ok(!texts.some((t) => /TFXS\./.test(t)));
+
+  // no login saved at all
+  const empty = tmp('folder-');
+  const person = personSock('27811111115');
+  await pairdeliver.deliver({ sock: person, sessionDir: path.join(empty, 'session'), dataDir: path.join(empty, 'data'), settleMs: 1, tries: 2, gapMs: 1 });
+  assert.strictEqual(pairing.statusOf(empty).state, 'failed');
+  assert.strictEqual(person.out.length, 0, 'nothing is sent without a login');
 });
 
-test('v1.8.1 pair: the new account reports its code, and "linked" when it comes online', () => {
-  const dir = tmpRoot();
-  pairing.note(dir, 'code', { code: 'WXYZ-1234' });
-  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(dir, 'pairing-status.json'), 'utf8')).code, 'WXYZ-1234');
-  pairing.noteOnline(dir, '27811111111');
-  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(dir, 'pairing-status.json'), 'utf8')).state, 'linked');
-  const none = tmpRoot();
-  pairing.noteOnline(none, '27800000000'); // an ordinary start: no status file is made
-  assert.strictEqual(fs.existsSync(path.join(none, 'pairing-status.json')), false);
+test('v1.8.2 pair: a refused code and a code nobody entered are told, and the process and folder are cleaned up', async () => {
+  const pairflow = require('../whatsapp/pairflow');
+  const b1 = tmp('data-');
+  const c1 = [];
+  sent.length = 0;
+  const p1 = pairflow.begin(sock, '27811111112', { root: tmp('root-'), base: b1, spawnFn: fakeSpawn(c1), intervalMs: 10, maxMs: 1000 });
+  writeStatus(pairing.folderFor(b1, '27811111112'), 'refused', { number: '27811111112' });
+  assert.strictEqual(await p1, 'refused');
+  assert.ok(sent.some((x) => /refused the pairing code/.test(x.c.text || '')));
+  assert.strictEqual(fs.existsSync(pairing.folderFor(b1, '27811111112')), false);
+  assert.ok(c1[0].child.killed);
+
+  const b2 = tmp('data-');
+  const c2 = [];
+  sent.length = 0;
+  assert.strictEqual(await pairflow.begin(sock, '27811111113', { root: tmp('root-'), base: b2, spawnFn: fakeSpawn(c2), intervalMs: 10, maxMs: 120 }), 'timeout');
+  assert.ok(sent.some((x) => /is not linked/.test(x.c.text || '')));
+  assert.strictEqual(fs.existsSync(pairing.folderFor(b2, '27811111113')), false);
+  assert.ok(c2[0].child.killed);
+});
+
+test('v1.8.2 pair: linked but no confirmation of the delivery is told to the owner', async () => {
+  const pairflow = require('../whatsapp/pairflow');
+  const base = tmp('data-');
+  const calls = [];
+  sent.length = 0;
+  const done = pairflow.begin(sock, '27811111116', { root: tmp('root-'), base, spawnFn: fakeSpawn(calls), intervalMs: 10, maxMs: 1000, deliverMs: 120 });
+  writeStatus(pairing.folderFor(base, '27811111116'), 'linked', { number: '27811111116' });
+  assert.strictEqual(await done, 'timeout');
+  assert.ok(sent.some((x) => /could not confirm that their session ID arrived/.test(x.c.text || '')));
+  assert.ok(calls[0].child.killed);
+  assert.strictEqual(fs.existsSync(pairing.folderFor(base, '27811111116')), false);
+});
+
+test('v1.8.2 pair: the linking process only links (no messages read, nothing started), and reports its code', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'whatsapp', 'connection.js'), 'utf8');
+  const guard = src.indexOf("process.env.TURBOFEX_PAIR_ONLY === '1') {");
+  assert.ok(guard > 0 && guard < src.indexOf("sock.ev.on('messages.upsert'"), 'the guard comes before the message handler is attached');
+  assert.match(src, /TURBOFEX_PAIR_ONLY === '1'\) \{[\s\S]{0,260}pairdeliver'\)\.deliver\(/, '"online" only delivers the session ID to the person\'s own chat');
   assert.match(src, /pairing'\)\.note\(DATA, 'code'/);
   assert.match(src, /pairing'\)\.noteOnline\(DATA/);
+  assert.ok(!/pairflow/.test(src), 'no restart handling: the bot is not restarted any more');
+  // accounts are untouched
+  const acc = accounts.envFor({ name: 'shop', main: false, dataDir: '/d', sessionDir: '/s', sessionIdFile: '/f', number: '27811111111', sessionId: '', prefix: '', timezone: '' }, 1, {});
+  assert.ok(!acc.CONSOLE_LINK && !acc.PAIR_METHOD && !acc.TURBOFEX_PAIR_ONLY);
 });
 
-test('v1.8.1 pair: the command checks the number and answers the owner (nothing is really created)', async () => {
-  const calls = [];
-  pairing.start = (root, number, own) => { calls.push(number); return { status: number === '27811111111' ? 'started' : number === '27822222222' ? 'linked' : 'waiting', name: `p${number}`, restartsOnce: true }; };
+test('v1.8.2 pair: the command checks the number, refuses the bot\'s own, and starts exactly one linking', async () => {
   const pairflow = require('../whatsapp/pairflow');
-  pairflow.begin = () => Promise.resolve('stubbed');
+  const starts = [];
+  pairflow.begin = (_s, number) => { starts.push(number); return Promise.resolve('stubbed'); };
   delete require.cache[require.resolve('../commands/pair')];
   const cmd = require('../commands/pair');
   const run = async (rest) => { let out = ''; await cmd.run({ sock, rest, reply: async (t) => { out = t; }, prefix: '.' }); return out; };
   assert.match(await run(''), /Pair a number for somebody else/);
+  assert.match(await run(''), /THEIR OWN WhatsApp, not to you/);
+  assert.match(await run(''), /like on the pairing site/);
   assert.match(await run('hello'), /Pair a number/);
   assert.match(await run('123'), /Pair a number/);
-  assert.deepStrictEqual(calls, [], 'a wrong number never reaches the account list');
-  assert.match(await run('+27 81 111 1111'), /Linking \+27811111111/);
-  assert.match(await run('27822222222'), /already linked/);
-  assert.match(await run('27833333333'), /waiting to be linked/);
+  assert.deepStrictEqual(starts, [], 'a wrong number starts nothing');
+  const ownNumber = require('../config').number;
+  if (ownNumber) assert.match(await run(ownNumber), /bot's own number/);
+  const ok = await run('+27 81 111 1111');
+  assert.match(ok, /Linking \+27811111111/);
+  assert.match(ok, /private chat/);
+  assert.match(ok, /THEIR OWN WhatsApp, not to you/);
+  assert.match(ok, /nothing of this bot is changed/);
+  assert.deepStrictEqual(starts, ['27811111111']);
   assert.ok(cmd.ownerOnly);
 });
 
-test('v1.8.1 pair: only the owner can use it', async () => {
-  const before = pairing.start;
+test('v1.8.2 pair: only the owner can use it', async () => {
+  const pairflow = require('../whatsapp/pairflow');
   let called = false;
-  pairing.start = () => { called = true; return { status: 'started', name: 'x' }; };
+  pairflow.begin = () => { called = true; return Promise.resolve(); };
   await say(dm(MEMBER, `${P()}pair 27844444444`));
-  pairing.start = before;
   assert.strictEqual(called, false);
 });

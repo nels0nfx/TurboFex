@@ -17,11 +17,16 @@ module.exports = {
   name: 'ignore',
   aliases: ['ignorechat'],
   category: 'owner',
-  description: 'Make the bot ignore a chat: ignore on / off in the chat, or ignore on 3 (a group number from gjids) or a phone number from anywhere; ignore list (owner only)',
+  description: 'Make the bot ignore a chat: ignore on / off in the chat itself. From anywhere: you can name a group by its number from gjids, its id or part of its name, or a phone number, e.g. ignore on 3 or ignore on 27821234567. ignore list shows them (owner only)',
   ownerOnly: true,
   noAgain: true,
   async run({ sock, jid, args, rest, reply, prefix }) {
     const w = (args[0] || '').toLowerCase();
+
+    if (w === 'help' || !String(rest || '').trim()) {
+      const here = ignored.isIgnored(jid);
+      return reply(`📵 *Ignore a chat*\n▸ _This chat is ${here ? 'IGNORED' : 'not ignored'}._\n▸ \`${prefix}ignore on\` / \`${prefix}ignore off\`: in the chat itself\n▸ *From anywhere:* you can name a group by its number from \`${prefix}gjids\`, its id or part of its name, or a phone number, e.g. \`${prefix}ignore on 3\` or \`${prefix}ignore on 27821234567\`\n▸ \`${prefix}ignore list\` shows what is ignored\n_In an ignored chat I do nothing for anyone but you. Your own commands still work._`);
+    }
 
     if (w === 'list') {
       const all = ignored.list();

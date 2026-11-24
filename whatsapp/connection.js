@@ -355,6 +355,11 @@ async function startWhatsApp() {
 
     if (connection === 'open') {
       require('../core/pairing').noteOnline(DATA, String(sock.user?.id || '').split('@')[0].split(':')[0].replace(/\D/g, '')); // a pairing that was waiting is finished
+      if (process.env.TURBOFEX_PAIR_ONLY === '1') {
+        // the temporary process of `pair` only links and delivers: the person's session ID goes to THEIR OWN chat, nothing else starts
+        require('../core/pairdeliver').deliver({ sock, sessionDir: config.sessionDir, dataDir: DATA });
+        return;
+      }
       require('../core/chatlog').banner(`${brand.botName} is online as ${sock.user?.id}`);
       scheduler.start(sock);
       Promise.resolve()
@@ -393,7 +398,6 @@ async function startWhatsApp() {
       const firstPrime = setTimeout(() => primeGroups(0), 1000);
       if (firstPrime.unref) firstPrime.unref();
       require('./warm').start(sock); // keeps the device lists of the chats in use fresh (the first ping after a break stays fast)
-      require('./pairflow').resume(sock); // a pairing for somebody else that was waiting when the bot restarted goes on
       // get the downloader ready in the background, so the first download after a start does not have to find it first
       const warm = setTimeout(() => { try { require('../core/ytdlp').warmUp(); } catch (err) { /* only a speed-up */ } }, 8000);
       if (warm.unref) warm.unref();
@@ -468,6 +472,14 @@ async function startWhatsApp() {
       scheduleStart(delay);
     }
   });
+
+  // The temporary process of `pair` only links. It must not read or answer a single message (WhatsApp syncs old ones right after linking,
+  // and they would be answered from the person's account), and it ends itself after 8 minutes if nobody stops it.
+  if (process.env.TURBOFEX_PAIR_ONLY === '1') {
+    const end = setTimeout(() => process.exit(0), 8 * 60 * 1000);
+    if (end.unref) end.unref();
+    return;
+  }
 
   sock.ev.on('messages.upsert', ({ messages, type }) => {
     if (!alive()) return;
