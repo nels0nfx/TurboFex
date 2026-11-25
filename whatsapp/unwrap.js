@@ -35,7 +35,7 @@ function textOf(message) {
   return m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.videoMessage?.caption || m.documentMessage?.caption || '';
 }
 
-// finds a view-once picture, video or voice note: { kind: 'image'|'video'|'audio', node, empty }
+// finds a view-once picture, video, voice note or text: { kind: 'image'|'video'|'audio'|'text', node, empty }
 // assume = true: this message is the answer to a request we made for a hidden view-once, so any picture/video/voice note in it counts
 function findViewOnce(message, assume = false) {
   const { content, viewOnce } = peel(message);
@@ -46,6 +46,12 @@ function findViewOnce(message, assume = false) {
       const empty = !node.mediaKey && !node.url && !node.directPath;
       return { kind: key.replace('Message', ''), node, empty, guessed: !(viewOnce || node.viewOnce) };
     }
+  }
+  // A view-once TEXT (WhatsApp added them recently): text inside a view-once envelope. Ordinary text is never taken for one, not even with `assume`.
+  const textNode = content.extendedTextMessage || (typeof content.conversation === 'string' && content.conversation ? { text: content.conversation } : null);
+  if (textNode && (viewOnce || textNode.viewOnce)) {
+    const text = String(textNode.text || '');
+    return { kind: 'text', node: textNode, text, empty: !text, guessed: false };
   }
   return null;
 }

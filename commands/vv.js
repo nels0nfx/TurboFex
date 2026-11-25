@@ -1,4 +1,4 @@
-// Reveals a view-once picture, video or voice note: reply to it with "vv".
+// Reveals a view-once picture, video, voice note or text: reply to it with "vv".
 const media = require('../whatsapp/media');
 const watchers = require('../whatsapp/watchers');
 const clock = require('../core/clock');
@@ -15,13 +15,25 @@ module.exports = {
   needs: [],
   silentOnSticker: true, // run by a sticker (setstickercmd vv): no answer, no reaction in the chat; the file goes to the view-once chat
   weight: 'medium',
-  description: 'Open a view-once picture, video or voice note: reply to it with vv (vv me = send it to your own chat)',
+  description: 'Open a view-once picture, video, voice note or text: reply to it with vv (vv me = send it to your own chat)',
   async run({ sock, jid, msg, args, reply, prefix, botIds, silent }) {
     const q = getQuoted(msg);
     if (!q) return reply(`Reply to a view-once message with *${prefix}vv*.\n*${prefix}vv me* sends the file to your own chat instead of this one.`);
 
     const vo = findViewOnce(q.message);
     const inner = peel(q.message).content;
+
+    // a view-once TEXT: the words are in the message (a quote of a view-once may be empty, then the complete message seen lately is used)
+    const seen = watchers.recentViewOnce(q.id);
+    const voFull = seen ? findViewOnce(seen.message) : null;
+    if ((vo && vo.kind === 'text') || (voFull && voFull.kind === 'text')) {
+      const text = (vo && vo.kind === 'text' && vo.text) || (voFull && voFull.text) || '';
+      if (!text) return reply(`⚠️ I do not have the words of that view-once text.\n${watchers.OPEN_ON_PHONE}`);
+      const dest = silent ? watchers.dest(sock, require('../whatsapp/store').watchCfg('viewonce'), jid) : (args[0] || '').toLowerCase() === 'me' ? ownerChat(sock) : jid;
+      await sock.sendMessage(dest, { text: `👁️ *View-once text opened*\n🕒 ${clock.stamp(Date.now())}\n\n${text}` }, dest === jid && !silent ? { quoted: msg } : undefined);
+      if (dest !== jid && !silent) await reply('✅ Sent to your chat.');
+      return;
+    }
     const node = vo?.node || inner.imageMessage || inner.videoMessage || inner.audioMessage;
     if (!node) return reply('⚠️ That message has no picture, video or voice note in it.');
     const kind = inner.videoMessage ? 'video' : inner.audioMessage ? 'audio' : 'image';

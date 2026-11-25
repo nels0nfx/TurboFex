@@ -32,4 +32,10 @@ function set(jid, value) {
 
 const list = () => [...js.data.chats];
 
-module.exports = { isIgnored, set, list, keyOf };
+// replaces the whole list (the settings reset and its undo)
+function restore(chats) {
+  js.data.chats = [...(chats || [])];
+  js.touch();
+}
+
+module.exports = { isIgnored, set, list, restore, keyOf };

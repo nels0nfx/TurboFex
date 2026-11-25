@@ -140,6 +140,10 @@ function setMode(mode) {
   settle();
 }
 
+// the raw bot-wide settings object and "it changed": used by the settings reset and its undo (whatsapp/settingsreset.js)
+const rawBot = () => bot();
+const touchBot = () => settle();
+
 function getAutoUpdate() {
   return bot().autoUpdate !== false;
 }
@@ -531,6 +535,7 @@ function updateWatch(name, fn) {
 }
 
 module.exports = {
+  rawBot, touchBot,
   statusCfg, updateStatusCfg, watchCfg, updateWatch, getStickerCmds, setStickerCmd, delStickerCmd,
   getWelcomedFor, setWelcomedFor,
   reminders, addReminder, removeReminder, getGreet, setGreet, wasGreeted, markGreeted,

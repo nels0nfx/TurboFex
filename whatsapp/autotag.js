@@ -38,6 +38,15 @@ function setAll(value) {
 // what is on right now: { all, groups, except }
 const state = () => ({ all: js.data.all, groups: [...js.data.groups], except: [...js.data.except] });
 
+// puts a saved state back (the settings undo)
+function restore(saved) {
+  const d = js.data;
+  d.all = !!(saved && saved.all);
+  d.groups = [...((saved && saved.groups) || [])];
+  d.except = [...((saved && saved.except) || [])];
+  js.touch();
+}
+
 // things that arrive as "messages" but are nobody writing: reactions, system notices, poll votes, edits
 const NOT_WRITING = new Set(['reactionMessage', 'protocolMessage', 'pollUpdateMessage', 'keepInChatMessage', 'senderKeyDistributionMessage', 'messageContextInfo', 'editedMessage']);
 function isWriting(msg) {
@@ -86,4 +95,4 @@ async function maybe({ sock, msg, jid, isGroup, text, prefix }) {
   return true;
 }
 
-module.exports = { maybe, set, setAll, isOn, state, isWriting, isSwitchCommand, editableText };
+module.exports = { maybe, set, setAll, restore, isOn, state, isWriting, isSwitchCommand, editableText };

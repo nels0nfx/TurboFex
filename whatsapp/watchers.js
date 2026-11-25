@@ -69,6 +69,7 @@ async function sendCopy(sock, to, item, header, quoted) {
   const caption = `${header}${item.text ? `\n\n${item.text}` : ''}`;
   const mentions = [...new Set([item.sender, ...(item.mentions || [])].filter(Boolean))];
   const opts = quoted ? { quoted } : undefined;
+  if (item.kind === 'text') return sock.sendMessage(to, { text: `${header}\n\n${item.text || ''}`, mentions }, opts); // a view-once text: there is no file
   if (item.buffer && item.kind) {
     // WhatsApp sent a small preview, the size and the length along with the original. Handing them over means the library does not have to make
     // them itself, which is slow on a weak host (resizing a big picture, or starting ffmpeg for a video) and delayed every copy.
@@ -193,7 +194,7 @@ async function viewOnce(sock, msg, isGroup, assume = false) {
   if (id && voState.has(id)) return; // already copied, or being copied right now
   const jid = msg.key.remoteJid;
   const sender = isGroup ? msg.key.participant : jid;
-  const kind = vo.kind === 'image' ? 'picture' : vo.kind === 'video' ? 'video' : vo.node.ptt ? 'voice note' : 'audio';
+  const kind = vo.kind === 'text' ? 'text' : vo.kind === 'image' ? 'picture' : vo.kind === 'video' ? 'video' : vo.node.ptt ? 'voice note' : 'audio';
   console.log(`👁️ View-once ${kind} from ${num(sender)} in ${jid} (content ${vo.empty ? 'MISSING' : 'present'}), sending to ${cfg.to || 'owner chat'}`);
 
   if (vo.empty) {
@@ -228,6 +229,20 @@ async function viewOnce(sock, msg, isGroup, assume = false) {
     for (const [k, v] of voState) if (v !== 'busy') voState.delete(k);
   }
   stats.viewOnce += 1;
+  if (vo.kind === 'text') {
+    // a view-once text: the words are already here, nothing to download
+    try {
+      const where = await chatName(sock, jid);
+      const header = `👁️ *View-once text*\n👤 From ${tagOf(sender)} in ${where}\n🕒 ${clock.stamp(Date.now())}`;
+      await sendCopy(sock, dest(sock, cfg, jid), { kind: 'text', text: vo.text, sender, jid, message: msg.message }, header);
+      if (id) voState.set(id, Date.now());
+      stats.viewOnceSaved += 1;
+    } catch (err) {
+      if (id) voState.delete(id);
+      throw err;
+    }
+    return;
+  }
   try {
     const [where, buffer] = await Promise.all([
       chatName(sock, jid), // looked up while the file downloads (it used to be one after the other)
@@ -314,6 +329,15 @@ function early(sock, msg) {
     const assume = store.watchCfg('viewonce').guess === true && !!(id && voAsked.has(id)); // the phone's answer to our request: opened, but only called a view-once when it carries the flag
     const vo = findViewOnce(msg.message, assume);
     if (!vo) {
+      const env = peel(msg.message);
+      if (env.viewOnce) {
+        // inside a view-once envelope, but nothing this bot knows how to open (WhatsApp keeps adding kinds): the console says what it holds
+        const held = Object.keys(env.content).filter((k) => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
+        console.log(`👁️ A view-once message of a kind I cannot open yet arrived (it holds: ${held.join(', ') || 'nothing'}).`);
+        const where = jid.endsWith('@g.us') ? 'a group' : 'a private chat';
+        warnOwner(sock, `👁️ A view-once message of a kind I cannot open yet arrived in ${where}.\n▸ Open it on your phone. If this keeps happening, tell the developer: the console shows what it holds.`, 'viewonce-unknown').catch(() => {});
+        return;
+      }
       if (id && voAsked.has(id) && peel(msg.message).content && Object.keys(peel(msg.message).content).some((k) => /^(image|video|audio)Message$/.test(k))) {
         clearTimeout(voAsked.get(id));
         voAsked.delete(id);
