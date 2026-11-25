@@ -10,7 +10,8 @@ const autotag = require('../whatsapp/autotag');
 const ignored = require('../whatsapp/ignored');
 const reset = require('../whatsapp/settingsreset');
 
-baileys.setForTests({});
+let k = 0;
+baileys.setForTests({ generateWAMessageFromContent: (jid, content) => ({ key: { remoteJid: jid, id: `VOT${++k}`, fromMe: true }, message: content }) });
 console.log = () => {};
 console.error = () => {};
 
@@ -22,6 +23,7 @@ const sent = [];
 const sock = {
   user: { id: '27899999999:1@s.whatsapp.net', lid: '999888777:1@lid' },
   sendMessage: async (j, c, o) => { sent.push({ j, c, o }); return { key: { id: `K${sent.length}`, remoteJid: j } }; },
+  relayMessage: async (j, m) => { sent.push({ j, c: { ...m.extendedTextMessage } }); },
   groupMetadata: async (j) => ({ id: j, subject: 'Football Fans', participants: [{ id: OWNER, admin: 'admin' }, { id: BOT, admin: 'admin' }, { id: MEMBER }] }),
   groupFetchAllParticipating: async () => ({ [G]: { id: G, subject: 'Football Fans', participants: [] } }),
   sendPresenceUpdate: async () => {}, presenceSubscribe: async () => {}, readMessages: async () => {}, updateProfileStatus: async () => {},
@@ -145,6 +147,8 @@ test('v1.8.5 viewoncetext: the text is sent as view-once, and your command messa
   assert.ok(text, 'a view-once message was sent');
   assert.strictEqual(text.c.text, 'Meet me at 8');
   assert.strictEqual(text.j, OWNER);
+  assert.deepStrictEqual(text.c, { text: 'Meet me at 8', viewOnce: true }, 'the mark is on the text itself, with no envelope around it');
+  assert.ok(unwrap.findViewOnce({ extendedTextMessage: text.c }), 'and the bot itself reads it as a view-once text');
   const del = sent.find((x) => x.c.delete);
   assert.ok(del && del.c.delete.id === cmd.key.id, 'the command message with the words is deleted');
 });
@@ -303,4 +307,12 @@ test('v1.8.5 undo: it only works for 10 minutes, and only the owner can reset', 
   await wait(120);
   assert.ok(!sent.some((x) => /Resetting all settings/.test(x.c.text || '')), 'a member cannot start a reset');
   assert.strictEqual(store.getMode(), 'public');
+});
+
+test('viewoncetext: if sending fails, your command message is kept', async () => {
+  const real = sock.relayMessage;
+  sock.relayMessage = async () => { throw new Error('connection closed'); };
+  await say(dm(OWNER, `${P()}viewoncetext keep me`));
+  sock.relayMessage = real;
+  assert.ok(!sent.some((x) => x.c.delete));
 });

@@ -1,3 +1,7 @@
+TurboFex v1.8.6 - view-once text now sends properly
+FIXED IN 1.8.6
+- FIXED `.viewoncetext`: your command message was deleted but the view-once text did not appear. The text was put inside the envelope WhatsApp uses for view-once pictures. The view-once mark is now on the text itself. If sending fails with an error, your command message is kept. Not tested against WhatsApp.
+
 TurboFex v1.8.5 - view-once text, send view-once text, settings, reset with undo
 CHANGED IN 1.8.5
 - FIXED `autoviewonce` and `vv` for the VIEW-ONCE TEXT messages WhatsApp added recently. The bot only knew view-once pictures, videos and voice notes, so a view-once text was never recognised. It now is, in every envelope WhatsApp uses for view-once (`viewOnceMessage`, `viewOnceMessageV2`, `viewOnceMessageV2Extension`, and a text carrying the view-once flag). `autoviewonce` copies it to you as "View-once text" with who sent it and where; `vv` (reply to it, or `vv me`) opens it, and when the quoted copy is empty it uses the complete message the bot saw lately. Ordinary text is never taken for a view-once, not even with `guess` on. If WhatsApp sends a view-once of a kind the bot does not know yet, you get a short plain message and the console says what it holds (so the shape can be taught). I could not see a real view-once text, so the envelope shapes are what WhatsApp's other view-once messages use: if one still does not work, send me the console line.
