@@ -7,6 +7,9 @@ const NOISE =
   /^(Closing (open |stale open )?session|Removing old closed session|Opening session|Session already (closed|open)|Migrating session|Decrypted message with closed session)/i;
 const ERROR_NOISE =
   /Bad MAC|Session error|Failed to decrypt message|No matching sessions found|No session found to decrypt|No session record|MessageCounterError|Key used already or never filled|Over 2000 messages into the future/i;
+// A MISSING chat session is not a damaged one: WhatsApp makes it again by itself. These are hidden too, but they never count towards
+// the automatic repair, because that repair removes the chat sessions (and would make even more of them go missing).
+const MISSING_SESSION = /No session found to decrypt|No session record|Invalid PreKey/i;
 
 function textOf(args) {
   return args.map((a) => (typeof a === 'string' ? a : a && typeof a === 'object' && a.message ? String(a.message) : '')).join(' ');
@@ -28,7 +31,7 @@ for (const method of ['log', 'info', 'warn', 'debug']) {
 const originalError = console.error.bind(console);
 console.error = (...args) => {
   if (ERROR_NOISE.test(textOf(args))) {
-    health.recordDecryptFailure(); // counted (for the automatic repair), not printed
+    if (!MISSING_SESSION.test(textOf(args))) health.recordDecryptFailure(); // counted (for the automatic repair), not printed
     return;
   }
   originalError(...args);

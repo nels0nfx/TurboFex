@@ -168,11 +168,11 @@ function recentViewOnce(id) {
 }
 
 // the message came without its file: ask the phone to send it again (the answer arrives as a normal message later)
-async function askPhoneAgain(sock, msg) {
+async function askPhoneAgain(sock, msg, quiet = false) {
   if (typeof sock.requestPlaceholderResend !== 'function') return false;
   // every request makes the phone show "Finished syncing with WhatsApp on Google Chrome (Ubuntu)": only a few per hour
   if (!placeholder.allow(msg.key.id)) {
-    console.log(`👁️ Did not ask the phone for message ${String(msg.key.id).slice(0, 8)}: the limit of ${placeholder.PER_HOUR} requests per hour is used (every request shows a notice on your phone).`);
+    if (!quiet) console.log(`👁️ Did not ask the phone for message ${String(msg.key.id).slice(0, 8)}: the limit of ${placeholder.PER_HOUR} requests per hour is used (every request shows a notice on your phone).`);
     return false;
   }
   try {
@@ -278,12 +278,20 @@ async function viewOnce(sock, msg, isGroup, assume = false) {
 // comes back as a normal message with the same id (see early(), "assume"). This used to be skipped for messages with no content
 // at all, so the phone was never asked and nothing was opened.
 const hiddenStub = (t) => t == null || t === 2 || t === 'CIPHERTEXT'; // 2 = could not be read; any other stub is a group event, not a file
+// A message that arrived empty only because it could not be decrypted yet (very common, mostly right after a start). It is NOT a
+// view-once: the library asks the sender to send it again by itself, so the phone is not asked and nothing is printed.
+const NOT_DECRYPTED = /no session|no matching sessions|invalid prekey|bad mac|no senderkey|key used already|messagecounter|into the future/i;
+const notDecrypted = (msg) => (msg.messageStubParameters || []).some((p) => NOT_DECRYPTED.test(String(p)));
+const chased = new WeakSet(); // the same delivery is looked at twice (connection and handler): it counts once
+
 function chaseHidden(sock, msg, jid) {
   const id = msg.key.id;
   const isGroup = jid.endsWith('@g.us');
   if (!id) return;
   const mode = store.watchCfg('viewonce').mode;
   if (!inScope(mode, isGroup)) return;
+  if (chased.has(msg) || notDecrypted(msg)) return;
+  chased.add(msg);
   if (voAsked.has(id)) {
     // the same message again: if we already asked, this is the phone's answer and it is STILL empty
     console.log(`👁️ Message ${id.slice(0, 8)} arrived again and is still empty (stub ${msg.messageStubType ?? 'none'}, params ${JSON.stringify(msg.messageStubParameters || [])}). The phone did not hand over the file.`);
@@ -291,7 +299,6 @@ function chaseHidden(sock, msg, jid) {
   }
   if (voWait.has(id)) return;
   const sender = isGroup ? msg.key.participant : jid;
-  console.log(`👁️ A message from ${num(sender)} came with no content (stub ${msg.messageStubType ?? 'none'}, params ${JSON.stringify(msg.messageStubParameters || [])}). Asking the phone for it (it may be a view-once).`);
   const timer = setTimeout(() => {
     voAsked.delete(id);
     console.log('👁️ The phone did not send the hidden message back. WhatsApp is not giving this view-once to this device.');
@@ -302,8 +309,8 @@ function chaseHidden(sock, msg, jid) {
   if (timer.unref) timer.unref();
   voAsked.set(id, timer);
   stats.viewOnceChased = (stats.viewOnceChased || 0) + 1;
-  askPhoneAgain(sock, msg).then((ok) => {
-    if (ok) console.log(`👁️ Request sent to the phone for message ${id.slice(0, 8)}. Waiting for its answer.`);
+  askPhoneAgain(sock, msg, true).then((ok) => { // quiet: over the hourly limit is normal here and is not printed
+    if (ok) console.log(`👁️ A message from ${num(sender)} came with no content (it may be a view-once). Asked the phone for message ${id.slice(0, 8)}.`);
     if (!ok && voAsked.get(id) === timer) {
       clearTimeout(timer);
       voAsked.delete(id); // a later delivery may try again
@@ -474,14 +481,14 @@ async function secretEditCore(sock, msg, sec, who) {
 }
 
 // ---------------------------------------------------------------- entry points
-// A message arrived WITHOUT content. If auto view-once is on, say so (once a minute) instead of staying silent.
+// A message arrived WITHOUT content. It is only counted: most of these are ordinary messages, so nothing is printed (it used to fill
+// the console). The view-once watcher prints a line when it really asks the phone for one.
 async function noContent(sock, msg) {
   const jid = msg.key?.remoteJid;
   if (!jid || msg.key.fromMe || jid.endsWith('@broadcast') || jid.endsWith('@newsletter')) return;
   const isGroup = jid.endsWith('@g.us');
   if (!inScope(store.watchCfg('viewonce').mode, isGroup)) return;
   stats.empty = (stats.empty || 0) + 1;
-  console.log(`👁️ A message from ${num(isGroup ? msg.key.participant : jid)} arrived without content (stub ${msg.messageStubType ?? 'none'}). Possibly a view-once.`);
   // Many things arrive with no content (group events, messages that could not be decrypted, reactions...), and real view-once
   // files are already reported by their own notice. So this guess is only told to the owner when EMPTY_NOTICE=1 is set.
   if (process.env.EMPTY_NOTICE !== '1' || msg.messageStubType) return;

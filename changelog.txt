@@ -1,3 +1,8 @@
+TurboFex v1.8.9 - quieter console, safer chat session repair
+CHANGED IN 1.8.9
+- FIXED the console filling with "view once" lines when nobody sent a view-once. Messages that were empty only because they could not be decrypted yet (No session, Invalid PreKey, Bad MAC) are no longer treated as a possible view-once: nothing is printed and the phone is not asked. Other empty messages print one line, only when the phone is really asked. Real view-once messages are handled as before.
+- FIXED the automatic chat session repair counting MISSING sessions as damaged ones. The repair removes chat sessions, so this could make more messages unreadable (a command the bot cannot read gets no answer). Whether this happened on a particular bot could not be checked.
+
 TurboFex v1.8.8 - one-file launcher for the pair site
 CHANGED IN 1.8.8
 - NEW `tools/deploy-index.js`: a ONE-FILE launcher. The pair site puts the person's session ID in it (it replaces the text `__TFX_SESSION_ID__`) and gives it out as a download named `index.js`. The person uploads only that file to their host and starts it. It needs only Node.js 18 or newer: it downloads the latest hosting ZIP (GitHub release `TurboFex-hosting.zip`), unpacks it, runs `npm install`, saves the session ID in `session_id.txt` (never over a login that already works), replaces itself with the bot's own `index.js`, and starts the bot. If it is stopped half way, starting it again continues. Later starts use the bot's normal `index.js` and its self-update. Tested with a local copy of the release; the npm install and the real GitHub download could not be tested here.
