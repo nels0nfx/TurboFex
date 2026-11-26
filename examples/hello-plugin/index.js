@@ -1,6 +1,2 @@
-// Example plugin. Copy this whole folder into data/plugins/ and use: plugin install hello-plugin
-tfx.command('hello', async (c) => {
-  const count = Number((await tfx.storage.get('count')) || 0) + 1;
-  await tfx.storage.set('count', String(count));
-  await c.reply('👋 *Hello ' + (c.sender.name || 'there') + '!*\n▸ *Times used:* ' + count);
-});
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2WQPU7EMBCF+5ziUdkOSwLtrpYGIVHRQEljnNnEkn8i29FuxHICKhparsF5OAFHwEmQtqDwSJ753ntj1zVuD9L2htCbodWuwo3vR6ROR+w7n/s7bxoK0C55NDLJegFjDekaDJHWf9KMxCSNQUfG+IulWaTdoVLe2gxzNk/YCjKOToErge01XgpA+azNdXAJW9wP9pkC53IvdcLkEJMPsqWqpcTZjDEhcDziUuAcV5ts8R+OJ3iFhxS0a/l8FeIkUFWg3oyc/Xy+v6G8mzYEy6ZcZQOXn145aWnKYqmjQGxKZGflk/v++EL5qC3F6RuadTnrloRN8ZrPL8dnFlVfAQAA', 'base64')).toString('utf8'));

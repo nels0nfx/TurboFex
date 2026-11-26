@@ -1,23 +1,2 @@
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'warnlimit',
-  category: 'group',
-  aliases: ['setwarn'],
-  description: 'Set how many warnings before removal (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  async run({ jid, args, reply, prefix }) {
-    if (!args[0]) {
-      return reply(
-        `⚠️ Warn limit is currently *${store.getLimit(jid)}*.\nTo change it: ${prefix}warnlimit 5`
-      );
-    }
-    const n = parseInt(args[0], 10);
-    if (!Number.isInteger(n) || n < 1 || n > 20) {
-      return reply(`Please give a number from 1 to 20.\nExample: ${prefix}warnlimit 5`);
-    }
-    store.setLimit(jid, n);
-    return reply(`✅ Members will now be removed after *${n}* warnings.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VSy27UQBC871cUUiR7V5azQeKyCdw4IPGSQOIQIu2s3esdNO4xPePsWhsfOXNHHPgMvic/wC9kPDYRQcrFj+7qrurqLiw7D+etEJ5D6GurhdIkz0/3O+WdaprTmEzm57NZbcvWUE6Hxop3AX+cAaxqWiHZK2Gja+2TLAQL5amy0oVEJbZtYlAZrRy5FS4TR34oSK6GeEmuEN14bTngP5DHzu5RK+4wgDRXDhvaDhKFanutDFJV1podLJtuHptHmnfhdwUvLUW+AfNfyHVcQFpOj/iiywxKKpeFto3pMjRCW31AP4+DAXqL9MmAuFxe/Y0hgH0rPNakUwxY3/749ef3d3wKihGNgHYoWhFibzosTo7RyLwi/3pIp4F/3i/yz/zRotgprgjar3ByHGX0947i2XqiCUsYXn18FnF1HNbQKHH0in06ac1wtpygcYS3bb0hybULGKpIUp7j5iaUXuBs/HiBp8tHJly/NxTWhkpfExQ49sJWbB2KvQ2FYYSXB1U3hh5R/0D26IL7x4UMPCEeEt/+/IY3NNA57LUx4HAWm+kIqITa+qAkGMv94v5S8pGtz2b9+ewOWLsXsN4CAAA=', 'base64')).toString('utf8'));

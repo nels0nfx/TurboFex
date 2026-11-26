@@ -1,16 +1,2 @@
-const store = require('../whatsapp/store');
-const { changeMembers } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'promote',
-  category: 'group',
-  description: 'Make a member an admin (tag them or reply)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  run: (ctx) => {
-    // with antipromote on, only the bot owner can promote through the bot
-    if (store.getGroup(ctx.jid).antipromote && !ctx.isOwner) return; // locked for everybody but the owner: stay silent
-    return changeMembers(ctx, 'promote', 'Promoted to admin');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VRzW6DMAy+8xTepYCE4N6qk3baqeq0N0gTF7JBzBKzFlV99zlh1drDDpGiz/5+bGtygSEweYQtePyarMcir+vm1CkOahybVMzLTaZT7wV0p1yLOxwO6ANc/+MpzVYYkZkNZKYeazyP5DkI45IBODXgGvLR00CMeSWQVowt+Vng1tM0JtBg0N6OUU3wnfpEUDAke1AOlBmsg4JVC9zhAOQlz9jPZSInmb3rRZL9hBFKhEfoQPwS0fdlEPNX8ZOYFprPJWyfU2yApoGT5U7M2f6mB3KVvH6OGaIc0MlJPi0Bby3cSZa2u3UkKXuEIi24bpFfY9boVX9YU9b38qsVPMWCDfuoW8qIPHm3iVl60p9o4CiD4zf6+UBmhsPEySjFWMuF1QzB9ugW34X+eMroXN3dA/K35WuAadlaPCbAtcqum+wHMWFtsDsCAAA=', 'base64')).toString('utf8'));

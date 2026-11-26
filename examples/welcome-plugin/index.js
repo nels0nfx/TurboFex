@@ -1,5 +1,2 @@
-// Example plugin: reacts to a member joining. Install it with: plugin install welcome-plugin
-// Turn it off in a group where you do not want it: plugin groups welcome-plugin deny
-tfx.on('member.join', async (c) => {
-  await c.reply('👋 *Welcome to the group!*\n▸ _Glad to have you here._');
-});
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA12PMU7EMBBF+5ziUyW7AqdfBB1C9Eg0SKvBmSRGzjhyHLIR4gRUNLRcg/NwAo6AjVcUFNP8+fP+n7rG1YGG0TJGO3dGdvBMOkwIDoSBhwf2eHRGjHQKNzIFshYmYDGh3x2PYI76wla7gc+yXNQ1bmcvye7aNroisvNuHrH07Bmrm9E4iIs4khB9f8Rf2/QPiIZlLUJ7UE6qMpdTqVx5CppW0aj0BheXeC4AWijmauV5tGtVfn+8vWJ7l3npu9BzTjnZ3svX+yf215aatOnpKXdLJdW+3JwXL3F+AO0rm/8sAQAA', 'base64')).toString('utf8'));

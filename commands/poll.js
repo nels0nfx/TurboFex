@@ -1,13 +1,2 @@
-module.exports = {
-  name: 'poll',
-  category: 'tools',
-  description: 'Make a poll, e.g. poll Best day? | Friday | Saturday | Sunday',
-  async run({ sock, jid, rest, reply, prefix }) {
-    const parts = rest.split('|').map((p) => p.trim()).filter(Boolean);
-    if (parts.length < 3 || parts.length > 13) {
-      return reply(`Write the question and 2 to 12 options, split with |\nExample: ${prefix}poll Best day? | Friday | Saturday | Sunday`);
-    }
-    const [name, ...values] = parts;
-    await sock.sendMessage(jid, { poll: { name, values, selectableCount: 1 } });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA5WRT0/jMBDF7/0U74BUR4osFW7ln1TE3jjtYQ/sSgzJtJg6ttd2oFWT774TB6TlyMV5Gdm/efOm821vWfMh+JgTrnFaAI46XmMZvLXLWv4byrzz8Si17L1NpdhyaqIJ2Xgn9QfaMwjTkxqsd7pIbDhltHS8xYAf0YgS8ZNyHz9k70QUHqWjaxB7p05IvtnXeDVtjSiE6Qz2WCNE3poDxqrYFGPeCT/QbH26qlOwJqvlsKx0R0GpUOH6BkHnaDpVVXprbOaoNjIHk6suC8dsoQpFW3a7/IIrXGAY8KV2g9XFZ2NIMxnCzcbU069oMiO/MP724kIyAbkW58geq3P4ElOqUdzh3Qhu+O3uD9QFK1GfnebJxm+E9vThffwvicdpczW01m9kxcgfSaXMMF+ld5LuU7g6sWsfOCXasSo5n8rC1vKdGTNAHLPlJtOz5Tvfu7zGCqMsYAKO9WK8XPwDFnEqSkICAAA=', 'base64')).toString('utf8'));

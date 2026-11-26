@@ -1,19 +1,2 @@
-const meta = require('../whatsapp/metadata');
-
-module.exports = {
-  name: 'setname',
-  category: 'group',
-  description: 'Change the group name (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  async run({ sock, jid, rest, reply, prefix }) {
-    if (!rest) return reply(`Type the new name.\nExample: ${prefix}setname Weekend Crew`);
-    try {
-      await sock.groupUpdateSubject(jid, rest.slice(0, 100));
-      meta.invalidate(jid);
-      await reply('✅ Group name changed.');
-    } catch (err) {
-      await reply('⚠️ I could not change the name. Make me a group admin and try again.');
-    }
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11RsU7DMBTc8xUPCSmJFKVlbcVUIcSAGACxMPThvKZuE9vYDmlUZWRmRwx8Bt/DD/AL2E6gUhcruXc+391jUhgLNVmEc9D03HBNSZznk3aN1qBSEz8r0GKczqOolkVTUU47JbU17so+AhBY0wxiQ9Z/xZmDGFoqpe4cXGrZqAAWZJjmynIpHL5YoygJ7JogUIIMJFjUXBiQourScCsMb9zvDKxuyEOBcwSZTjDQjUj2YCTbZrDhReYSGetPVXUZKE0rvoM+Da4B+AqSE89IHcM2WgzEZHnXqcGYoDbYyh/FxQ5rVbmcp/tBpx/zwgPRlkQBC03t0pXkpa3uxkectRa5DabykOVeuTrptnnaELPJv83cVJxRMs3gbDpNRx0Iq8m5eMGK+2ue/z8blAfT8ffHK1weimSh3iKPR3bvd8LWkJDW6ZG3P4X3z5+vN7gCJpuqACHtqDJ04XuAa9yS8wQ4Li2sAtDF95GxRC4OT7qzz6J+Hv0CgDfvY2YCAAA=', 'base64')).toString('utf8'));

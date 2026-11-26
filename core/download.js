@@ -1,19 +1,2 @@
-// Reads a download but stops when it gets too big
-async function readLimited(res, max) {
-  const chunks = [];
-  let size = 0;
-  const reader = res.body.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.length;
-    if (size > max) {
-      await reader.cancel();
-      throw Object.assign(new Error('That file is bigger than 25 MB.'), { code: 'TOO_BIG' });
-    }
-    chunks.push(Buffer.from(value));
-  }
-  return Buffer.concat(chunks);
-}
-
-module.exports = { readLimited };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WRX0vDMBTF3/spzttSHJ0Ivlj0YSAiKIOxNxFJ09s2rk1G/tjN0e9u0m5O+1I4+Z2Te24WC6yJlxYcpe5Vq3mJwjtYp3cWfUMK0qEmZ+G0RiHrhNuDEqi8Ek5qBRPsL7KTjkpmyM7R8X2KYwIIrayDaLzaWtzj7T0PYkshXH5TEK7zXyiGkAlaSMgKXR6ycOV6FFkasUobsDyfgs+uY5hZ0RxfvPWEIdh5z+U5LYu/yQ3ICizCKYogbydxnOPqfvJnLanaNRd8PH241Infv3zBlaD2fAPgGqN7rIpPEi7j1spaMUU9Ho3Rhs02DXeoZEuQNi6yDoVdwxVubvG6zGbpPBQSuqQ7zDar1cfy+WmG4ZQ+TLXHXWY7bxu29FUVhqiM7thYIB3RCBpy3iiciLArwR2bvIEZkqTTpW8po/1OGxff5vj3GTHkyQ9H+UlEGAIAAA==', 'base64')).toString('utf8'));

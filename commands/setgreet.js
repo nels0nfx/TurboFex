@@ -1,14 +1,2 @@
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'setgreet',
-  category: 'autoreply',
-  description: 'Set the greeting sent to people who write to you privately (once a day each): setgreet Hi @user! (owner only)',
-  ownerOnly: true,
-  async run({ rest, reply, prefix }) {
-    if (!rest) return reply(`Type the greeting. Use @user for their name.\nExample: ${prefix}setgreet Hi @user! I will reply soon 🙂\n\nSee it: ${prefix}getgreet\nSwitch it off: ${prefix}delgreet`);
-    if (rest.length > 1000) return reply('⚠️ That greeting is too long (max 1000 characters).');
-    store.setGreet(rest);
-    await reply('✅ Greeting saved. People who write to me privately get it once a day.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21SwW7UMBS85yumElISaeVur1tR9YIKJ5Babnuolbwklhzb2E6z0WovlThzBiHBZ/A9/AB8Ai/e3bKg3uI3M5k3HlfWhIgQrSe8hKcPg/JU5EKcj52MQTp3nsC8vMyy3taDJkEbZ30MzN9mgJE9rZAHiq0nivmCZ5WM1Fo/8VwOs9zpKQE1hcorF5U1jN1SROwISahMi0CGJxaOrNOEsbMYvYo0zyY7wHn1wL/WEwprKoJELSeQrLpyheMGeK1wPQTyZ8waDXlYo6cy+afzWz6uEP1A80iGyVTwgym2nD/EBdK6CzajRm2wK1NMQDUozmZGyYw4eLMnFvd3k6N/cgi8D7TfAY31M6Z8uiixNq82sudwK7zY7h12zyz+BqPSem+AYK3B72+fH9dmbW6JoOKJuj2oGRpVrDpGYZvmhFGTTox77vAYZM4hNJk2drjCxXK5/C9V/vPL918/PuGOn8HfglTgKiy05e+il5ukRNVJL6tIPpQiP5ikVyM42s2sTX4HRI6SVzy6fP2Im6f65QPVAu+eab+nk/I5ckr59AQOrrtFtrvM/gBZJzfF0wIAAA==', 'base64')).toString('utf8'));

@@ -1,15 +1,2 @@
-const store = require('../whatsapp/store');
-const { resolveTarget, num } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'unban',
-  category: 'owner',
-  description: 'Let a banned person use the bot again (owner only)',
-  ownerOnly: true,
-  async run({ msg, args, reply, prefix }) {
-    const target = resolveTarget(msg, args);
-    if (!target) return reply(`Tag the person, reply to them, or type their number.\nExample: ${prefix}unban @person`);
-    const done = store.removeBanned(target);
-    await reply(done ? `✅ @${num(target)} can use the bot again.` : 'ℹ️ That person is not banned.', { mentions: [target] });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VSS07DMBDd5xSDhJRUisK+FQIhsUNi0x0g1U2HYCkZm7HdNoqygzUX4CBwHS7AFZjYBbGApcfvjd/HtSHnwXnDCKfA+Bg0Y5FX1cnuQXmnrD2Jl/lskdUROwjKmXaLS8UN+hIodDD+Rw5et24iZ53ZhBYr3FvD3gl+yABIdTiHPNBaUV7KoFYeG8O9DM2OkONwg65mbb02JPMr9KBACIQbsMjOEASH4B8Q1kbuGqUJikgHQ20/i0vi+VqOc/AccBop11MNHKgYoHNNCeLIlWLEtn0JlvFe72GcRaUiLdr30XW0+yuF4ocuViewvofiKGFnAvWBKe0tVkvVRK1J+uE58GYadiUYBt/baEfzFO4aubqly73qbCthHQ9J2BhDg/O0ZnV4N4ncGJrqjM1VjJ3Z4kXMqzhISmC1U9ofZEXKGaw+Xp/h/HiQd7+xo5TyR8LVCqSMj6f3z7cXWErf311oBySgVFCVl/JjOqSpPDeHm7T0TmKdNIxlNi6yL+LzGOGFAgAA', 'base64')).toString('utf8'));

@@ -1,14 +1,2 @@
-const games = require('../whatsapp/play');
-
-module.exports = {
-  name: 'mathquiz',
-  category: 'games',
-  adminOnly: true, // only admins start a game, everybody can join it
-  aliases: ['math'],
-  description: 'Maths race. Players type join, first correct answer wins (mathquiz hard 8 = hard, 8 rounds)',
-  run: (ctx) => {
-    const words = ctx.args.map((a) => a.toLowerCase());
-    const level = ['easy', 'medium', 'hard'].find((l) => words.includes(l)) || 'easy';
-    return games.fromCommand(ctx, 'mathquiz', { defaultRounds: 5, options: { level } });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA01RO0/DMBDe8ytuSyJZzoSEimBhBYFYqw5HfG2N/AhnmzaU/ncuLgi282ff9/IYQ8qwQ08JboHpvVimrtV6OOwxJ5ymYXI4t/1N0/hoiiNNxylyXp6fGoAgqytoPea97H62SrARM+0iz4JX5gqi8TY8BSdo5kIKhgGiHC8XCVJGzoDViwL6IJ5fo5mFLMBbtAFsXlicxURpBesq2W4WakNpZDtlG4NIPgqegHEkDc/inThBnieqLAq2liXxGJlpFL2QDsRwWBx0vyFgj2zgWhIug5KJYwkm9TUIF1Hpxnzs4faudiCJa42HyGbpRe408i5pj1PXYX2HOseHKFr34r/rpc+/PSdpneytW8I0t0rqJGOLX6bFQbvRWxtM17lKVWW0DaMrklzAHr6+4LJ7oWXKhcPlW/WWo7+P3qMwiDP1/7PgJOVtsbj8UhOu4EpBrE3KfPpxdoZz9XtWzfmm+QbpMFaXMwIAAA==', 'base64')).toString('utf8'));

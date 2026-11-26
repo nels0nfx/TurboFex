@@ -1,22 +1,2 @@
-const store = require('../whatsapp/store');
-
-// on by default: a mistyped command gets a "Did you mean...?" answer
-module.exports = {
-  name: 'autocorrect',
-  aliases: ['didyoumean'],
-  category: 'owner',
-  description: 'Offer a fix when a command is mistyped: autocorrect on / off (owner only)',
-  ownerOnly: true,
-  noAgain: true,
-  async run({ args, reply, prefix }) {
-    const w = (args[0] || '').toLowerCase();
-    if (w === 'on' || w === 'off') {
-      store.setAuto('autocorrect', w === 'on');
-      return reply(w === 'on'
-        ? '✅ *Autocorrect is on.*\n▸ _When a command is mistyped I say what I think was meant. You answer_ *yes* _or_ *no* _(no prefix)._'
-        : '✅ *Autocorrect is off.*\n▸ _Mistyped commands get no answer._');
-    }
-    const on = store.getAuto('autocorrect', true) !== false;
-    return reply(`🤔 *Autocorrect: ${on ? 'on' : 'off'}*\n▸ _When a command is mistyped I say what I think was meant. You answer_ *yes* _or_ *no*_, without the prefix._\n▸ ${prefix}autocorrect ${on ? 'off' : 'on'}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA7VSzW7UMBC+5ymGqpKT1crLOdVqtYILEqhHhEqVmmS8a5HYwXaURtsceQPECYkLD9Hn6RPwCIyT7B+iR26e8fjz9zO50c6D88YiLMHil0ZZjBnni3YrvBN1vRguWXIVRYsFGA2fOihQiqb0KQiolPNdjQXkpqqELmCD3lH/4rUqoDMNVCg053x1AUK7Fm1UmaIpkeN9bSyNLmEXAWhRYQpMNN7kxlrMPZtTW5RKOHQp3LBCFQQX0NhtuMqFx42xHb0yrUY7zBfocqtqr4ym/rWUaImLVPfQblHTcc9SuQNzUnH8NQgklVJCPKBSXXbJgD3U11Sm4G2DoaXNeiOUPjaE63QOttHxDoTduDlZWpfdHGqLgUWfDGqJ/eB7S+rjMHfz8hYeHoCxhHvz1pBNr0h3TKaHYUVsaHS5JKmahcF9JSXbI8KYInfo16QnPvcSju8nUCBqvrF6ZHiCP90CrIA9/fgKs/WJPeSb0Xz2UT99f4Ts/bOmwhtwooOwRHT0W6U/QyvcsA2ewwdajHEdMph16GaQmXDUhk6xNpNfCc+OdNJn6Eh54PPur2V0YRsppekvQpvE9ychUOLLybvNv70L6SbwgvyRonQ4Qpy5d/f7569vZ9RSuNwR8mqMLB2z6v+ncRmFrPzWNJ6e4eQgz8YfL3dj3Z/u+oEhURsoatbfDQ7186i/iv4AzP22yx0EAAA=', 'base64')).toString('utf8'));

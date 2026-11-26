@@ -1,21 +1,2 @@
-// JSON from public web services (weather, dictionary, rates...). Only public addresses, short timeouts.
-const safefetch = require('./safefetch');
-
-async function getJson(url, { timeout = 6000, headers = {} } = {}) {
-  let res;
-  try {
-    res = await safefetch.get(url, { timeout, maxBytes: 1024 * 1024, headers: { Accept: 'application/json', ...headers } });
-  } catch (err) {
-    throw Object.assign(new Error(err.code === 'TIMEOUT' ? 'The service took too long to answer.' : 'The service could not be reached.'), { code: err.code || 'NETWORK' });
-  }
-  if (res.status === 404) throw Object.assign(new Error('Nothing found.'), { code: 'NOT_FOUND' });
-  if (res.status === 429) throw Object.assign(new Error('The service is busy right now. Try again in a minute.'), { code: 'LIMIT' });
-  if (res.status >= 400) throw Object.assign(new Error(`The service answered with an error (${res.status}).`), { code: 'SERVICE' });
-  try {
-    return JSON.parse(res.body.toString('utf8'));
-  } catch (err) {
-    throw Object.assign(new Error('The service sent an answer I could not read.'), { code: 'PARSE' });
-  }
-}
-
-module.exports = { getJson };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA52Ub2/TMBDG3+dT3AskJyhyyzQh6FTQgCJ1sAatHbxkbnJpPFK72BeyqOt355KRrZ1Ak5Dyx7Yufn7P3TmDAZzNkxnkzq5hUy1LnUKNS/DofukUPYQ1KirQxZDplLQ1yjUxOEXopZSRhMSUTf+lyjKH3qOPwRfWEZBeo63IyyC1xhN4lWOOlBYwBoc/K+0wFHJwvyyikyBQvjEp5JXp9GCFdOatCStXxrDtt+QNXg6HwxgKVBk6z/PtDnbdK4JtAFAisYY/4SG5pluCdoFDVK30HoxkiUfbx7BWN+8adjmCF8OjY3jeve7lRhx6mqa4oREItdmwe9XSDq4ZVcTAuenBmCpqIXbAIew8ROeiPzhUOFtDsrzGlKTyXq9MaLCGiXPWtYEytRnCeDwGsZieT5LLhYC3PC6wLxGQtT/aB5TWrHgAyvganRQwOgxMbVVmYCzBEjkRKi0wkyJqXbcqI7jXu70FMZssviUXn0RPz7fOIeQESk+KKt9RHQ+PoydciJmlQjNabitzKChmyeL7x+Ry9qGX+ZvE0esnJfZtag/Lyjfg9KogtltLWHD91UppA3wpWGtTER6SfJ6eTxf/oHjT+hw+BXG1D3FXA8yg1lTwrM2tdRA+2z7su4vk1T7CfHLxdfp+0kPsNy1VznQHVW6U89jBLW3WSLJzcpzcUFSUvxLRf3baQQI9GmqR7zzAdK9xuGseVfDL6cV88tAkuyBY26wqUeLNhv8A3bnsjzDsToLf0VumWXEEAAA=', 'base64')).toString('utf8'));

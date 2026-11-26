@@ -1,18 +1,2 @@
-// Switching the bot's identity needs a fresh link, and linking a new device has been unreliable since WhatsApp changed
-// the process on 28 July 2026. Until that is certain on your server, this command refuses, so the bot cannot be locked out.
-module.exports = {
-  name: 'relink',
-  category: 'owner',
-  realOwnerOnly: true,
-  noReact: true,
-  description: 'Link the bot again with another identity (switched off for now: linking new devices is unreliable)',
-  async run({ reply }) {
-    return reply(
-      '*Relink is switched off*\n' +
-        'Since 28 July 2026 WhatsApp has made linking a new device unreliable, and this command logs the bot out first. ' +
-        'If the new link failed, the bot would stay offline.\n\n' +
-        '▸ Keep the bot linked as it is.\n' +
-        '▸ View-once files can still be opened with *vv* (reply to the message).'
-    );
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21SzW7bMAy+5yl4c5K5zpDDMLTYocf9AAVabLv0oki0LUSmDFGOZxR5jT3LnmdPMkrZ7HboSfbHj+THj9zt4GG0UbeWGogtwsHHgsEapGjjBIRoGBTUAbkFZ+lYgiKTv1KKEsYIBk9WI7SK4YBIMFBAZ9XBIbAliXxvVeTbvgfdKmrQrHa73K0PXiMzeIL9e/g0uAn2b/fvKvgq7Z1QVATLoDFEZSnRJj8EYAwnDKXEU9B3XZIUsB4YuQT2/yYBrYjkOSA4r49owA+xWnXeDA4r/NH7EBk+wNMKgFSH11Ak4XQsSkG0itj4MAnqR8KQwYDK3aW/O3ISiWHABJO/R6XjAhhkHWwfrSfJ/yI1Z1GqSbOI661Y6QUNi99rzttISusaah+k8ng9272YzcmXxedNFqd4Ig1hoPWTCO3FzfMmD5d0xyHQBV1nBKDY3udpU6nnfbePVMCbvyShPeQdPl/QstC0804ZfP0iFoGXs3mxMOcbnk2RxUBtA8cKXvT+WGdKqpml1so6NOWcN/rBGeCopqRcKFg90n/6f//8BZ8R+zkpVZJRRbpN91W9wv9mcbzyae5aGnK6JOlinUvH5Hskyc8r3J5OW1hf3I6Xy+vkpFWDm6rINTc38pzL1flm9QdQXhEWbwMAAA==', 'base64')).toString('utf8'));

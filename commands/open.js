@@ -1,13 +1,2 @@
-module.exports = {
-  name: 'open',
-  category: 'group',
-  aliases: ['unmute'],
-  description: 'Let everyone send messages (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  async run({ sock, jid, reply }) {
-    await sock.groupSettingUpdate(jid, 'not_announcement');
-    await reply('🔓 Group opened. Everyone can send messages.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WQwUrEMBCG732KuaWF0gfo4sGDeBEExdMiEpOhRJuZmExWy9Kn0Luv6COYRoTd43z55xv+eLZ5xgE/AkdJcAHHBoC0xxEUByTVl9lowYnjUtgUOYcK9ex0wjTCXmXyWVA9bthiMtEFcUwlfoMCeMC4MCEkJAseU9ITJmi19Y4SMM1LV43VfVvGESRmrEe2zDl6Zrnc6B2+ZRfRnoTTQgZipvYIic1rDy/O9hAxzAusXa1WUu/aSX0f6sF7FHE0PQRbWrZ1QxHLkybiTAY9kqhud7Jbha36+f76hOtNAdtPoR3g6r+q0XRed/hTrH2z7ppfhUm5AHUBAAA=', 'base64')).toString('utf8'));

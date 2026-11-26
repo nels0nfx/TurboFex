@@ -1,18 +1,2 @@
-const store = require('../whatsapp/store');
-const { setMessage } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'setwelcome',
-  category: 'group',
-  description: 'Set the welcome message (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  run: (ctx) =>
-    setMessage(ctx, {
-      textKey: 'welcomeText',
-      onKey: 'welcome',
-      label: 'welcome',
-      defaultText: store.DEFAULT_WELCOME,
-      toggleCmd: 'welcome',
-    }),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3WRQU/DMAyF7/kVvrWVqu7eaUholAubdtgmjiikpquUNCFxtE5T/ztJKIgJ8M2f33t2FKEHR+BIW4QVWHz3vcU8q6rF+cTJcWMWaZgVSyaS9goOaYvO8Q5h+s/EBfVBHm1M6dZLrHA02pILjisDGLjCGrKQdUYptMKsDFRwwk7bS5h0VnuTYItO2N7EwMD3SEAnhNkGaj4l563qBwd6kJci+VLCLrQ1kPUYUdLcIutDai5oLGB1F3r48b6Iy3RuLMKRnjDeNu8+BJA2xdLDzeybS/6K8g/e4hv3kmJG/fkB1UPzeH/cHF6em816t22+lKS7TuJatb9SpqJk05J9AJCZ0STFAQAA', 'base64')).toString('utf8'));

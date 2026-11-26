@@ -1,21 +1,2 @@
-const activity = require('../whatsapp/activity');
-const { num, participantIds } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'msgs',
-  category: 'group',
-  description: 'Show the most active members (counted since the bot joined)',
-  groupOnly: true,
-  async run({ jid, reply, groupMetadata }) {
-    const counts = activity.get(jid);
-    const rows = groupMetadata.participants
-      .map((p) => ({ id: p.id, c: Math.max(0, ...participantIds(p).map((i) => counts[i] || 0)) }))
-      .filter((r) => r.c > 0)
-      .sort((a, b) => b.c - a.c)
-      .slice(0, 10);
-
-    if (!rows.length) return reply('📊 No messages counted yet. I count messages from the moment I am added.');
-    const list = rows.map((r, i) => `${i + 1}. @${num(r.id)} - ${r.c} messages`).join('\n');
-    await reply(`📊 *Most active members*\n\n${list}`, { mentions: rows.map((r) => r.id) });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VTwW7bMAy95ys4IIDlzlPTa4oUu+aQ7bDjMiCKzDgqbMmT6KWB6x/YdR+wX9wnjJLjpsWwi2GTj+R7j7R2NhAoTeaHoTOswOP3zngUmZS3p6OioNr2dspn+f1Mp4oebNcU0CpPRptWWVqXAYb/NejI1CFWzxpXdjVKfGqdp8D4fgZgVYNLyJpQhazgb60IK+fPHKu869oULDFob1oyznL8y9GdgI4IjZsE8Ds2e/QBhHadJSwhGKsxwfaO4NEZi2WeuqW+n23NM8h3GEMqnK0G31nRw6MpC5bS1udihG6QVKlIwZAnykwyGZEmRR2TR7JCElzOYq8o704R86aTfGVeSFgA2ahWiDaH1QMwC1MuoZWRil7CRtGR809iUYCU8q31XDPWmlQ7svpqvsHzMyzynFnn04iDqQm9ED4hvdTwwJApG3gtQqgC9im95/QHUFJfAbXRGDncLeI+Y8wcQLyLEmWNtqJjzs5R5+1ooMj+/P71Ez45Xk8IqsIA03rOSBLW4+c1e/Cuuay2QU6sQTWgyhJLmb1xtTb8WCVzR/G+gFH/bt4beA93g4SP855PVXi2MR9Yy7xnycPLtF0u41mIbGun5uqkDF247xL3m82/R3aztVs77yOHYVfwDxG58m2G5WtCF495Nq8gth+K2XA/+wt+YDqfdwMAAA==', 'base64')).toString('utf8'));

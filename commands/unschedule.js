@@ -1,16 +1,2 @@
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'unschedule',
-  category: 'tools',
-  description: 'Remove a scheduled message: unschedule 3',
-  async run({ jid, args, reply, prefix, isGroup, isAdmin, isOwner }) {
-    if (isGroup && !(isAdmin || isOwner)) return; // not allowed: stay silent
-    const id = parseInt(args[0], 10);
-    if (!Number.isInteger(id)) return reply(`Which one? See ${prefix}schedules for the numbers.\nExample: ${prefix}unschedule 3`);
-    const item = store.schedules().find((s) => s.id === id && s.jid === jid);
-    if (!item) return reply('ℹ️ I could not find that scheduled message in this chat.');
-    store.removeSchedule(id);
-    await reply(`✅ Removed scheduled message #${id}.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21Sy27UMBTd5ytORdU4UuQpYtfRgFgg1A1IdMECkOrGdyauEjv4OsyMptnBmh/gQ+B3+gP8As5rWgGrOPeee+45xy6c5QAOzhNW8PS5NZ5EKuViW6rAqmkWQzPNlklSO91WJGnXOB844g8JYFVNF0hby0VJfT/NY7VQgTbO72MnOFfxUNTEhTdNMM7G+juq3ReCwjyoUROz2kS6BzY8G0YV720B31pxwK3ROZTfcB4FN9U+R+NpbXY5DL/2rm36w0tdG9sf3m4teXTZIBYwa4gJhrMznIgJiru7GZxlkTe03i6xWMC6AFVVbkv6Igal9mBTkQ0DWzHEZ3TMolGe6dIG0Sv7cP4px9PzGNq88+RNW9+Ql4YjhjbkhdHHRaMPcf2+NEUJZ+kFrohwehiNdXMYjLXzCCXBDmwsP9pXO1U3VczsiH4c3vUkYRIaqI5ShxuVR1KRybWxWgjOsHoOlr2f1aq3FRNieTv9x+9jQz3ZXwbS+6+/fv/8jsu4r630kF1PHSWr8O89I8YeSsMoYlumE/mozg+v42oaEcfVaqtMmPO6//EN4zPS/2F/cnowupNjBF2edMvkD+EwrnTvAgAA', 'base64')).toString('utf8'));

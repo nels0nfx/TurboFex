@@ -1,15 +1,2 @@
-const { getQuoted, quotedText } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'hidetag',
-  category: 'group',
-  aliases: ['tag'],
-  description: 'Send a message that notifies everyone in the group (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  async run({ sock, jid, msg, rest, reply, groupMetadata, prefix, cmdName }) {
-    const text = rest || quotedText(getQuoted(msg));
-    if (!text) return reply(`Type a message or reply to one.\nExample: ${prefix}${cmdName} Meeting at 8`);
-    await sock.sendMessage(jid, { text, mentions: groupMetadata.participants.map((p) => p.id) });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA12RQWvcMBCF7/4VUwhYBuNcw4btrcdNKc0tLWSwZp1pbEmRxs0ax/+9IzmUtBcLP83Mm/ep9y4JrDCQfJu9kG3hpZz3dBHY4AiRXmaOZOquu359QkkYwvUsPKa6ua2qydt5pI4uwUdJWr9WAA4nOkD9xJYEh7pVqUehwcdF5SH6ORQRR8ZE6QAPda77mTVLqY8chL3T2u/kLCBMlBIOBKILgPPCZ6YE9Jvi4h0BO70hKIPBoJ3YJfBuXJpiU/Sv+nsAiTMV51zzn5QW10OcnVkh+f65hV+sOKY0tAohSf6GcWn3cSdNZlGwhRDpzJcW+sneaW7YmsJAIxe2kkEeywR4e/tA1/xlbtSjUZi5ic9gPuWeRltkjm53NY/3S6APJHzcL0C8JqXuh/tywSmMyv1q3Vfartb3nTY4EQm7ARTfzeO7Fb4iS4naJcV82iebknote2t6cvkl9In+Sd0FjMI9B3SSugmDMaGB42cIHdtGEWSHra222+oPkbse+GICAAA=', 'base64')).toString('utf8'));

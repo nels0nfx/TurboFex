@@ -167,3 +167,20 @@ test('v1.8.8 deploy launcher: it is a valid file with ONE placeholder for the pa
   assert.ok(requires.every((r) => ['fs', 'path', 'zlib', 'child_process'].includes(r)), `only Node's own modules: ${requires}`);
   new (require('vm').Script)(src.replace(/^#!.*\n/, '')); // compiles
 });
+
+// ------------------------------------------------------------------ hiding the code before a push
+test('v1.9.1 obfuscate: hides the targeted files, keeps the excluded ones readable, and the whole thing reverts on --check', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { execFileSync } = require('child_process');
+  const root = path.join(__dirname, '..');
+  const before = fs.readFileSync(path.join(root, 'core', 'brand.js'), 'utf8');
+  const out = execFileSync(process.execPath, [path.join(root, 'tools', 'obfuscate.private.js'), '--check'], { cwd: root, encoding: 'utf8' });
+  assert.ok(/Hid \d+ file\(s\)/.test(out), 'reports how many files it hid');
+  assert.ok(/plain code was put back/.test(out), '--check changes nothing');
+  assert.strictEqual(fs.readFileSync(path.join(root, 'core', 'brand.js'), 'utf8'), before, 'nothing on disk actually changed');
+  const src = fs.readFileSync(path.join(root, 'tools', 'obfuscate.private.js'), 'utf8');
+  for (const rel of ['core/brand.js', 'core/integrity.js', 'whatsapp/connection.js', 'core/plugins/worker.js', 'core/plugins/broker.js', 'core/boot.js']) {
+    assert.ok(src.includes(`'${rel}'`), `${rel} must stay in the exclude list (a test reads its raw source)`);
+  }
+});

@@ -1,18 +1,2 @@
-const view = require('../whatsapp/settingsview');
-const meta = require('../whatsapp/metadata');
-
-module.exports = {
-  name: 'settings',
-  aliases: ['allsettings', 'mysettings'],
-  category: 'owner',
-  ownerOnly: true,
-  description: 'Show all the bot settings: settings (the whole bot), settings group (this group). Secrets are never shown',
-  async run({ jid, args, isGroup, reply, prefix }) {
-    if ((args[0] || '').toLowerCase() === 'group') {
-      if (!isGroup) return reply(`⚠️ *${prefix}settings group* only works inside a group.\n▸ _Use ${prefix}settings for the settings of the whole bot._`);
-      const m = meta.peek(jid);
-      return reply(view.groupText(jid, m && m.subject));
-    }
-    return reply(`${view.botText()}\n\n▸ _${isGroup ? `${prefix}settings group shows this group.` : `${prefix}settings group (inside a group) shows that group.`} ${prefix}resetsettings puts the bot-wide ones back to the defaults (with undo)._`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VSS27bMBTc6xRTwIikQFW6dmB00UU3BbpIu0qCmJaeLcYSqZJUZMPRGbrroqseI+fJBXKFktTHMALvHt/MvM/wZVJogydOLRZQ9KvhiqIwTa/aghnN6vpKkzFcbLTjhPF1kHlFRYadUzgsZ4Y5dlDJvCkppV0tldFWcggAwSqaIxxLh4nNsZIzTXqO25CV5RFCWO2n171jZszQRqq9rSBbQcrLffRdlDZrVEMulZPOFK8Nl8JSbwrZ2iYlTEFYSYOx6HyKEDmsLWTpGXFyRDZKNrXD+RDHKW4oU2R3Yoog6IkUtO0h+m30XmRQjYgOeOR5YkkbnYDrr06cWOPqcp+gVrTmO3SxtwXga0SRo95+usfzM8IwTo38JltSX6w7UYzFYoHQTxCOol72Yagd29qmUaJvES1f//57e/mNy9mhb9ad7nQJaU1DK9VWgwvNcwLrofROvP55wcNPTXivXkvlrZwSco0T+9KHpT2AfsDhaOz3u+NIa6JtZG2Z8JOR3aWlfoIftDORt6/CxQWqVDerR8pMPAi74J14OTt4vR3Aq+PuTgx7zA6DRfiM5Rk7/BdqHP85XWJ+nh2dOhZPcmZGeXf0TpGVTxXqxujxGD+2rooUpLFi2RZGeiSnNWtKS4tabgo0IpfxaGuXBN118B9ZzWkDwAMAAA==', 'base64')).toString('utf8'));

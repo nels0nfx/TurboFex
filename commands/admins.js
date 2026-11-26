@@ -1,22 +1,2 @@
-// admins = list the group admins AND tag them. tagadmins / admintag / calladmins are its aliases.
-//   admins                 -> the list, every admin is tagged
-//   admins Please help us  -> the same, with your message on top
-const { num } = require('../whatsapp/utils');
-const meta = require('../whatsapp/metadata');
-
-module.exports = {
-  name: 'admins',
-  aliases: ['tagadmins', 'admintag', 'calladmins'],
-  category: 'group',
-  description: 'List and tag the group admins, with an optional message: admins or admins please help',
-  groupOnly: true,
-  async run({ sock, jid, rest, reply, groupMetadata }) {
-    let info = groupMetadata;
-    if (!info?.participants?.length) info = await meta.getMeta(sock, jid).catch(() => null);
-    const admins = (info?.participants || []).filter((p) => p.admin).map((p) => p.id);
-    if (!admins.length) return reply('⚠️ *I could not find the admins of this group.*');
-    const note = rest ? `\n_${rest.slice(0, 500)}_\n` : '';
-    const list = admins.map((id, i) => `${i + 1}. @${num(id)}`).join('\n');
-    await reply(`👑 *Group admins* (${admins.length})${note}\n${list}`, { mentions: admins });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VTzW7UMBC+71MM0kpJluCUA5et2oKEhJD4u3errpXMZl0c29gOZZXmGapeucBj8Dy8ADwCYyfZdkHkEnt+vpn5vnFRAK8aoRycgBTOg98i1Fa3ZrK/ePcSPK+Do2HhNNrHxOAqoORSjnZuEYSnvxTcoWOzogCYwP7+npzGgqFyDvgZ7W6IBOFCqRqrg/QPEgkTtigNtG6f7niDOVwLv4Wdbi006ByvEbQCr82s1IoG60C1DfQ0p8VPrbCYJowV11vuHTemaL2QLsmOx+gGPf9faPBV3PMQPWt01Upk+MVo6wOL3QxAUUNLSIauk5wsIxtLOE/2FCb5GEKWcL4nMbkIOSX3WGu7I6SoSASq0JVWGC+0IvubIBlX1aTQgXQjJVyBjvFcTswsJ0K1nU7mntpYJwK9V5Kqe9tinMHtVAm2VWkHTpcfc7gSVU4cBfEsGrnLh7S3I0HQZ5EOAIkehNpo4ucg4jh6xQbSR8F9xgy3XpTCcOXdGZOoar/NplR+zcUgDavRB4x030fGiK5ym6YZnJyS1FJmA/ig537J03/rwM0NnF9kbCOkR5umJkIYFnMy1nBzb6NCD3oeUPdtWvStVQMVafLz6/dfP25h8ZpaaGUFSnvYiKAV6TTxv6Eb7XokhS2Sg54pAeMO0vkM1it1Oe/ChTkpSkyPcnh2dJT1lyu1BtqF5GFufMsnY5lhhKCViGOs552Ax/C0Z/B83tGzIF/WrzN2pYVKk5Wa+hgIH+ZZ//52dweLVw8WbAHpvDvgoM8Ij9ruV2rehR76dU4vr0EVFtDt966PBfp81h/P/gB21IOzgwQAAA==', 'base64')).toString('utf8'));

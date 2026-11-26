@@ -1,20 +1,2 @@
-module.exports = {
-  name: 'ping',
-  category: 'general',
-  description: 'Check that the bot is online and how fast it answers',
-  async run({ sock, jid, reply, timing }) {
-    // response time = from the moment the bot got your message until its reply was accepted by WhatsApp.
-    // (The detailed breakdown for the owner is in the status command, not here.)
-    const start = Date.now();
-    const sent = await reply('🏓 Checking...');
-    const sendMs = Date.now() - start;
-    const ms = timing.thinkMs + sendMs;
-    console.log(`🏓 ping: ${ms} ms (bot ${timing.thinkMs} ms, WhatsApp took ${sendMs} ms to accept the reply)`); // detail for the owner: the console only
-    const text = `🏓 *Pong!* I am online.\n⚡ Response time: *${ms} ms*`;
-    try {
-      await sock.sendMessage(jid, { text, edit: sent.key });
-    } catch (err) {
-      await reply(text);
-    }
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11TsW7bMBDd/RVXIIAlV2V2GxmKZOlQoCgKdOlgRjpLrESeQJ6hCIa+oUO3LkV/rV/QT+iRkhM7gwiSd/fu3eOTperYocKnnjwHuIPTCsBpi1tY98bV60LOpWasyY9yV6NDr7t0XWEovenZkJPIfYNlC9xolgXhkRhMAHKdcQjaVdDQAAcd5JrlHAb0IcHoMLoS/NFlJwhUtgV8N1UBHvtuLICNFRow5YkZwO2tREJPLmCMoVA+eLKppyWL7qV9Ld9IRw8WQ9A1wtGx6aR9mMFh0AF0WWLPWMHjCF+FfHjf9+rcKfsiUBWyNl3M8KjbigYHB/Kpi+zRxzGNS+fAmo8BSrJWJi7ACYMGPao8IZbCmmOSZ6H9IKoqR0OW7y6jcYI70IMWmRLNbP3v94+fkPQVKZRS69cV1cdwBQjv5i6XaTamzGoqboxrpebtUvySR2KGjupsn3pGB2zh5mTDFOuzqOrN6RokRopn6YCJWsmZcVMV0yJykiiNlO/zXdR3lvZazm3aLlyif8aLIRifojozu80ncvWbDXwAbRejqW/u768/8PnSIVvYnCfY7OdJ2Y+LnWBROhpPJdKzV7LkwVNqWABWhrfpaVSLo5hxhpnin1E2kKH3+SvA+eli+TlZ1qlYTbvVfxTg8PJ0AwAA', 'base64')).toString('utf8'));

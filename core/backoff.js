@@ -1,11 +1,2 @@
-// How long to wait before trying to start the WhatsApp connection again after the START itself failed
-// (a disk error, too many open files, the library failing to load). It grows with every failure up to one minute,
-// and the caller keeps trying for as long as the bot runs, so a short problem never leaves the bot offline for good.
-const MAX_MS = 60 * 1000;
-
-function delayAfter(failures) {
-  const n = Math.max(1, Number(failures) || 1);
-  return Math.min(MAX_MS, 5000 * 2 ** Math.min(n - 1, 4));
-}
-
-module.exports = { delayAfter, MAX_MS };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WQvU7DQBCEez/FlElk8oOAJqJIB0UoAAk6tI7X8YnzrXW3JkTAu7O2g4DmTrr7ZmdmFwvcyAFewh4qOJBTFFxJZGg8uvE1KUWF1oynmjRt2hY7CYF36iSA9uTsrJTjwDw8bu4f4TSxr1CR81xmiwUmhNKlV3CMEnMbK2goHCEtB1RGpXyQe1dEisdBefL3QuV0jlvFPsoh4eC0Br/xieosbNf2oARG40KnnPeWFMph5I68t3CvzG36qWUVQWksbnePFaKIXbAcSUBItVjrNkrhuUHo/eCZ3viXlqqyjDwM24uU88z2khTbzfPL9gHXuFpihtVyuVxnWdWFcWElezpu+n1NTvHTFB8ZMIqD6bak9byh98kqx13XFP/Qz0+spmvjI2sXwwl2YTLa5rg0Q/M9x2z2+xlwBpt2MTXpV5Y1Unae5/zeWstklh9/cuU/Db7W2Tf0Cp/9IgIAAA==', 'base64')).toString('utf8'));

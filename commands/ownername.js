@@ -1,23 +1,2 @@
-// The owner name shown in the menu header (detected from WhatsApp; this only lets the owner check or change it)
-const ownername = require('../whatsapp/ownername');
-
-module.exports = {
-  name: 'ownername',
-  category: 'owner',
-  description: 'The owner name in the menu header: ownername (see it), ownername set <name>, ownername auto',
-  ownerOnly: true,
-  async run({ sock, args, rest, reply, prefix }) {
-    const sub = (args[0] || '').toLowerCase();
-    if (sub === 'set') {
-      const name = ownername.setCustom(rest.replace(/^set\s*/i, ''));
-      return reply(name ? `✅ The menu now shows *${name}* as the owner.\n▸ \`${prefix}ownername auto\` goes back to the name from WhatsApp.` : `⚠️ Write the name: \`${prefix}ownername set Nelson\``);
-    }
-    if (sub === 'auto') {
-      ownername.setCustom('');
-      const name = ownername.get(sock);
-      return reply(name ? `✅ The menu shows the name from WhatsApp: *${name}*.` : '✅ Back to the name from WhatsApp. WhatsApp has not told it yet; it appears after your next message to the bot.');
-    }
-    const name = ownername.get(sock);
-    return reply(`👑 *Owner name in the menu:* ${name || 'not known yet'}${ownername.js.data.custom ? ' (set by you)' : ' (from WhatsApp)'}\n▸ Change it: \`${prefix}ownername set <name>\`\n▸ Back to WhatsApp's name: \`${prefix}ownername auto\``);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA5VUzY7TMBC+9ynmsJLTKko5pxQEvSL2grQHCoqbTJvQ1g72RG3UzZEz2gsHhASPsc+zLwCPwNjpL1squCTOeDzzfZ+/Sb8Pb3IEvVJoQMklgs35AwoFxPElqgpylBnvBhkSpoQZTI1ewk0uyb4oywEnFha0WtSwQLL+XFsvzTGdg3YLqWYIBXU7qVaW2n3fbggGP1aFwUBEUX/lisqy7O8TRHfQ6Sx1Vi0wwnWpDXcYwqYDHm0M4pAZcjCVhDNt6t2GD2ZoU1OUVGjF8T/4PmYaH8ELLHrc4VHMIsFTt3p2HJUVad/Nh65ZjhjIVOhC0tYqBVOpYANWp/MQpJnZkKlbcs9yUYdQGpwWa2i6nh1T8UrZasJ8A5f/9sk7uL0FIboR6Vd6hWYkLQYskEsvpgzWJQ+HIBii2NXZVdrKvUcccdKosqSXgcMRORgyxaD/njfGttcvQtdrWx4YJlVGtWgDX+w5JA/fPnkDefmUXnn7WOhdbVxG02PqB0NEY/Xw5R7GydWmJducyjdOYKbRwkSybUj7g37zxHBRAjE3/vrj5/1nuDEF4T4xPl/bXdhrXFitxkmy5dM8Fs3f4EG1c0IJsZfjL6LOkAJ3xf8hWyvZebLxQUrPW7iTLy/rs19BzuorTZy7yNjFUCMN3JsnDKWxIKfEY1DrimcB18RwrJU8qNvaE02RONHr30ifUE5+fb+7g9712YmLe9DS88Z2UOfK/X4YqGiuNocOH2yUSZJR6u+BJRRuNAkmtYPfFU4aCE506Iqm9dto9/e5YI92nsdJe2In8K6UsJfs1Vq3NVYTdppB5zcIE2Q+VgUAAA==', 'base64')).toString('utf8'));

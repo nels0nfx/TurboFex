@@ -1,13 +1,2 @@
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'sudolist',
-  category: 'owner',
-  description: 'Show everyone with owner rights (owner only)',
-  ownerOnly: true,
-  async run({ reply, config }) {
-    const list = store.getSudo();
-    const main = config.ownerNumber ? `👑 Main owner: ${config.ownerNumber}\n\n` : '';
-    await reply(`${main}🔑 *Extra owners* (${list.length})\n${list.length ? list.map((n, i) => `${i + 1}. ${n}`).join('\n') : 'None yet.'}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2WQsU7DMBCG9zzFDZXslMgVaytgYqQMXTPUpCYxSs7BdkijyA9Rib2v2Efg7AwIMf7//Xf+flcGnQfnjVXwAFZ9DtoqzoTYjI30Tvb9Jg1ZvsuyzpyGVgl17o31jvJzBoCyU1tgbjiZVjvPCvIq6VVt7ES+GVHZZJ6Uq6zuvTZI/qExI6gvZSeDCkbtG0hRsLpu6DhflMF2ytN60q8kt+DtoKIl3YQV2AH5TOh9OxVQGXzXNYQ8sUHU1C+CEW5qImrlDwTLqdFvopMaKbGsi/TWfujeiOAJjrfr5QIvMZEGW1jN/4OhxBKPQNXYcliOUvuFix9Xc3wh3K7fF1g/n72Vyy23Br6aI59oFda+CXmJfwwCSKqTPedYgM7h4RHooIY7uA+CYDAcc/FhNHJWIssjwz7+6qS8YDSLPKHIwi77AYI/N87vAQAA', 'base64')).toString('utf8'));

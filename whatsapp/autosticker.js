@@ -1,27 +1,2 @@
-// Autosticker: pictures and videos written in a group (where it is switched on) are sent back as stickers
-const media = require('./media');
-const store = require('./store');
-
-const lastAt = new Map();
-const GAP_MS = 4000;
-
-async function maybe(sock, msg, jid, botIds) {
-  if (msg.key.fromMe || !store.getGroup(jid).autosticker) return;
-  const own = media.unwrap(msg.message);
-  const kind = media.kindOf(own);
-  if (kind !== 'image' && kind !== 'video') return;
-  if (kind === 'video' && (own.videoMessage?.seconds || 0) > 8) return; // long videos are not stickers
-  if (Date.now() - (lastAt.get(jid) || 0) < GAP_MS) return;
-  lastAt.set(jid, Date.now());
-  if (lastAt.size > 2000) lastAt.clear();
-  try {
-    const found = media.findMedia(msg, jid, botIds);
-    const buffer = await media.download(sock, found.source);
-    const webp = await media.toSticker(kind, buffer);
-    await sock.sendMessage(jid, { sticker: webp }, { quoted: msg });
-  } catch (err) {
-    // no picture or video tools here, a file that is too big... nothing to say in the group
-  }
-}
-
-module.exports = { maybe };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2VTy27bMBC8+ysml1gCXNooeijiuoWBAkEPRgvkAwpaWtmsJa5DUlVdx//eJSU/kt4k7sxwdoc7nWLZBvbBFDtyD9ibIrSOPLQt8duUxB6dMyGQhbHQ2Dhu98i6LTmCCTAevjOh2FIJtjm0HHuyAWtd7KCl2kv7UcHWBzRUGo0FHD23xlE2VtN0NM7nA8IHFo1XiHQUEQOk1j4sg2AsdVjpfXYhPy5//Fw9SeXDbDYTvPYHW6BqbREMWzT6sKbMc7GboPGbCX6ZcoI1h2+lz3EcAaZCJhW1o4OqHDcrwssL7pIDtaHwGPvPhJYrfR1cLm5lbnYuCr0R7qy4SK2p1nZOTEbZhrzXG8qvwJ2RSZ+R8ed7lQk5IaKZVL9bLDA2jTDHuL/H9SxFNL69/sJZXOuRE0VV+l31Hr4oT2Kh9LHBWY7P+HjRwXSKmu3m/ARiqpbDNcz+nq86kLLcZTneIetTiUNK8xlkPw2Z3HockL5HTnDVubR9hpi/JM7eS5r5mVbUpF2WkMEdUmrnYVbc3kyzkjGs4lf2X9bzG9K6rSpywtKdNsMLVaWMq2ZdDo8lCSvPrSvoFbmj9f4NNfBTP6aUw2TQH1g9MIpK+9FeyqIfwxGXPUyyp3j03HKg8iE+V5ySyAmFloVDRs7lQ/uSl+Xz9oJdHxwCc+0Rd3Uiu1uZmhC2Om2tlLA2G6VUTHZrJOzA8PoQ9zxsqd/0eN3oNBo1XLY1KfqzZxe8NHzsdwmn+egfkbUyHUQEAAA=', 'base64')).toString('utf8'));

@@ -1,23 +1,2 @@
-const store = require('../whatsapp/store');
-const { isCreator } = require('../whatsapp/adminguard');
-
-module.exports = {
-  name: 'antidemote',
-  category: 'group',
-  description: 'Undo demotions made by anyone except the group creator and the bot owner: antidemote on / off',
-  groupOnly: true,
-  adminOnly: true,
-  async run({ jid, args, reply, prefix, isOwner, myJid, groupMetadata }) {
-    const a = (args[0] || '').toLowerCase();
-    const g = store.getGroup(jid);
-    if (a !== 'on' && a !== 'off') {
-      return reply(`*Anti-demote:* ${g.antidemote ? 'ON' : 'OFF'}\n▸ Nobody else can remove admins: it is undone at once.\n▸ \`${prefix}antidemote on\` / \`${prefix}antidemote off\`\n_Needs the bot to be an admin. Only the group creator and the bot owner can switch it._`);
-    }
-    // an admin must not be able to switch off the protection that stops admins from being removed
-    if (!isOwner && !isCreator(groupMetadata, myJid)) return; // not allowed: stay silent
-    store.update(jid, (x) => {
-      x.antidemote = a === 'on';
-    });
-    return reply(`✅ Anti-demote is now *${a.toUpperCase()}*.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA41TwYrbMBC95ysmENZ2cJ2eE9JSFrZQ2uS0p6ZsFGvsuNiSKslNjNfH/kJP+yH9nv2SjmQnmxQWejFoNG/m6b3nVApjwVipEZag8UddaAyDJJkd9swaptTMXwbRYpT63hYKc6uRURW61zCMV4XIa6a5A44qyesSEzwqqa0hUDsCEKzCOQRM2IJjJS0GMVVTZjGXuqGbXMta+SJHk+pC2UIKqt8LLsFD6GygYhxh1wATjRQIeExRWbB7BD8A0oEsE9xXd9KCPAjUc3jZDVLADGSW+X0euBYlsbC6RlfyL/qnZBqRgq5F2ML3gsfAdG5iEkSVTQxKY1YcY1Jr7ZbFUDWfXJOf/QUt48wy6CKvBb3bi8tIm9CN+fr2Gzw+QhBEiZWf5QH1LTMYkpgvzTk1e3OSHO1HNzYkGkNLkdEgGC+XEEgRwM0NnE70xtNSILK21qLnHG6nH0iQN70i8ylM2jy5kOg9BOtVAOTA+u4u6Dbi+fcfWMmd5A1gaZC8c5Mq+RN7ucwcCksCQE2OkTWMhBcpJj1ys520vUjdlQ+bLTnxymWWbbYb8bBC5OZsppWwo+GiX5qAc+l//Pd8zaGw6Z54Jg/bQbrOf2ez80ioapJbEM7t2ZXoVg5AouSnKk0EU5dIOjL/SykzyACZlhVh6ZcY9OFnj8ZDPpxD4/OfFV6lZMhOFA12LRw5R4eVJUWDz2kba8AUJQrrJ/exqBWhMfTZDI8RLN+dfT9eGrt0uRuSMkgwSHEdj+enX3CREOeskAeYTlpGKb1X6pTSbpr0YnbxqFuM/gJ612b6ZQQAAA==', 'base64')).toString('utf8'));

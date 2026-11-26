@@ -1,20 +1,2 @@
-// More games: blackjack, higherlower, mines, typerace, flags, capitals, bingo. Admins start them, everybody joins by typing join.
-const games = require('../whatsapp/play');
-
-const base = { category: 'games', adminOnly: true, needs: [], weight: 'light' };
-
-module.exports = [
-  {
-    ...base,
-    name: 'blackjack',
-    aliases: ['bj', '21'],
-    description: 'Blackjack against the dealer, blackjack',
-    run: (ctx) => games.fromCommand(ctx, 'blackjack', { defaultRounds: 1 }),
-  },
-  { ...base, name: 'higherlower', aliases: ['hl'], description: 'Guess if the next number is higher or lower. Last one standing wins', run: (ctx) => games.fromCommand(ctx, 'higherlower', { defaultRounds: 1 }) },
-  { ...base, name: 'mines', aliases: ['minesweeper'], description: 'Take turns opening squares: a mine knocks you out', run: (ctx) => games.fromCommand(ctx, 'mines', { defaultRounds: 1 }) },
-  { ...base, name: 'typerace', description: 'First to type the sentence exactly wins (typerace 5 = 5 rounds)', run: (ctx) => games.fromCommand(ctx, 'typerace', { defaultRounds: 5 }) },
-  { ...base, name: 'flags', aliases: ['flagquiz'], description: 'Name the country from its flag (flags 5 = 5 rounds)', run: (ctx) => games.fromCommand(ctx, 'flags', { defaultRounds: 5 }) },
-  { ...base, name: 'capitals', aliases: ['capitalquiz'], description: 'Name the capital city of a country (capitals 5 = 5 rounds)', run: (ctx) => games.fromCommand(ctx, 'capitals', { defaultRounds: 5 }) },
-  { ...base, name: 'bingo', description: 'Every player gets a card, the first complete card wins', run: (ctx) => games.fromCommand(ctx, 'bingo', { defaultRounds: 1 }) },
-];
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA52US4/aMBDH73yKuQWkKGgrcdnVVmqrtpc+pKq3FQfHGYLBsbN+FFLEd++MIbs8ui3sIZDY8/j/xjMej+GrdQi1aNDfQqmFXC7oyWGu6jk6bVfocmiUQZ9D6Fp0QmIOMy1qWpCiVUFoeiuVqW0B7yoy9eCDcAHCHJsc8Be6rrRVBwvLe2XHccg8fRcDaY0POwFwDw4fo3I4zIpivJqL4EXbjlstumx0N9jblsIjmW4ofcDauu4WsuSf5SBYwHejaS24SEoNYkVkD9McVkhMgYw1/2ewpYiNraLGAtetdYEFPAwANvQAFEXBmfL0YSg+eT4VKNstC63IhONn5YLSZ29usuluq0IvnWqDsoYc3/eOIGqhmIKqQzZCc31Pw7pIPkMZ1iO4f7urTTFztvlgm0aYinfyIzFUjApnIurww0bDwDewHXGwLf9snmB6kIPj5ao9Y8w1AZyI/xzRe1CzpNngOoCJTYkOlN/3CVgHKVgBXwTBWYPcBKbic14RLyW5DOpY2F+xXmJKXXpMk5ZWiNS351g/xRIhREdNaVs0LNU/RuHYVaSeh6WxcumhsxFsDBdD9Equkt9PV3aq85Ny3C82zV86A48moJEIuBYy6C6VGIZ9BJhQI0/ApaSji1UfCDgTPvmH8HQZHNedl2iQf58X/Rv5JAZJkYPrgHWAotljHximYK8E6IVcpb6/w44B9qv/Y9hZgVShAzujrumphn3YV6IcqLqKJt3DZx30ke9g4GuURrVGKjYpFa7KE8Us9Ze0TasxYNq4bmb7pC+2+/Ru8AcPIAYyagYAAA==', 'base64')).toString('utf8'));

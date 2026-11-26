@@ -1,20 +1,2 @@
-module.exports = {
-  name: 'calc',
-  category: 'tools',
-  description: 'Calculator, e.g. calc 12*(3+4)',
-  async run({ rest, reply, prefix }) {
-    const expr = rest.replace(/×/g, '*').replace(/÷/g, '/');
-    if (!expr) return reply(`Example: ${prefix}calc 12*(3+4)`);
-    if (!/^[0-9+\-*/().%\s^]+$/.test(expr) || expr.length > 100) {
-      return reply('⚠️ I can only work with numbers and + - * / ( ) % ^');
-    }
-    let value;
-    try {
-      value = Function(`"use strict"; return (${expr.replace(/\^/g, '**')})`)();
-    } catch (err) {
-      return reply('⚠️ I could not work that out.');
-    }
-    if (typeof value !== 'number' || !Number.isFinite(value)) return reply('⚠️ I could not work that out.');
-    await reply(`🧮 ${expr} = *${Math.round(value * 1e10) / 1e10}*`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA51STY7TMBTe9xSvo47ipKnTAhuoygYxEgu4AJ2qJnFbC9eO7GfaqJMzsByJDezYsR323IQLwBFwbDKarpDYOMmn9/n7ednryklO+bHWBi0s4DQAUGzPn0FSMlkmuf8uGfKtNo3HUGtpA1hxWxpRo9DK4y/8rJMMtcmB0y2FjgyzRxl5PH6SBgKzjSrBOEVOYLjF3J+1bHKoDd+II7RpEPdyWlkEb8l4P90k7QZZyUnx47bY5pBkSfoAuwtYkaTzQBcbIMOOnXoyOqOiDlm/PLJ9LX2y0SlKtmcm1w/5xertdPJ0vJxkBUnp5dKursejgqJ3Q+LdNzfBIpVcbXEHz2E2nfYJ4Fw5+fnpy6/vH+GVb0WBVrKBgzbv4SA8Ubn9O24sMFXBGCaQQQEEUriEVZ+oDafkCB+YdDyCaJp7tQD7sq6cKruFkPWFsxwsGlHixbx3Q0anYPm+uuUq1un7bH1+0ut1Gy93QLgx/46knaxAaYyZcMcQtEN6br4rFZua681fs8PFApKYPem6HL4J71TYK6EEchLG0vR/ZdmBCew3//vz128Qw7e+pmx0es1wR412qopCvvYZn/kFFuHZZvFvaPNBOx/8Ad3LOkUlAwAA', 'base64')).toString('utf8'));

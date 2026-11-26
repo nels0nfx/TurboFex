@@ -1,25 +1,2 @@
-const store = require('../whatsapp/store');
-const { resolveTarget, jidVariants, num } = require('../whatsapp/utils');
-const { setBlock } = require('../whatsapp/blocklist');
-
-module.exports = {
-  name: 'unblock',
-  category: 'owner',
-  description: 'Unblock a person on WhatsApp and on my ban list (tag, reply or number) (owner only)',
-  ownerOnly: true,
-  async run({ sock, jid, msg, args, reply, isGroup, groupMetadata }) {
-    const target = resolveTarget(msg, args) || (!isGroup ? jid : null);
-    if (!target) return reply('Tag the person, reply to them, or type their number.');
-
-    const wasBanned = store.removeBanned(target);
-    const ids = [target];
-    if (isGroup) ids.push(...jidVariants(groupMetadata, target));
-    else ids.push(msg.key.remoteJidAlt);
-    const res = await setBlock(sock, [...new Set(ids.filter(Boolean))], 'unblock');
-
-    if (res.ok) return reply(`✅ Unblocked @${num(target)}`, { mentions: [target] });
-    if (wasBanned) return reply(`✅ @${num(target)} is off my ban list. (WhatsApp itself did not report a block, so nothing else to undo.)`, { mentions: [target] });
-    console.error('Unblock failed:', res.tried.map((t) => `${t.name}: ${t.error || 'ok'}`).join(' / '));
-    return reply(`⚠️ WhatsApp would not accept that (${String(res.error?.message || res.error).slice(0, 80)}). If they are blocked, unblock them in WhatsApp settings > Privacy > Blocked.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA4VUzW4TMRC+5ykGqdLa0srtEaWipbkgkBBILXCoKsXdnWzdeO3F9jas0j1y5o448Bg8Dy/AKzD2bn5aUSFFSjz2fPPNN9+ksMYH8ME6hBfg8HOrHLJMiMPVjQxeNs1husz48aRIb9f0ylt9hxfSVRhyuFXlR+mUNMHnYNoa+qeQ2qC030fyGGbaFsunU67jtVY+xLRJbctWo8AvjXXBU856AmBkjVPIWpPeZjmFChmwsq6jsF0ZdClYoi+caoKyhuIfhucgoUHnrQH6fIpVz5oGpCnjue7gWhqI5YEFWeXEsdEdWBf7vEbHgSV8eqw7nqqk8zs6TiG4FmNI+s4U4FrDqGOqmSTLofYESBr6ETYH5V852zY5VPHrLQZZyiCh56lPaivJFpLuSbC9ObAtHIf7e2DPRjA4jdVgSoy1Jg0jjlrQ/QDDCSW0zgwUWHYhKwg3OIqyaTjYGKzz2HnoGowntRFBpNHs+K2kn0ljsCSKyTvCYW3vcAiyse7xXoYq4ywvh5urHcexBR4fiKb1N0wIsWc39kCnfFSGj9ioPe4ySR6xxC5xCfhGlWf6IQlSk0jIlVRh60s2jOuSyhpcwTnJHAEXSgd0bGatRmk4v8p39ttoEfkTpLDLRxLPf//4CqP7SKOXB2uScaNKP89pLWo00aV+utWEPLCTZSvwv5Af4ZGnwC4W+1YWwLZGV8GjXkBJDjE2ahAXi3YiscvJrTF8o0w1qEk+aE1pBf8fzSipjZvqnHVsu2wLqTSW0yz6yovgFJailg1j5MMXJzA/WAcR17mfQvyZsqObM7vM+jkXt1YZlsEhZJshPxLg+88/v77t9nhlWz10JosCG9odugF2sD6n2qZKA0pFTkWN3ssKY7VtlAuvVYHsKIfnR7znAl4vovU72jOEcYI5jKNPKwJq72+EbBSojIcTeO/UnSw6+jUb0sQ8ddDnk/548hc3pR+phgUAAA==', 'base64')).toString('utf8'));

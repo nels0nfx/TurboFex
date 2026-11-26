@@ -1,26 +1,2 @@
-// Text styles for the menu and messages. WhatsApp shows these special letters on every phone.
-const SMALL_CAPS = {
-  a: 'ᴀ', b: 'ʙ', c: 'ᴄ', d: 'ᴅ', e: 'ᴇ', f: 'ꜰ', g: 'ɢ', h: 'ʜ', i: 'ɪ', j: 'ᴊ', k: 'ᴋ', l: 'ʟ', m: 'ᴍ',
-  n: 'ɴ', o: 'ᴏ', p: 'ᴘ', q: 'ǫ', r: 'ʀ', s: 'ꜱ', t: 'ᴛ', u: 'ᴜ', v: 'ᴠ', w: 'ᴡ', x: 'x', y: 'ʏ', z: 'ᴢ',
-};
-
-function mapRange(text, upperStart, lowerStart, digitStart) {
-  let out = '';
-  for (const ch of String(text)) {
-    const c = ch.codePointAt(0);
-    if (c >= 65 && c <= 90) out += String.fromCodePoint(upperStart + (c - 65));
-    else if (c >= 97 && c <= 122) out += String.fromCodePoint(lowerStart + (c - 97));
-    else if (digitStart && c >= 48 && c <= 57) out += String.fromCodePoint(digitStart + (c - 48));
-    else out += ch;
-  }
-  return out;
-}
-
-// "ping" -> "ᴘɪɴɢ"
-const smallcaps = (text) => [...String(text)].map((ch) => SMALL_CAPS[ch.toLowerCase()] || ch).join('');
-// "Menu" -> "𝗠𝗲𝗻𝘂"
-const bold = (text) => mapRange(text, 0x1d5d4, 0x1d5ee, 0x1d7ec);
-// "Menu" -> "𝙼𝚎𝚗𝚞"
-const mono = (text) => mapRange(text, 0x1d670, 0x1d68a, 0x1d7f6);
-
-module.exports = { smallcaps, bold, mono };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA4WTz08TQRTH7/tXvPTA7oayLQQoWEvScIWEWBMPhJhld9pd3N1Zd6ZQfiXGaEw06hFQUOSIFzXc9G7qf+HVE3+C35ndtqAGD5N+9s173+/rm5lKhe6yniQhtyMmqM0zkgGjmCVdchMfIITbYcKhe4ErRTNNSQR8S6gswUikzAvdiCImJcsE8YTYJsu2KQ14whzD44mQ1FpuLi3dX2yutKhBuwaRe4vMnxePzDKtg34cATwdegLyNT0FMU3PQG3Qr+NPoA6ofwYIVOUxIFSRc8CGTn8OeqDpBShSWe8BsQ69NMuwT1TFBYJcB1+DUk2HoIeg7x8BmSpVPQpt/hkkddZbUFeTst/UdAra0vQB1AP18LutJJT8jt5C28Z+3TDa3cSTIWYVu+kdN+kwS+IMIJqmLGtJNwNHfGvIftgJpWZbjw/TJt6VGKZp1vGtTs3KR+0FxNvUklmYdLSqnZcQFfso8gLH4z5b4WEim9Kq2nWdELYhQgsNmp2hsTFk3m7QfNXWTuONQtNpZzxeHFRbo45pXFVPoNgu9FiECzIUna8NRSenpm5WHf33gep87S/V0VByYXhMzw09Zmo3W1ypLiym565ZFMVeoGL7WBmT3SxR8bqxbxiVCpVS6JZoYoFKuDr98/5F/6xUXHkRu1HkuanAvPNzoMYCrTqOc/Vs1hzcAMvyAr07eiarOCLJl9QYFl3BLHuN9vbQi+1soHvLNNGpamAZzzRv4PLk4BTrC9bXy5PDx4M+1nnkX2vhjytX7U36M/50AYzlUGPePxyOvl2evHmFdYD1buAQ84T/z2G2Vi1gzi0c2rNwMGLudyPmsF7KM6lmtTuaXFk3X84N8Gx+A3KySR+rBAAA', 'base64')).toString('utf8'));

@@ -1,10 +1,2 @@
-const { setActionMode } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'antilink',
-  category: 'group',
-  description: 'Links: off / delete / warn / kick (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  run: (ctx) => setActionMode(ctx, { key: 'antilinkMode', label: 'Anti-link', trigger: 'sends a link' }),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WPsW7DMAxEd38FN9mAa+8OUiB7i36DKjGuYFlSRAqJEfjfS6tLM4l6dzzwTAzE8ARCvhh2MXxGi7DDGTLeisvYqmEY7z+aSac06uoh1Z2aZo22eBzwkWJmko1nAxD0ihMoHdh5FxbVCzOacY55Ez7nWFKFFslkl4444R/ipQni9QqjSB4ZZbjrHORZnFmg1XZ1gSAGv3U1oWZ9yXcCzgUPVD2vKBfJbw0/Oji/v9Y8aC/dF9z+nXwoqgevv9ELvgh++6simW6eMQslDJZAQxVg7/pmPzW/OY//hEwBAAA=', 'base64')).toString('utf8'));

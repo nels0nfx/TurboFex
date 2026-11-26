@@ -1,12 +1,2 @@
-const store = require('../whatsapp/store');
-const { addFilter } = require('../whatsapp/filtercmd');
-
-module.exports = {
-  name: 'filter',
-  category: 'autoreply',
-  description: 'Auto-reply to a word in this chat: filter hello | Hi there! (group admins in groups)',
-  async run(ctx) {
-    if (ctx.isGroup && !(ctx.isAdmin || ctx.isOwner)) return; // not allowed: stay silent
-    return addFilter(ctx, store.getGroup(ctx.jid).filters, () => store.update(ctx.jid, () => {}));
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VRy27CMBC85yuGC4mlNLmDqMSl7a3fYNkLuEpsY28UIsi/13FAPfW4O6/1WDkbGZFdIBwQ6DqYQFXZNO14kRyl920GS7EvVObeIbX+MB1TwPyf5pRx1etFV/RODx01dPMucEyaewFY2dMO5cos67RRkunswpS2clhCfTdlQFNUwXg2zibsmLC3DIIdJEYXNIwFX0yEShfssJriQl3n8MCXSSAF2qA6Bzf49ILe2LiI8hxFjpFxsgphsJXim8hHAuaEZWxM/MzS7Rab5+K4uODxwDp+j5aCEKkQHoLdo21hHUOmG0bSu1SynBBNR5az88r7a3NxrdevaM7EOS4n/RgtmvVJsUYlcHh/0gavU2cv0gu7zyK1Dsx1Me+LX6JxGzTiAQAA', 'base64')).toString('utf8'));

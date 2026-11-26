@@ -1,21 +1,2 @@
-// How the bot is linked to WhatsApp. WhatsApp does NOT send view-once pictures, videos or voice notes to a device that is linked
-// like WhatsApp Web (browser, desktop): those arrive as an empty message. A device linked like the Android app does get them (the bot
-// links as Android by default). The identity is fixed when the bot is linked, so a bot that was linked earlier must be linked again.
-function platformOf(sock) {
-  return String(sock?.authState?.creds?.platform || '').toLowerCase();
-}
-
-// true = linked like a phone app; false = linked like a web/desktop device; null = unknown
-function phoneClass(sock) {
-  const p = platformOf(sock);
-  if (!p) return null;
-  return /android|iphone|ios|smba|smbi|phone/.test(p);
-}
-
-// the owner's note about view-once, or '' when everything is fine
-function viewOnceNote(sock, prefix = '.') {
-  if (phoneClass(sock) !== false) return '';
-  return `⚠️ *This bot is linked like WhatsApp Web, so WhatsApp does not send it view-once files.*\n▸ They arrive empty, so they cannot be copied. This is WhatsApp's rule, not a setting of the bot.\n▸ *Fix:* link the bot again with a new pairing code or session id. The bot links as an Android device by default now (make sure BOT_BROWSER is not set to web), and the pairing site must use the Android identity too.\n▸ Until then, reply to the view-once message with \`${prefix}vv\` to open it.`;
-}
-
-module.exports = { platformOf, phoneClass, viewOnceNote };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2VUTW7aQBTec4pXqZIBuWYfFEVJ1KqLKkgJVTaRyhg/4xH2zGjmGQeFnKG7LrrqMXKeXKBX6JsxxlAkBOjN+/u++b6ZTOCrboAKhFQTSAelVGvMgDQ8FoLctTHJ4R9kGh3czebgUGWwkdh80mqJYOSSaosu5liG2oG2sNGST5QmLuFuAjLc+Ahxs37QYDLhf2vsZzxiCsPU6sahjbnIrUmb0QXXaYcgrJUb/nEgFGBlaAsVOidWmMB1N2KPIfT10K5VZrXMQHQQVkj+oILhHnm7hlo737lLT7fcMBd1SaME5pzI2BRJHsnr5/KZRzQFqnP2YnAesI8FtI048IrClhItVLUjSA+ripWQKhnktVqS1ApMKSjXtprlQ6eX6xG8DAAsMskKHshKtQrxq0TUVDyQILxKlhYzd5V0pbDbQRSNEtLfdIP2VjgcjqaD14HHSrZGuDwhSoAptEJP0hRyUbrzhAbTyf5C9lRPQdVlyYm1WivdqCMEvtltKZw7QrDUimEbzv8f4JRPZQ7DD2bU4fSdpz3siWivZSdD653UbueqVPgvuQuxScJio6HpYfLN8FZoIxeUCCLVNfXCjb1Qo6i9Rtyg3VLB3Lb3q7BH4ytmXHDHTcLCMRiLrAGGEiVRi87vfwb7w+Vly+YBVxQdoVq8//7z9+0njOcFDz314Jkvgq5OzcioWjPKI1i8fIkuGT+p919vXrnbzjfBMaEN+ehSKN+AdbjURmLmZc7z+dNNYeJsXTJRPk/wKCJPkM471SftkPEX+XwxDpsf/BBEDY2kgisVNmCE9NLlYRl65h0717Mrs9ZfvujgQvZ3Z8S9rXs/8jYNDCvB/Dh+d+BmNv9xcz97fPh875dvSSH/7LBkRzH3ysJW3QJOshaCBWt3+kQcLE5a76F950Dpk1TMt2ZKfxZqer73T1CL9Wnx8aUVx+tm87Tw2dqwviQliyDMSmdMaYLPRltyrKCXIzvER86JT3QHr9PBPyyagK2wBQAA', 'base64')).toString('utf8'));

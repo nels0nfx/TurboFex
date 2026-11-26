@@ -1,26 +1,2 @@
-const { getJson } = require('../core/http');
-const { weatherMessage } = require('../core/lookup');
-
-module.exports = {
-  name: 'weather',
-  aliases: ['forecast'],
-  category: 'lookup',
-  needs: [],
-  weight: 'light',
-  description: 'Weather now and the next 3 days: weather <city>',
-  async run({ rest, reply, prefix, isOwner }) {
-    if (!rest) return reply(`Write a city after the command.\nExample: ${prefix}weather Lagos`);
-    try {
-      const geo = await getJson(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(rest.slice(0, 80))}&count=1&language=en&format=json`);
-      const place = geo.results && geo.results[0];
-      if (!place) return reply(`⚠️ I could not find a place called *${rest.slice(0, 40)}*.`);
-      const w = await getJson(
-        `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=3`
-      );
-      const name = [place.name, place.admin1, place.country].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(', ');
-      return reply(`${weatherMessage(name, w)}\n\n_Data: Open-Meteo_`);
-    } catch (err) {
-      return reply(`⚠️ I could not get the weather right now.${isOwner ? `\nReason: ${err.message}` : ' Please try again in a moment.'}`);
-    }
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA4VU247TSBB9z1cUUuQLMk5m4QENmJEW9gG0aFZIiIeZkVPYFafZvni72yTZyN/AO098Bt+zP7C/QLVjj8iAhBQ56uq6nD51qiqjnYcDNORfOaOhhwIs/dMJS0mc54vKWFpsvG/j9MmsGp23hH5D9jU5hw39PEYa83c3RM2UqTtJOe1aY71j58MMQKOic4jHVHHGJpQCHblzuIrXnKJC5+ObcFGhp8bYPfuPaYNVE9XBeXDZkmg2PjiE/+G+JldZ0XphNNvfHQuBNltAXQMfOMPOw0Oocc95RiTwtBJ+/+wIyO11BbbTyYEf6HzG31buM2gtrcUuA+Eut5pj+nR4E4BYQ3IvuKbs6jurjxHJ6p0VngAhJAdcew4KCCqjFKPJr/UfO1StZErmh2P2fgL0JzbGrZjIUMDb/ViKaRna0ZBhSnGLwk9dTFahY+58seDLytRCNw+wFblpST9Q5MnkXHjx8WzhCG21uQjNKOYH0uxMb9+8fG5UazRpn4S35E6KipJlBo+XadpHlem0L84iibrpWAAF6YgbptAXH7j6BHUC2EqsiCEylpzTdZI1EEXfH6+WN1PIQOAQcZfB/z5/+f/rJ3jJWTtZcx89rAU3EscCFUpJNdyfH04xP1qm/f38LqjtD5yN1wC35P2cskmaFxK98F0diBsQ5JOhj6TRzZ27ycL0ddYytYUn1ZJFfiOVv6nMUoj/SOWmU6JmmQQjti0G5/I754z1UYlWeAzSzkaZlKF12ZYZKV3Lk1GeLVVUo5D74sTjtGqpcPeDSejTEmVrzXt8L2QAxQGRF4r+ZX0U2HkTTYSUYY6Kh6uRyDuEB4kx51dHOsIpOzYux5ornk2nQVx2f5OvheQpSX43RhLqdDonYewywBSKZ4A5v5d2l+tkx+eiAJHmH4zQSZxBfAvgVEfzw+n6So5Ytml/ra91+QI9nsNlaPvr0PZyUk4f1lC1gYSsTW9n8JcaZXkNkz5Nsw37KWyhfH6Y1scFrK71G0IXNhWPobW5OoLrV8C7C/5iChwNw48NCg38Q1BGsTTyuL+FyN8+m/VPZt8AnvcwJdcFAAA=', 'base64')).toString('utf8'));

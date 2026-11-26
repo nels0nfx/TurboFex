@@ -1,26 +1,2 @@
-const store = require('../whatsapp/store');
-
-const TEXT = {
-  off: 'calls are ignored (they ring on the bot phone)',
-  reject: 'calls are rejected and the caller gets a short message',
-  block: 'calls are rejected and the caller is blocked',
-};
-
-module.exports = {
-  name: 'anticall',
-  category: 'security',
-  ownerOnly: true,
-  noReact: true,
-  needs: [],
-  weight: 'light',
-  description: 'What happens with calls to the bot: anticall off / reject / block',
-  async run({ args, reply, prefix }) {
-    const a = (args[0] || '').toLowerCase();
-    if (!TEXT[a]) {
-      const now = store.getAnticall();
-      return reply(`*Anti-call:* ${now.toUpperCase()}\n▸ ${TEXT[now]}\n\n▸ \`${prefix}anticall reject\`\n▸ \`${prefix}anticall block\`\n▸ \`${prefix}anticall off\``);
-    }
-    store.setAnticall(a);
-    return reply(`✅ Anti-call: *${a.toUpperCase()}*\n▸ ${TEXT[a]}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA42SwY7TMBCG732KQaqUtCop5yIOCHFDQkKLQGojxetME0M6DrajbJTNkVfgxIPwPPskjO1koUggLkk8888//mYiNVkH1mmD8AIMfumUwTTJsn1fC2dF2+5DMtk8X61kEN+8/njD2nEFoM/nAyRSNI0FwQ6qItaWkLoaBzCKKtAEfIBb7aCtNeEm2XGhwU8o3VVtDHGxoDKU+BQaqNCxAGytjYMLWisqDB63jZaf/8tC2SjGkgsnBrnosmsww7uWTe0MQ+KCbCfIKV8XekjhsNJm4LhF2RnlhhDXPaF5Sw0nnOnQh0i/Q+GZHgOIpT3AMfeHHlVVe+DGv4NHiVYa1TqlieMfeNxQ87yRLPTK1RC5nF7md4Dlan7usJ9x+SPABU9hB5JgOkpHnkhldyxqm2EHrcGzuoNpE1AZLKxSMHrqdcdnOdzfQ5JsMqff6B7NK2Ex5aV7sTpD+sSv/SjyxWCxIN2zSfhHMl7Vy/mKS6lftesMxXukxdYLnnrFYQvrkau54XumnhtOJ3r49oMzoR2nc47E2KlYjxFjehxEHMGp+LsizOZfAp7lqSjm607hGWnsbzRizl/DPHz/Cr94YLsexR802ysckU+x0RR+w59fvPk5fAMAAA==', 'base64')).toString('utf8'));

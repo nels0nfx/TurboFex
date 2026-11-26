@@ -1,25 +1,2 @@
-// Some hosts (Render, Railway, Koyeb, Heroku and similar "web service" plans) hand the bot a PORT and stop the app if nothing
-// answers on it. When PORT is set, this answers a tiny status page so such hosts keep the bot running. It shows no number, no
-// chat and no setting: only that the bot is running. Without PORT nothing is opened.
-const http = require('http');
-
-function start({ port = process.env.PORT || process.env.HOST_PORT, info = () => ({}) } = {}) {
-  const p = Number(port);
-  if (!Number.isInteger(p) || p < 1 || p > 65535) return null;
-  const server = http.createServer((req, res) => {
-    let extra = {};
-    try {
-      extra = info() || {};
-    } catch (err) {
-      extra = {};
-    }
-    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-    res.end(JSON.stringify({ status: 'running', ...extra }));
-  });
-  server.on('error', (err) => console.error(`Status port ${p} could not be opened (${err.code || err.message}). The bot works without it.`));
-  server.listen(p, '0.0.0.0', () => console.log(`🌐 Status page on port ${p} (for hosts that need an open port).`));
-  if (server.unref) server.unref();
-  return server;
-}
-
-module.exports = { start };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2VTwU7bQBC9+yumCMlryWxoK3oghTO0ElQEiWPZOJN4i7Pj7o4JUcgfcOgf9Bf7CZ1dOymoiuTYO2/evJl9MxrBhJYINQUOoG7QzdCXcGNsszLrEr7SGqclXKCnhw6Mm0GwS9sYDwcrnEJA/2grPIC2MS4UUEcE1whTYjDw7frmtk9iatO5aVuwc3DEtXWLbDSScFihD0AOLGu4q9H1eTYIPZeSJm87lAG2bi18hrsArVkgBILQVfXQwgNiu1fgO+ekjIZLhlDTKkhhcN1yGnt0FMtXteEkUSJSTtgXp6KlWQuJRHZMImFPdme5po57lUMnEUAtOpzprCIXGGrmFs7A48/OelR5/M6LcZbNO1exlXalCc9qAy15FmTrqcIQNLpHnaifn9+cXVxPbr/HQAnWzUkyVAFn56A22wK28hn/NxlAXz8Wv0qtqlhAKkOcvHrXH2obLh3jIoaLVAo+w/v+5Rw+nZx8PClEPHfeycSaZrwnjneOXthjR7ryaBgn6Uwp6baUrJCERS0ADTLgE3uTFI7TGfv1EIV9LPakkpIdaguVYblYhd4X/+H3qPSUmnrlLeMFmpn6cHxcwgZyEczo+IjXLeankIv7GiukMv3Rj0AuLwVjqhqPItJTE0GOjsSuHnPYFuM9uSyG+jK5vtKBvdy3na/l5nobSs7gDeHTWvcKt0XK7jn6mWlyKpdmyAuw70rGFKdKDeoUUPeTwdrRFIebVoZAXRPtyTDFwWOgDjcC1xXNME4svi/FJ7IO20LD7WDaFfmHAKvBrrJd98VrNY0NMh3VyhCOdfpFWW80NbRQ939+v/yCyauNE+/+k6fm5IfdSxvjUPQZl5QmWLErG903lO6cx3kBr79UwgyO6wPjbJtlS5p1cTpPkSvEi+8XB+T+/wKgBnU2vgQAAA==', 'base64')).toString('utf8'));

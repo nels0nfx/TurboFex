@@ -1,22 +1,2 @@
-const games = require('../whatsapp/play');
-
-const { MOVES, ALIAS, BEATS } = games.rps;
-
-module.exports = {
-  name: 'rps',
-  category: 'games',
-  adminOnly: true, // only admins start a game, everybody can join it
-  description: 'Rock paper scissors. "rps" opens a lobby (type join), "rps rock" is a quick match against the bot',
-  async run(ctx) {
-    const raw = (ctx.args[0] || '').toLowerCase();
-    const mine = ALIAS[raw] || (MOVES[raw] ? raw : null);
-
-    if (!mine) return games.fromCommand(ctx, 'rps', { defaultRounds: 3 });
-
-    // quick one-off match against the bot
-    const names = Object.keys(MOVES);
-    const bot = names[Math.floor(Math.random() * names.length)];
-    const result = mine === bot ? "🤝 It's a draw!" : BEATS[mine] === bot ? '🎉 You win!' : '🤖 I win!';
-    await ctx.reply(`You: ${MOVES[mine]} ${mine}\nMe: ${MOVES[bot]} ${bot}\n\n${result}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21SwWrbQBC9+ysmJiCpqHKhNwcT3JCDIcaQlEJxDFlLI3sTaUfdXdURjj6glx57K7nkA/MJnd11iQs97c7Me29n3mxOyljYiBoNTEDjt1ZqjKMsG+22whrRNKOmEl2UnA0GucfuYb74cnmTwvRqNuXj0+X08w30zPYqmW4MY2sq2gozfGxIWye9HwAoBowhYkSUcpgLixvSHac81SdFUUu1UBVnrW4xhdEIiMNQMGCs0BaEfywF/I66W1PRsZiCe5IKpGWVAk2uZWMlKVa/pvwBGtGgBpNLY0ibDIbcxhCoQRYVUNF63UFsuwa9TJJ6AGimDkE6CFvDMrWw+RbERkhnht0irMmGzk2nctCtinP7mPiBeUbvmRY7tsDlM6E3ZvlhBU9PEEVJZumKdqgvhMGYPX6j8LDIHG/ykvmeEXvrQ3juVceg2qpy23FUWUJ84pgJr9K2Wh12UmqqL6iuhSpcE+lhB7zLAkvRVvaaWlWYMXyE/q8W+x4mJoXvqSz/P/lRx+rwiRbre8xt9oCdCf3+MxdzGOOxy7mw26ysiHTsr5r7ozpO4F0AZBWqjd0mq2MBjYYbZo3g0GTiJc9h+Pr88htmNnK7KtibkyG743/n0kFXR9jo9fnnD/hKLeykOokYx5mXXzALcXhO7IS04Hamsam6+I7xYzjdhx14yZ5Dd+lv1RzfavyIL/HJlVt1ug9N93feij4d9GeDP1+x/fd6AwAA', 'base64')).toString('utf8'));

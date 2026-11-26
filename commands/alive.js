@@ -1,20 +1,2 @@
-const pkg = require('../package.json');
-const brand = require('../core/brand');
-const clock = require('../core/clock');
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'alive',
-  category: 'general',
-  description: 'Show that the bot is running, with its version and uptime',
-  async run({ reply, isOwner }) {
-    const ram = Math.round(process.memoryUsage().rss / 1048576);
-    await reply(
-      `✅ *${brand.botName}* is alive!\n\n` +
-        `📦 Version: v${pkg.version}\n` +
-        `🔐 Mode: ${store.getMode() === 'private' ? 'Private' : 'Public'}\n` +
-        `⏱️ Uptime: ${clock.uptime()}` +
-        (isOwner ? `\n💾 RAM: ${ram} MB` : '')
-    );
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21RTW8TMRS87694SJG8WyIHJD6qVlEF90AFKqcc4nifNia7trG9WaLVHjkX0R6ReuPOjRM/pn+A/oQ+O62KApfVat7MezNjabQPYNcVTMHhp1Y5zBnnEyvkWlTIP3qjWXGcycRbOqHLPaY0Didp8MCTtZHr//HS4IHnA4F7vG4lghfWTtIwcrPGlG2NHD9b44Infp8BaNHgETBRqw2yMQFSBKyM2xJYoUYn6gSX6KVTNiijafJ+ZToIdII+CEsTQHlwrdZKV2PoVFiBohMbdJ4EEOO2pG12J4TfahnpeU+ebb0dk/xtR8dgKJIrspGSOdGQz5kIK+5Mq8vcOiPRe95gQx7PPJWbF9x5DxN4+uTZ4fOXLyhqXCA6ocJufZ4AgMX19y9wMOpTzZxcv6Hww0H0nvI/muu5XsDjOzoJbq4ufsCHXYoj2Ix6emJ+l2r4h3v5FWampDpHfWqdVxgikBcwnU6BWac21C6DE2Cn9//U5mm7rJVk+wuvz3/++XUOZ6m4uDQ9O98VmRfD3+T8vsATWMz1zdW33/Du1SyKqMIBZq8X8RArkiA1NIyz4Ti7Bb30tpG5AgAA', 'base64')).toString('utf8'));

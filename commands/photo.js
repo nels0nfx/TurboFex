@@ -1,16 +1,2 @@
-const media = require('../whatsapp/media');
-
-module.exports = {
-  name: 'photo',
-  category: 'media',
-  slow: true,
-  aliases: ['toimg'],
-  description: 'Turn a sticker back into a picture: reply to the sticker with photo',
-  async run(ctx) {
-    await media.handle(ctx, ['sticker'], 'Reply to a sticker with this command.', async (found, buffer) => {
-      const sharp = media.loadSharp();
-      const png = await sharp(buffer).png().toBuffer();
-      await ctx.sock.sendMessage(ctx.jid, { image: png, caption: found.animated ? '🖼️ (first frame of the animated sticker)' : '🖼️ Here is your picture' }, { quoted: ctx.msg });
-    });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1VRMW7cMBDs9YrtKAEC3ctwAqRK48ZJF6SgqZXEnMSllyTOB+Pe4M5tvpEif0qekBUl++KK4OzM7uysJR8TLNg7AzfA+JAdY620vjpOJkUTwlUpqua6qhbq84waHwNxisJ/qgC8WbADFSZKpFoBrEk4Ep8E3KQrGGc6dpA44/ozszMRYwffVCK3jOr7ivYYLbuQHHnRfs3swUBMzh6Q4d7YAzifSLDgbMosUxnDfALB0oRvzKNLE1zsmHjyFjj72qbHplgW8GjcvraejO9nXKut+Nm7iCNQd6/tzfvmaXIRLC2LKLVq9xH1QNn3LdznYUBu4ObDPkwiKSnHyXCQ1LaxM5n+y4rUEu3/tOBHIW0Oi6TeO2qp1I1O9Kn8L7qNKwvoSPagI/r+FmM0Y9lK/3Di6gncIkC3tm/lRnvMxbM2XooJe/gI6u/Pl99/fj3LOo7FzcByX6ChRPzG2+NoFHQXxWdkBEnmRJlfb6TgvM5+yCSyrnhc4gjn3fv2ntvqfF39A0RWzvCLAgAA', 'base64')).toString('utf8'));

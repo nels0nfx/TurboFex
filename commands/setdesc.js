@@ -1,19 +1,2 @@
-const meta = require('../whatsapp/metadata');
-
-module.exports = {
-  name: 'setdesc',
-  category: 'group',
-  description: 'Change the group description (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  async run({ sock, jid, rest, reply, prefix }) {
-    if (!rest) return reply(`Type the new description.\nExample: ${prefix}setdesc Be kind. No spam.`);
-    try {
-      await sock.groupUpdateDescription(jid, rest.slice(0, 2000));
-      meta.invalidate(jid);
-      await reply('✅ Group description changed.');
-    } catch (err) {
-      await reply('⚠️ I could not change the description. Make me a group admin and try again.');
-    }
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2VRsY7UMBDt8xUPCSmJFPlWlHeigTshCqCBjuJG9tyu2cQ2tsNutEpJTY8o+Ay+hx/gF7CdcLc6Gkt+82bmvTfSmhAxcCQ8h+fPo/bc1EJcHHYUAzl3kWuKItXtVVUNVo09Cz4662NILacKMDTwJerAUXGQdZcgSZG31k8J3no7ugLmqtcuamsS/nJHZsuIO0ahnJfRkBq0CbCmn9rSXDjv0vcS0Y+cocJ5BIXJSPjRNCcEK/cdPmnVJWMh5tf1Uwfn+U4fMbdFPKDv0DzJjDYx4ujNQmxu309u0Wf4cK5OfDQ3Rxpcn1w/PS3j5tU9XjD22iiBtxbB0SBuU255TfTTujDJPJCORaAovj64lDBfP6xo7mWL0GvJzabDs81m067DUE4mtPlCvc69ueG+toxfXNS/f3zFq/8CliV9Jeq1ac4nkzs07H37SOe/Qd9//vn1Da8h7dgrGBvXKSWj83zwhvacFILW05ZLgYwqKdCWtHnYnN65q+ar6i/mDvYcjAIAAA==', 'base64')).toString('utf8'));

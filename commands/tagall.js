@@ -1,19 +1,2 @@
-const { num } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'tagall',
-  category: 'group',
-  aliases: ['everyone'],
-  description: 'Mention everyone in the group, numbered (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  async run({ reply, args, groupMetadata }) {
-    const members = groupMetadata.participants.map((p) => p.id);
-    const note = args.join(' ');
-    const list = members.map((id, i) => `${i + 1}. @${num(id)}`).join('\n');
-    await reply(
-      `📢 *Attention everyone*${note ? `\n${note}` : ''}\n\n👥 Members: ${members.length}\n\n${list}`,
-      { mentions: members }
-    );
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11RUWrcMBD99ynmY8F2Yhz6u2Hb9ABLD9AteGoPXhV5pErjpsboEKUHCBR6vxyhkhxTkh8hvXnz3ptRb9gLrMDzBAFO4Oj7rBxVZdvePV5RPFp7N4vSvqzvi2Iyw6yppZ/WOPGRvxYAjBMdoRQcUeuyiUiPQqNxS0RHZ2abQdQKPfkjfC7pB7nFMJVfUmEg3ztlRRmODWfidIOdA4pBrgRZqElBv5KjASocJsUeDOulzgaZ8Sk+jyBupuyZOG8gv3APbuZqjdNavTSAbvTN1n4mwQEFIdR5tjhL3tBEyTZN/IrWWnSiemWRxbcT2qqyNZzeg23VEBf2X4CNUOxOVu03o7gqoXxF0Coep91o01JDAyrrdYdVwS28Cy08HNa4hFirQ1e/aF14F8NHVLINVmUAoHt++v0Hbj6KvFntTVRKsT5Ad+HtHjqIf1CGC1/4+enXXzhveY5wWPdomniUa6Yc1hQ7dM2L1RrzZ4/YsK8s5FqOF5oi3Bf/ACTHe350AgAA', 'base64')).toString('utf8'));

@@ -1,15 +1,2 @@
-const store = require('../whatsapp/store');
-const { resolveTarget, num } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'addsudo',
-  category: 'owner',
-  description: 'Give someone owner rights (tag, reply or type their number) (main owner only)',
-  realOwnerOnly: true,
-  async run({ msg, args, reply, prefix }) {
-    const target = resolveTarget(msg, args);
-    if (!target) return reply(`Tag the person, reply to them, or type their number.\nExample: ${prefix}addsudo 27821234567`);
-    store.addSudo(target);
-    await reply(`✅ @${num(target)} now has owner rights.`, { mentions: [target] });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3WSzUrEMBSF932KKwjTQung+MuI4EZcutCdChPbayfQ/HiTzkwpXfoWPp1P4k3aEQXdnnz35NyTlEY7D84bQrgCwrdWEqazophv18I7Ye08Hs6yy6SMbM+UM80GHwTV6HPQrYLhv+HWy8aF4USZqm2wwJ015B3zfQKghcIlzERVubYys5ylUnisDXUsm61GimKFriRpvTSa9Vu5QXBGodEIEQKS9ZpdUy/qnJPYpgND4DuL4NcoKaR8QcogVULqacjopsuiP6Fo7oJ2x9ISPLUYZOE6XQK1Ou1BOXbmld3kn4MlfJU7GLK4CieP/fhYS+zjR03p9zh3EWD5CunByGaM+pb06JuuHkQdQoNFckbv1/EmiCr/c6/iSd/shLINt3nYj8GGqVVYnF8sjhbHJ6dn56vp9vimBQP3DKRTjPFIbIX0+yifH+9wfdjzJXtoAG22sBbuV/HFKuePoVCHF3JLeBzpZy4nuA55MlwmX5rQacVsAgAA', 'base64')).toString('utf8'));

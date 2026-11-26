@@ -1,26 +1,2 @@
-const store = require('../whatsapp/store');
-const clock = require('../core/clock');
-const { parseWhen } = require('../core/when');
-
-const MAX_PER_CHAT = 20;
-
-module.exports = {
-  name: 'remind',
-  category: 'tools',
-  description: 'Remind you later: remind 10m call mom, remind 2h feed the cat, remind 18:30 dinner',
-  async run({ jid, args, myIds, myJid, reply, prefix }) {
-    const at = parseWhen(args[0]);
-    const text = args.slice(1).join(' ').trim();
-    if (!at || !text) {
-      return reply(
-        `Say when, then what to remind you about.\n${prefix}remind 10m call mom\n${prefix}remind 1h30m take the pizza out\n${prefix}remind 18:30 dinner (${clock.zone()} time)\n\nLongest: 30 days. See them with ${prefix}reminders`
-      );
-    }
-    if (text.length > 500) return reply('⚠️ That reminder is too long (max 500 characters).');
-    if (store.reminders().filter((r) => r.jid === jid).length >= MAX_PER_CHAT) {
-      return reply(`⚠️ This chat already has ${MAX_PER_CHAT} reminders. Remove one with ${prefix}unremind <number>`);
-    }
-    const item = store.addReminder({ jid, who: myJid, ids: myIds, at, text });
-    await reply(`⏰ Done! I will remind you on *${clock.stamp(at)}* (${clock.zone()} time) in ${clock.duration(at - Date.now())}.\nCancel it with ${prefix}unremind ${item.id}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VUUU7bQBD9zykGCclrlC4BVKkKDRKCSqVqpQqQWqlUZLEn8YK96+6uSUzwGfjvV4/Qz56nF+gVOuvYJqDwFWnmzfi9t28SaWUdWKcNwggM/iikQRZwvj1LhLMiz7frZhDu96IaG6U6unmGjQixXTcecQvIhbH4JUEF1Tr8jDoe3uA/HX69/Pzu9PLo/eE5wXcH1Ml0XKTIcZ5r4yxVFz0AJTIcQmAwkyoO+lSJhMOpNiVVndaprYsx2sjI3EmtqH5ao6HUBaSENkNYzsPOIKP5NIVMZ/22uJvABDEGl6Bf3tV33gz3BhBLpdDUHxG2VBGYQrEFXMu4D8JMbR+y8iSufz74msE8LfuQG5zIOVRhrYJY17KFI1mdU8zPfxt8J1seIQ7nHuRb3KYyQrYT8mstFQsgCLkzMmPNgJwA26CV9/ew4cfabwGRcIVRSy6sqQGMz0QJ/iH6XqsC/+jgdKvX2yWudOH4hdpcLAVUa4xb0032qO/EDdYm5vLuTgAtWoNc8RTY5qKOEb/TCllYgZMZhhfqQn3UaorWDcGDRWk5nGG9O4OZdAk8W4vGjhuVjTVVZ5A3hqeopjR2AK8Hg/CpO8Hfn7/+/XmAc29Guw6kJWM0pMQDWCbmfhCiRBgRUZ5syIOVN6hvhndUWMgnMiUYYyaE0QEYTmmB0WjkUxN2ZEZPruCFxxt39IhS5DmK1KCIS0iEJR9WV1QdfzKMbkDfIpCzzywrVPMWb1WRXaE5GD/xbJlC6cjq0fKvgos4Pm0Wt8mfJXrYJl7GdtgegT+fOsFVs1TMhHSdloffcEyMNuCESFGaVpKnFWy1ebBOZDkTLqy2XggJSAVtIy6M8IdPA/AKjungudIzFoYVBflIqAhT0vOSC5sLr5XLuFr6UPV71X7vP8Dfkt0qBQAA', 'base64')).toString('utf8'));

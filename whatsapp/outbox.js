@@ -1,25 +1,2 @@
-// When a person's phone cannot open one of our messages it asks us to send it again.
-// For that the library needs the message back, so the last ones are remembered here.
-const MAX = 1000;
-const TTL_MS = 6 * 3600 * 1000;
-const items = new Map();
-
-function remember(sent) {
-  const id = sent?.key?.id;
-  if (!id || !sent.message) return;
-  items.set(id, { message: sent.message, at: Date.now() });
-  if (items.size > MAX) items.delete(items.keys().next().value);
-}
-
-// used as the library's getMessage(key)
-function get(key) {
-  const it = items.get(key?.id);
-  if (!it) return undefined;
-  if (Date.now() - it.at > TTL_MS) {
-    items.delete(key.id);
-    return undefined;
-  }
-  return it.message;
-}
-
-module.exports = { remember, get, size: () => items.size };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21Sy27bMBC86ysmp4qFSysokIONOAgQ9FSfGiC9FbS1tglbpECumofjf89SphUV6IUEZ7iznFlOp3jakYNBSyF69yWi3XlHWBvnPMO3Qqaz38B3AQ3FaLYUYRkm7iO6CPaI5Ooe2hrrdDGd4ocP4J1hWQgHuwomvMIR1bFHsg5WZr2fIPrzNRM5NYswgRCooWZFgWrsZNXF2jvhl/e/cYvrqqrmGXl8/Pln+UvAG3zF95uqkm3MW6YmCu3oGUvTlmpeFJvOrdl6N3QpxQIrHAsgV9VSksA7vafXO23ruXB2g/JKqPd3XCVSZyNKhLgLrr+T+ulIXNp6guPF6wzjggkMz/BgmLTzz6XCSV30c719IyySXZUVazoQU6blTbFU2tELy/bXHDoSgVORsu+iZGbiOHqZ65Z4ee5dSrH6jECIHhmbZzF/bpTZFID6TIAvhtG5mjbW0RDPyNM30dDyBxZ5RucW+NePiF+08V/RUzHgdsiv99r4ujuQppfWB04jPg7znCRb8rMkxRnkKbcLjHI9zYsP2853z/oCAAA=', 'base64')).toString('utf8'));

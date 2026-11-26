@@ -1,10 +1,2 @@
-const { toggleSetting } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'pdm',
-  category: 'group',
-  description: 'Announce when someone is promoted or demoted: on / off (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  run: (ctx) => toggleSetting(ctx, 'pdm', 'Promote/demote notices'),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WPwYrDMAxE7/mKuSWBkNxTWtgv2IX9AmOrqSGWvLZMW0r/fZ20l940D41GY4Wz4gGVZVnpl1Q9L3jiiER/xSfq2nGcrhej2cQ4Gau+Otr+0DRBXFlppFuUpLk6Hg3AJtCMNrrQDlVao7RIule0JClxh46yTT5ulyr/YpbClnC9ECNLIGGCz4hJgig5SKqWfZwhjAlyPqMzLnjOFaz3fj+7B3xXOUNToQ3tO58olRraWb31OJ4+a290eP+O9ucVP72iwaLeUm0+NM9D8w8ZYUF6NwEAAA==', 'base64')).toString('utf8'));

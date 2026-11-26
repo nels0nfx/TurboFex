@@ -1,18 +1,2 @@
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'autoupdate',
-  category: 'owner',
-  description: 'Install new versions automatically when the bot starts: on/off (owner only)',
-  ownerOnly: true,
-  async run({ args, reply, prefix }) {
-    const choice = (args[0] || '').toLowerCase();
-    if (choice !== 'on' && choice !== 'off') {
-      return reply(
-        `🔄 Auto-update is currently *${store.getAutoUpdate() ? 'ON' : 'OFF'}*.\nUse ${prefix}autoupdate on  or  ${prefix}autoupdate off`
-      );
-    }
-    store.setAutoUpdate(choice === 'on');
-    return reply(`✅ Auto-update is now *${choice.toUpperCase()}*.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21Ry2rbQBTd6ytOIWSk4MpZO5hQCoFAqVdZtQVP5StbIM8od0ZVhKNd+wddBvJv+YJ+Qu+MZIJDNmLm3DP3PFRY4zyct0xYgum+rZhSlefzbqe9000zj0OVXSXJ3m7amnJ6aCx7J/xDAhi9pwWUbr1tm432pGaCFnLYWu5lYjtDHMENuYKrxlfWCH4ryrquYajDL2InqENYs9e+KmTSo9uRgd8RftpgUovqAtbMbVkijXvlVvdZ3B7vK7ku4LmlAGnXmwLcmvQAzVs3k4RN3c/QMJXVA4YsRhC7sYZiZ6si9JAG8rfLH3h8hFJZ7u0X2xF/1o5SKSK8qMTBxP+wXEpKo3B+jhOoLNVRAKLsWzajgXTCgPW/57+/8UlSfxzbQ+VQtMxkvBRwcXaI9edb8oF0Fzlphmuo1VcFqXF1c6OGi/y7uXOEs8OYbHj9HdKQdMN4f1aW68nLlGuI31HUnYge25nSTvyTWOuXpz9vwxjbhRjj6zxsa45Niu11XDPMkuEq+Q+FdbeNjAIAAA==', 'base64')).toString('utf8'));

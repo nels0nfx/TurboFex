@@ -1,14 +1,2 @@
-const b = require('../whatsapp/budget');
-
-module.exports = {
-  name: 'delbudget',
-  category: 'budget',
-  description: 'Delete ALL your saved budget data: delbudget confirm',
-  async run({ msg, args, reply, prefix, botIds }) {
-    if ((args[0] || '').toLowerCase() !== 'confirm') {
-      return reply(`⚠️ This deletes all your income, expenses and your budget limit.\nTo continue type: ${prefix}delbudget confirm`);
-    }
-    b.clear(b.userKey(msg, botIds));
-    await reply('🗑️ All your budget data was deleted.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2WQTU7DMBCF9znFICE5kSKXdasuEGwQXXYHSHXiaWrJsYN/SKM2Z0CskNjAMTgPF4Aj4PyhSmy8mHnz/L2Xa2UdZLAEg49eGIwJpbN6x5xlVTXLPC/QkWQRRaXmXiLFfaWNs+HgEAEoVuIcCEc5KtMwzJnDQpsmLE6mHG1uROWEVmFxjRIdwuVqBY32Bix7Qg6DHDhzbA5/ppBrtRWm7G2YbVQOxqv4AKUtUmCmsGmgr2STQmVwK/YpZNrdcAtt0lMCiC3Ecae8u3iA4xEISajTK12juWIW4wTOlksg00fTGQRf540a7OPN19vH9+czrHfCdnghgQUm5RBBqFyXmEJoCJXtNooPmzGGFKVw9F6tdZfICeURXFOFAs8PA3j7L/MmVN9xtP2b0VwiM3FGvUVzi03cVzCkTUYpq5lwIzH5eX996ZAvJ8qTiqFmUwxOSX/dplG7iH4BPpcbvRUCAAA=', 'base64')).toString('utf8'));

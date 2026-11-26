@@ -1,13 +1,2 @@
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'delgreet',
-  category: 'autoreply',
-  description: 'Switch off the greeting for private chats (owner only)',
-  ownerOnly: true,
-  async run({ reply }) {
-    if (!store.getGreet()) return reply('ℹ️ No greeting was set.');
-    store.setGreet(null);
-    await reply('✅ Greeting removed.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA0WPMW7DMAxFd5+CnSwDgbMn6JytHXoCQaYdAbKoUlRcI/DWzr1AD9JepxfoFSorSTvy/8/HT0M+CkQhRrgHxudkGVXdttvpqCXqELbFrJt9VY3UJYctvgRiiTl/rgC8HnEHdYduYESpN1kzWnAgnrOu07oe3FyMDqNhG8SSz97TZMUcgfoe5IhQ9q0foCeGwPaUKWDWGqBo8shA3s1NAZX5MY87EE64SjrO3gAnr85QLsLSlIYAtgd1V/5oB5TDekc1TU5JYn8Jq/r79evn8x0e6L/IpCNElHb9fuVcEPGG8Mm5q6MnbeWP9PEGhxuDcaQTdlfGsqmWffULDdCWCHYBAAA=', 'base64')).toString('utf8'));

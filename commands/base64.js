@@ -1,17 +1,2 @@
-module.exports = {
-  name: 'base64',
-  category: 'tools',
-  aliases: ['b64'],
-  description: 'Encode or decode text: base64 encode hello, base64 decode aGVsbG8=',
-  async run({ args, rest, reply, prefix }) {
-    const mode = (args[0] || '').toLowerCase();
-    const text = rest.slice(args[0] ? args[0].length : 0).trim();
-    if (!['encode', 'decode'].includes(mode) || !text) {
-      return reply(`Use:\n${prefix}base64 encode hello\n${prefix}base64 decode aGVsbG8=`);
-    }
-    if (text.length > 2000) return reply('⚠️ Please keep it under 2000 characters.');
-    if (mode === 'encode') return reply(`🔐 ${Buffer.from(text, 'utf8').toString('base64')}`);
-    if (!/^[A-Za-z0-9+/=_-]+$/.test(text)) return reply('⚠️ That does not look like base64.');
-    await reply(`🔓 ${Buffer.from(text, 'base64').toString('utf8')}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3WST47TMBTG9z3FG6mSE02aRgihIaOAAKHZsEDiz4JSqJu8tFYdO7IdTTudnAEkWLGBY3AeLgBHwI6TUoZhY1nPz9/7fZ9dyaLhGOO2lspoyGA/AhC0whTIkmq8d5dEtpJTgyupdrZqpOS6K1LObIdOYUaWtm/uagXqXLHaMCls71ORywJBKlvvdga3JgUvDOhP18i5jIZi30gvXuvlxVnmB+mdyEE1ItgDVSsdgUJt3FrzXQS1wpJtoQ07eAsrhTZQOZkMAndhlszh+hoICWMjn8lLVE/stCA8P+p3aLbfKceasxwPNx9Cv4s5ipVZQwqJFVKsGhRYCcHJjHhDJALiXZB5zETOGxtK4HBCB3HiBg2oYOeZRglvJVi80pi+FeO9t9TeEtS/pzcSW/RM7YHMDRzQH8CdJEnCv8eSH1++/fz+AZ5ztJKwQayBGWhEgarrh3xNFc0NKh2TI88+4yyDwfoN4cWvr58/wnj/uClLVHGpZNXR2IQaU551z/HCBilWwfDbwnZxHOr03ezR5A2dXCWT+6fT7P1kfjqexsY+UicU/sfJyzU1UEjUIKQBLuUGONtg/8kOHugltT7/sH66nXVAO6L1+D1rG43a89FvhGfHxksDAAA=', 'base64')).toString('utf8'));

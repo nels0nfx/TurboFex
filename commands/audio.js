@@ -1,27 +1,2 @@
-// Sound effects: reply to a voice note, audio or video with the effect name
-const media = require('../whatsapp/media');
-
-const EFFECTS = [
-  { name: 'bass', description: 'Boost the bass', filter: 'bass=g=15' },
-  { name: 'slow', description: 'Slow the sound down', filter: 'atempo=0.7' },
-  { name: 'fast', description: 'Speed the sound up', filter: 'atempo=1.5' },
-  { name: 'nightcore', description: 'Faster and higher, nightcore style', filter: 'aresample=44100,asetrate=55125,aresample=44100' },
-  { name: 'deep', description: 'Make the voice deeper', filter: 'aresample=44100,asetrate=35280,aresample=44100,atempo=1.25' },
-  { name: 'chipmunk', description: 'Make the voice high and squeaky', filter: 'aresample=44100,asetrate=66150,aresample=44100,atempo=0.6667' },
-  { name: 'echo', description: 'Add an echo', filter: 'aecho=0.8:0.88:60:0.4' },
-  { name: 'tremble', description: 'Make the sound tremble', filter: 'tremolo=f=6:d=0.8' },
-  { name: 'rewind', description: 'Play the sound backwards', filter: 'areverse' },
-];
-
-module.exports = EFFECTS.map((e) => ({
-  name: e.name,
-  category: 'effect',
-  slow: true,
-  description: `${e.description}: reply to a voice note, audio or video with ${e.name}`,
-  async run(ctx) {
-    await media.handle(ctx, ['audio', 'video'], `Reply to a voice note, audio or video with ${ctx.prefix}${e.name}`, async (found, buffer) => {
-      const out = await media.ffmpeg(buffer, 'mp3', (i, o) => ['-i', i, '-vn', '-t', '300', '-af', e.filter, '-acodec', 'libmp3lame', '-b:a', '128k', o]);
-      await ctx.sock.sendMessage(ctx.jid, { audio: out, mimetype: 'audio/mpeg' }, { quoted: ctx.msg });
-    });
-  },
-}));
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA5VUTW/bMAy991fwMMAO4DofbbLAgwdsQ3sbMKy7FQWqWHSsxbZUSU4aBPnvo2QjdeMNaw+BYop67/FJ5HgMd7KpOWCeY2ZNAhpVuQcrgcFWigyhlhYjYA0XEqSGreAoYSdsAbbA7hzUrMKLTNbGQoVcMEgJ6KkRGsMgjse7glnDlBr7zWD06aJLvrm9vfn2647S7y8ADh4ngWDFjAki4GgyLZQVsqbgVynphCPttnNRWtRderpOp/MAjlEfx5RyN8C5o6CHMb5yLnd1H4xZrJRMJ/HHc7ScGTtEU4i8B9eov4BN44G0WqwLm0mNA8RbokENjMAKSkIdwSkZjN2X+IpBo2GVKjG9vp5OJhEzaDXRpvP5dDaPzrbPVXBENRDwnW3QV9Q+AJeD+k2cV/PZcnLOGZ1MmA1cyAqhqqbe/E+DM8I7Yp4aZJv9m9QsFtP5P9VM4sViMbhizAo50PKFc+KGbu+F1wUIZ5nQb5ksJrRenwNajdWqHF7yqb721bykneBdSJYyzdNFwh3NObTGnaj5APlHyfY95BXLNjumuTmzbIvaoId8oG6sJG9KjPFZSW0NtWPXmHHFVBjiCNLPEB6IveXG2K1OTUZ2rqXeO+/8KAhc1PVdQkU1PueVvscPB4x7keO7Ro477KiPjw6YmX2dgW7qMLPPI3D6KLhjoptCcUFPpkS3G8F94AHJhsADBg8RPP58DzXBxEpjLp6PPR2dijB3dkewasgG7Q1r9ZBHftTJxpKvfXV5Xilch+0JklWpK1IXigikP38fXAoK0HdwuXUzKrh08ye4oj52HyynBeP2Vn0gkxwzt1eKFaGVpNBnrhLm1uls6TpNPtAAbqW1clxhRmab2GDNv6MxbO1Ni38LqujQ2pG4CiKoRIV2r9wD9OGxq8G9I8p7asg9nni8yqzh2PG0Kz2144j+/QEEyyjRdAYAAA==', 'base64')).toString('utf8'));

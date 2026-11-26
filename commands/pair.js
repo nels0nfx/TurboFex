@@ -1,23 +1,2 @@
-const pairflow = require('../whatsapp/pairflow');
-const config = require('../config');
-
-module.exports = {
-  name: 'pair',
-  category: 'owner',
-  description: 'Link a number for somebody else through the pairing site: pair 27821234567 gives you the pairing code to give them; the site sends their session ID to their own WhatsApp (owner only)',
-  ownerOnly: true,
-  noAgain: true,
-  async run({ sock, rest, reply, prefix }) {
-    const raw = rest.trim();
-    const digits = raw.replace(/\D/g, '');
-    if (!/^\+?[\d\s-]{8,20}$/.test(raw) || digits.length < 8 || digits.length > 15) {
-      return reply(`🔗 *Pair a number for somebody else*\n▸ \`${prefix}pair 27821234567\` (the country code first, digits only)\n▸ _It works like the pairing site: you get the pairing code and give it to that person (WhatsApp > Linked devices > Link a device > "Link with phone number instead")._\n▸ _When they have linked, the pairing site sends their session ID to THEIR OWN WhatsApp, not to you. They put it in SESSION_ID on their own host. Nothing runs for them on this server, and none of my settings are touched._`);
-    }
-    const mine = String((sock.user && sock.user.id) || '').split('@')[0].split(':')[0].replace(/\D/g, '');
-    if (digits === mine || digits === String(config.number || '')) return reply('⚠️ *That is this bot\'s own number.*\n▸ _It is already linked._');
-    if (pairflow.isActive(digits)) return reply(`ℹ️ *+${digits} is already being linked.*\n▸ The pairing code is in your private chat. Wait for it to end (about 7 minutes at most) before you start again.`);
-
-    pairflow.begin(sock, digits); // goes on by itself; the owner is told in his private chat
-    return reply(`🔗 *Linking +${digits} on the pairing site*\n▸ The pairing code arrives in your private chat in a few seconds. Give it to them.\n▸ _When they have entered it, the pairing site sends their session ID to THEIR OWN WhatsApp, not to you. This bot is not changed._`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA61VzW4bNxC+6ymmgZFdOVsqcZrasOu0BhK0Bgq7iA34EKUStUvtEt4ltyTXykLRLfdeihbIJXmM9HX8Au0jdIZcyfJfTr2swOFwZr5vvhmlWlkHNZdmWuoZ7IMRvzXSiDhibDAruLO8rgfL+6i/10v9C/xOZX7DPxjJqVfprCkFE29rbZxFv3kPQPFK7EJE0aIEzyl3ItemRZueKRGMmbCpkbWTWqH9Z6nOgYNqqokwMNUGrK7ERGctiNIKcIXRTV7gr/AopMrBSodp6ARb2ztbT7aefvPs223I5YWw0OrmmnOqM4yi/S1dVHv+mmKAFSqzdMRIVliLJcHhC/IONiwazoijg7qG2EMArcq274H48zEed8GZRpBJ6YOcS3Vl4LZVKZhGxXMElp4nyKd19K3LNoHaiKl8C4u+pw8gcG94aJR1zBlZxcj31WUmc+kJRy9GYXgq4sHwxSBPIIo6VzmF+KvBr8NH378eZkP79Zv5TrL1eLExYA6jxvi0D+/edbFYKVTuCvgOdm4bn8OTZ8vqAGtyjVGh+nj878c//oLNX6gP93dwc6gu//wMw/HGPKBd3GzccAwxtSTVjXKmDR2bSkM8dWg96SHQ6NDBTJtzC6U8F3foggSQC3dbBFxlQQXShRZzHAxhLDY9XnX5OZAiRYYyvZAp6ikYEGAw4PmBN8wkslMXWokldIntETx70GejrtSzQiiqo4WCY97SR05u1fwFHZ7+9PLwFRyfHa10mKDIfP2Ik8EpBa8bR5ikgpOXJyeHx0cjfKzVmogLjVqCI+0KyolytL5RNA7BUVpMbC6ESTxNimDpKVQtmp3DRxa4oTlq0kJkbDTuhLZYU2Yl8dE+nDgCFsckd9ZgVHj4EFYHJjMvPZQqs3UpXRz9EPVfP36zPO2G05eUvRyB/f2QcyVab+ryh13Fut6EjP3rAo4uP3z65/PvsHlKUpA28DDRbhhZT1t4zDavlIf3vDTY5bbrJhutV7bco0zag9Sh1rpab2YeX77/22d+tDEPHov10BNBbeoSdNlPb8oZ/bHjqAKDa0Re4KqFFHEwOOMoBmpv0DlqC2I+0SiSbeKrwRUAiLdCTfQxFXoKPzTWceOA0wJj1F+PaoVoInKp4rDDOlB7MBhArgXNJ0xazGdFOQ37NSxL4lSXGRVK1K7X2btvn9B0Ecg1aoKWr83MfaxwY/zfwF3UkJHDVMxQ1CiPzDL4cX0fiIrdPbhCOWFwJ0j3Pw9vkBvRRHasUeVX07VIeou93n+NAQM6wQcAAA==', 'base64')).toString('utf8'));

@@ -1,8 +1,2 @@
-const { entry } = require('../whatsapp/budget');
-
-module.exports = {
-  name: 'expense',
-  category: 'budget',
-  description: 'Save money you spent: expense 250 groceries',
-  run: (ctx) => entry(ctx, 'out'),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAAy2OQQqDMBBF9znF7KIgWgrdKPYSPUEaBxuoGTuZtAbx7o2ty/8+7/Mt+SCwAnrhBBv0wPiKjrHQdd18HkaCmefmHocRRZedUhMN8Yk1LjOxhCysCsCbCVvQGaIPqKuMrBEciVPGh73TAYNlN4sjn4ubeSNM5DFBoggh29LCsQLnywlGJovsMPxsjtkqrCwl9Nf/5z1VoCnmd5XaOvUFvSQWmNIAAAA=', 'base64')).toString('utf8'));

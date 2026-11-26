@@ -1,10 +1,2 @@
-const { setActionMode } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'antiword',
-  category: 'group',
-  description: 'Banned words: off / delete / warn / kick (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  run: (ctx) => setActionMode(ctx, { key: 'antiwordMode', label: 'Anti-word', trigger: 'uses a banned word' }),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WQwW6DMAyG7zyFbwGJwZ2qk7r7tGdwE5dFhIQ6iSiqePc57LD1lOTz79/+o4OPCZ4QKV10ssF/BkOwwxmY7tky1arr+vUbU8Rl6fHQRNWcqmoOJjvq6LEETlE6nhWAx5kGUOiTXQMb1QrTmGgMvAkfOeTlgIaiZrsUO+Ef6D0ZKC1xgHC7QS8KR4nksiJ7OSarJ6jRzNZHCN5tzWF0WH7Jc4DEmQo6NK+Is4ypdXo0cH5/TVtoK18w0fZv81JRLTi8khN8Efz2m0g87TgSC82RIiBc/7ZXsDdttZ+qH1H3RWJZAQAA', 'base64')).toString('utf8'));

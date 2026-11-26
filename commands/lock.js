@@ -1,15 +1,2 @@
-const meta = require('../whatsapp/metadata');
-
-module.exports = {
-  name: 'lock',
-  category: 'group',
-  description: 'Only admins can edit the group name, picture and description (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  async run({ sock, jid, reply }) {
-    await sock.groupSettingUpdate(jid, 'locked');
-    meta.invalidate(jid);
-    await reply('🔒 Group info is now locked. Only admins can edit it.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21QQU7EMAy89xW+tZWq7H1XHDhxRALxgNCYrqF1QuJQqlU/gbjzRZ5Aki7SInH0eGbsmd5yEJhQNFyBx9dIHptaqd181BK0c7u8M1p03R6qarImjqjw3VkvIUlOFQDrCfdQj7Z/qbs091pwsH5J2OBtdAU0GHpPTshywm95XECbiTgkOgMaEpAjQhEUxw4c9RI9gmZzKYfmLLTJpC3mRZU99yA+YoYK5y/0aOU6o3dbTHNBDgv34CM3JwgpRgfPZLrUh0tvrm1JmVizTl/mvSoH71GEeHhwqR5siqKUgCZ3lRW5O0X8pkf65Zw3m1c50NTfX58fcFOSEz9ZoABsZ9i8FPxbFonarqxdtR6qH956wSzIAQAA', 'base64')).toString('utf8'));

@@ -1,10 +1,2 @@
-const { toggleSetting } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'goodbye',
-  category: 'group',
-  description: 'Goodbye message when someone leaves on/off (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  run: (ctx) => toggleSetting(ctx, 'goodbye', 'Goodbye message'),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2WPsW7DMBBDd33FbbIBw94TpGvHDv0CVWYUA5ZOlU5JjCD/XsldGnTkA8njWQ5Z6EHCzq34hMgSHD3pRAnfZUno9DhOt4uRbGKcjJWlJnR/VMrzXFaMuEdOkmvioYiC8TiQdszz1wY9VGSNwHHaGk5c4g5nZJuW2Noqf/+1k0fOxoFuFwTK7MEBtMJckYnDxOczdWb2S2hy3fq9ai/9qPJAkgoa2j2vKJV6qLNy7+n09vpuo8Ofzf/26H5Qz6P6AX6nrMUsAQAA', 'base64')).toString('utf8'));

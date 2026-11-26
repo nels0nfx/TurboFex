@@ -1,15 +1,2 @@
-const games = require('../whatsapp/play');
-
-module.exports = {
-  name: 'endgame',
-  category: 'games',
-  aliases: ['stopgame'],
-  description: 'End the game running in this chat (the starter, players or a group admin)',
-  async run({ jid, reply, myIds, isGroup, isAdmin, isOwner }) {
-    const game = games.get(jid);
-    if (!game) return reply('ℹ️ There is no game running here.');
-    if (isGroup && !isAdmin && !isOwner && !games.canEnd(game, myIds)) return; // not allowed: stay silent
-    games.end(jid);
-    await reply('🛑 Game ended.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1VRvU7EMAze+xS+5dpKVbvfiYEBnZhY2BBD1JheUOuEJFWpTrexI2YGXgNehxeAR8Buewg257P9/Ti1pRChUR0GOAOPD73xmKVlWQ17FYNyrnKtGtN8mySd1X2LJT4666OMHxIA4tUNpEhaSNKCoVpFbKwfGZ6IJ1C1RgUMG7hJQ7RuGr6VhsZQe+OiscQLF6Qh7nFyBL4nMtSAIcZMgJotQSbtEJWP6AsQc+gDWA8KGm97B0p3hvJZNIxUC012gHujCw7o2rGAbrzUoQATdrIhxbksSXE1EHo45lM4zvJ7H847pSkbjBmT8UVkwNxBtpJGzuSx9zRrZOnn08fX+zNc79Ej8wLZ/6EEL9M/LIsbWK9htRha6tmT1LODWhHfKZPHkiU/qW+hqlgq8r1bO6DeyKlGCKZFipPUTMH/9SeEGpSJJ+Pfb68vsBOrPIR68XgskuM2+QHp8iHSLwIAAA==', 'base64')).toString('utf8'));

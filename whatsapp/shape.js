@@ -1,17 +1,2 @@
-// Helpers that look at the SHAPE of a WhatsApp message (the names of its parts, never its content).
-// - isGroupStatusPost: is this a status that a member posted inside a group?
-
-// WhatsApp changes the name of this message type between versions (V1, V2, ...): any key that says "group status" counts,
-// at any depth, except the "mentioned this group" kind, which has its own switch (antigm).
-const GROUP_POST_NAME = /^groupStatus(?!Mention)/i;
-
-function isGroupStatusPost(obj, depth = 6) {
-  if (!obj || typeof obj !== 'object' || depth < 0) return false;
-  for (const k of Object.keys(obj)) {
-    if (GROUP_POST_NAME.test(k) && obj[k]) return true;
-    if (obj[k] && typeof obj[k] === 'object' && isGroupStatusPost(obj[k], depth - 1)) return true;
-  }
-  return false;
-}
-
-module.exports = { isGroupStatusPost };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21Sy07bQBTd+ytOsgBbMnbpogvSCGWBYEMTNS0sqhZN7OtHncxYvuOGCPLvvTMm0DZd2J65j/OS0xQ3tG6pY9hKWayNaSBfWxGWN7PFFUwBhXvp8axtsSFmVRJCN6CVXN1AbRmt6izH0PSLOl/IjLakbZQEaYoz1Hzdmb5dWmV7Xhi2F1ISHnkpsK8OEpSQbFYC0soQ5ag11zlJuXT7l4GDe9WTVUqXxDjIcWo85kGo3bWEFdktkYZI49poRnh3HuPufYwkSaILKL1DQ7uBn9WOMfZkL7rG4qXX4s5RO4UynlNrqxj0mMnB04834lbQRbJX4BHGaGqdx9hWdVahUuyjMVsN3tZWSqGSpXIjKUlebHH9ef518bCYL788fJrdXmGK9Ef5Flx4ObodaKK0ngRB0evM3Y7jDc3qZzzIFJAPEZ4CoC4QjqSB52efjKTlbqPpFKdyoMyeutaw9RHvInRk+06jUGumiSAUpkM4SG1c2HO/lUh67BijgWdg+sdLYklkNRFOThzrt+b7K7zteo8+7A1NN/am0RWmf8qU7n89y+DB9hnOoyOKvTx/m9oHwcbk/ZoSemyN/MWS19MxOPaT4DcA7NlQLwMAAA==', 'base64')).toString('utf8'));

@@ -1,17 +1,2 @@
-const { getQuoted, num } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'react',
-  category: 'tools',
-  description: 'React to a message: reply to it with react 👍',
-  async run({ sock, jid, msg, args, reply, prefix, botIds }) {
-    const q = getQuoted(msg);
-    if (!q) return reply(`Reply to a message, then type ${prefix}react 👍`);
-    await sock.sendMessage(jid, {
-      react: {
-        text: args[0] || '👍',
-        key: { remoteJid: jid, fromMe: botIds.includes(num(q.participant)), id: q.id, participant: q.participant },
-      },
-    });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA02RQU7sMBBE93OKQkJKIlmB9aB/AJBYwBYhYZKejJmJ7dgdzYxCjsDin+BfkSPQjmE+WaXLqfKrTuNsZEzoiB9Gx9Qq2LHHjD8INIwmUFnU9dVhqzlq769GNvtYVDerVe/acU81Hb0LHOX7aQVY3dMaRSDdcKFEaDRT58JJRHZOrElsKTbBeDbOiv6YPgY7aPQUo+4kIZDfn5JmGAfDWyyJ+Pz392NJ0PFkG4TRlhOia3YKb0bQ+9gp6NBFlRMUfKCNOSq8Or5tI+ZqwRSupfcg2OfmpbilWDo1G5QXQyUhPAabs8qXxx+oM6gCb8mCT55wOeW75v+oL99x+qClR+KsI9n2PpvLBTnjIBdcn0eA6ShzKvN0/Yz3dxTn9vnZkWx1EmMv9HemXecdbILr72WFuXFtbLMfZeGl/NZyqL0ObBrjteWqUkiuoU62XwdJ+jVi/rnz+2Veaskw36y+AL7/+vxAAgAA', 'base64')).toString('utf8'));

@@ -1,9 +1,2 @@
-module.exports = {
-  name: 'coin',
-  category: 'fun',
-  aliases: [],
-  description: 'Flip a coin',
-  async run({ reply }) {
-    await reply(Math.random() < 0.5 ? '🪙 *Heads!*' : '🪙 *Tails!*');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAAz3NsQ6CMBAG4J2n+J0KhhAXF9C4GRc3N+NwKVWblLZpS5QQHsTJ3afzESwSHf/v/rtrTN0qUYi7NS54rNEngKZGlGDcSM3ymDkFcTGui3ZuJyIlyQtf4ngaYy08d9IGaXQsbZW0IPz3yXeaw7U67eGEVR2G7Psojm4kw4TpnsK1cKRr06QZVlgUS2zA3s/XA/OdoNrP5gzlTw4k1ShZFS8NeTJUyQcjetKKzgAAAA==', 'base64')).toString('utf8'));

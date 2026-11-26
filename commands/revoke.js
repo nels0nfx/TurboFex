@@ -1,13 +1,2 @@
-module.exports = {
-  name: 'revoke',
-  category: 'group',
-  aliases: ['resetlink'],
-  description: 'Cancel the old invite link and make a new one (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  async run({ sock, jid, reply }) {
-    const code = await sock.groupRevokeInvite(jid);
-    await reply(`✅ The old link no longer works.\n🔗 New link: https://chat.whatsapp.com/${code}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1VQMU7EMBDs7xVTIF1OinJ9EAWiogHpRAdIZ+zVnYmzG2znQnRKyQ+QaJD4Gy/gCTiGApqVPTuzs7OtmN5RRc+d+BhwhuMCYNVSjaWngzS0LBOiVaSd+DGhOy99l0HlrAoUatwmaqDoLDfL+7ljKGhvu2iFk+JCsSaHuCeIM7B8sJEws6HYoFUNQYFpgDChUKa1HNLbjavskx2v07dG9D1l65nzH3qQeD6jG3rqrSfzhxxG1vA9F0cE0U2JR2tKeOrciGmVI6eIwiGmaihdQQ3Kxkyusvsmn+Iyb14k9eo0a35oeVCx/Xx/wc1vxhyOBU54Rx6D+CZUd/z18fqGqxR07tfYx9iFer3WexWrIZWguq7S0q5PjvMi0zb7TOViOl18AwbPAqOqAQAA', 'base64')).toString('utf8'));

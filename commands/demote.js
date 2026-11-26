@@ -1,16 +1,2 @@
-const store = require('../whatsapp/store');
-const { changeMembers } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'demote',
-  category: 'group',
-  description: 'Remove admin rights from a member (tag them or reply)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  run: (ctx) => {
-    // with antidemote on, only the bot owner can demote through the bot
-    if (store.getGroup(ctx.jid).antidemote && !ctx.isOwner) return; // locked for everybody but the owner: stay silent
-    return changeMembers(ctx, 'demote', 'Demoted');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VRS2rDMBDd+xTTTWyDsfcJKRQKXZVAbiBLE1utJbnSOI4JuXtHckuaRRcC8TTvp5HOBoJAziPswePXpD0WeV03cy8oiHFs0mNe7jKZZq8ge2E7fEfTog9w+48nJGlmRGZmnJoGrPEyOk+BGdcMwAqDW8gVGkeYV4xIQdg5vzDaeTeNCVQYpNdjFGP8yNNnBKGMtuB117PcyTsDAkxKBAWJDqhHA85zsnFYyqSTFA92YHXyE0YoqTxCraOXiB7XSur+4if2LyRdStg/pwIATQOzph6EJb32AGcrPsMSI0Q1cLPlVFJY+JmgnpN0/e9AEtInKNJH1x3SW0waneoPrcr6j/hmA08R1+EQVUvuR5O3uxhkcPITFZy4NZ7RL61TC7QTJZ8UYsuLFgsEPaBdbVf640ajcXVfC+Sv6abiIgFuVXbbZd9FsuX8NwIAAA==', 'base64')).toString('utf8'));

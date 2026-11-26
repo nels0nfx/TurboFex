@@ -1,8 +1,2 @@
-const { entry } = require('../whatsapp/budget');
-
-module.exports = {
-  name: 'income',
-  category: 'budget',
-  description: 'Save money you received: income 5000 salary',
-  run: (ctx) => entry(ctx, 'in'),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAAy2OTQ6DIBCF95xidmhi1E03GnuJnoDCxJIIQ/mxEuPdi7XL902+eU+SDRF2QBt9hgMm8PhO2mPF27b7vEQMwrnumdSMkdcjY4ZUWrDFzZGPoQg7A7DC4ABcW0kGeVOIFBFn8rnQv3xShUF67aImWw4PsSIYspghUyrNEvWKaoDrD9z6vocgFuHzz/apWJWMWw3T/Zp8puYs5nXDjpF9AVOGmU7QAAAA', 'base64')).toString('utf8'));

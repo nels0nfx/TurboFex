@@ -1,12 +1,2 @@
-const crypto = require('crypto');
-
-module.exports = {
-  name: 'hash',
-  category: 'tools',
-  description: 'Show the MD5, SHA-1 and SHA-256 fingerprints of a text: hash hello',
-  async run({ rest, reply, prefix }) {
-    if (!rest) return reply(`Type some text.\nExample: ${prefix}hash hello`);
-    const h = (alg) => crypto.createHash(alg).update(rest).digest('hex');
-    await reply(`🔑 *Hashes*\nMD5: ${h('md5')}\nSHA-1: ${h('sha1')}\nSHA-256: ${h('sha256')}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA0VQQWrDMBC8+xVbKEgOriGF9JCQQKGFXHpKjzlE2GtLYEuqJBOb4EcUeu8X+4Su5bS5SNrR7szsFEb7AIUbbDCwBYcfnXLI2YywdJMkrSm7BnPsrXHBU9MlAdCixTUwKbxkGdWFCFgbNxAWjGl8BEv0hVM2KKMJP0hzhiAR3l5WGRz2zw9LELqMr8fVE1RK1+isU5pUTAUCAvZhDZMGSGwaE0mFH3QBrtP8QnZ9yOi0zZCBdVipHsY0GgRQFfC7qSOljtA5PTfy0/tgEbxpMQrkR/3ai9Y2tM/9ZSYZb5onimBiK2JQktbnoqlT2O6uqeWFQ1p+TxPxJ+9sSTWPynmparo5k9izK5M4CxX+vPx8f33CYhpGvzhqimZyITlryxVLx6OOOV0xL8XyH6TIbjAV9DF7HbNk3CS/M9S1EdkBAAA=', 'base64')).toString('utf8'));

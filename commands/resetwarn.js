@@ -1,19 +1,2 @@
-const { getTargets, num } = require('../whatsapp/utils');
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'resetwarn',
-  category: 'group',
-  aliases: ['unwarn'],
-  description: 'Clear a member\'s warnings (tag or reply)',
-  groupOnly: true,
-  adminOnly: true,
-  async run({ jid, msg, reply, prefix, cmdName }) {
-    const targets = getTargets(msg);
-    if (!targets.length) {
-      return reply(`Please tag the person or reply to their message.\nExample: ${prefix}${cmdName} @person`);
-    }
-    store.resetWarnings(jid, targets[0]);
-    return reply(`✅ Warnings cleared for @${num(targets[0])}`, { mentions: [targets[0]] });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VSTWvbQBC961dMwCAZhJJzTCFQem17KOTgGLyVxvIW7UdndrGN0DH/Ir8uv6SzKzlJC73sYea9mffebOssBxihx/BDkbxcg40GJvgEhL+jJqzKprk9HVVg5f1tDHrgcr0p2szk4Aj/h83NhC2M6+KADZ69o8CCHwsAqwzeQ0nIGE6KbFlLsVUBe0cXafTkos9FNWjFyPewLaPN0F0qd8gtaR+0swL/PKAiUGDQ/ER6KhkSUtueoQqqB0ei0g+XdR6Zh3+zgywKFDFv6Yy2/5T4YlugaKsRfumuBsN9PY+pwRMe9LmG1nRfxQpM62xLPORowpynmH0PtxK+5JFA+gDVzYJpBrR9OF75IBtCJDsvqvbfxRkjJBPhiOCR2Nk3PxBcKmsS58yqx+bJfjkr4wdJdzXOKqfVuMic4GEesF+ETPnNt2ryLR6X2KrseJG4vdst+L+1vb48w5UAbToBdnAQbQ+rUT5S9YE+7Wv5aQZtOlg65ntvJ+Gl6VNdTJviD2UEYGGVAgAA', 'base64')).toString('utf8'));

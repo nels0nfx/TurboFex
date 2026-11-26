@@ -1,26 +1,2 @@
-const fs = require('fs');
-const path = require('path');
-const { DATA } = require('../core/paths');
-
-module.exports = {
-  name: 'backup',
-  category: 'owner',
-  description: 'Send the bot\'s saved settings as a file to the owner (owner only)',
-  ownerOnly: true,
-  async run({ sock, jid, reply, isGroup, config }) {
-    require('../whatsapp/store').saveNow();
-    const file = path.join(DATA, 'groups.json');
-    if (!fs.existsSync(file)) return reply('ℹ️ There is nothing to back up yet.');
-
-    // never post the backup inside a group
-    const to = isGroup ? (config.ownerNumber ? `${config.ownerNumber}@s.whatsapp.net` : null) : jid;
-    if (!to) return reply('⚠️ Use this command in a private chat with the bot.');
-
-    await sock.sendMessage(to, {
-      document: fs.readFileSync(file),
-      mimetype: 'application/json',
-      fileName: 'turbofex-settings-backup.json',
-    });
-    if (isGroup) await reply('✅ Backup sent to your private chat.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2WTsW7bMBCGdz/FFSggCVCo3UGQpijaqe6QdOsQWjrZdCSS5VF2BENbO3cvOvQxmtfpC/QVeqRkWEEAAwKP5PH/v/tdGk0eaoIrcPi1Uw7TpKYku1yUccdKv53vhfV59wjvbu5uYJifEKIojcMinIyNFq2pugYFPlrjfHjpuADQssUlJGtZPnQ2yblSSo8b43qumoNGF4sVUumU9cport+irsBvEdbGf0kISO6xAkLvld4QSP5BrRoEb+Kx2AfS8WN002exaVx/4uUSvOswlCT1ugTX6fQIZMqHHHaqytmVbfocFH1wprM5sO1abWDIogd45vqwlZ6ktQV59p9kIqhbmUPKDMLZEVmUdxW5ip1ROg0Ec0g24QESOzI6mS6oGtJXNTE4RZ5uWWAabmcZP+s7p0d1afL329O/Pz/gbosOWSpo47fMI0AIeKGz0KMXcRahb1GAxj0TsYYFRZxxCqA0qQqZYRQzE82drk4Q4BrSEYOIHFddu+Ze13D/+viyPrwhcQIjNPp7WILumibjLxOeGfXmha+fv4Ovz8Tz3LKv0rSt5AAozRKtU3sODJTcHA6KUzrl4uxTHqTycZqCODgfkUhuMPUmn6bH8TJl16L2S/4LCIeyes+Az6Tz6VirWvS9DYFlH43iqHIgizis05lwYTWGmk2sTY2PF6dkXoyAxezCMBvyRDabFJ/s//oOb8fBsPw4hN507plzMWZlyBfD5eI/olYLJswDAAA=', 'base64')).toString('utf8'));

@@ -1,9 +1,2 @@
-module.exports = {
-  name: 'reverse',
-  category: 'tools',
-  description: 'Write text backwards: reverse hello',
-  async run({ rest, reply, prefix }) {
-    if (!rest) return reply(`Type some text.\nExample: ${prefix}reverse hello`);
-    await reply([...rest.slice(0, 500)].reverse().join(''));
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WOsWrEMBBEe3/FBg4sgRBu0tyRMn8QSJELnCLvJUpkSazWORvjf49OdpNmi9mZNzPEfvSocUqROMMTLA1AMAMeoSX8RcrYqiJZw/gZaS4yx+hzFXvMllxiF0PRX8kxAuPE8GHsz81Qn4+wQ+ALvY81ZfIcLNAYxFK+mVW5yc8KEuHVTbDKOgLAXUE83B2yOHiksBnF5WVOCDkOW5s+h+fJDMmXzYdlg6z/ai/yVIHmZhzvkDet9Z2ts3cWRafgsevku96DQurv6IJoW1nDq2rWU/MHEqmB7C4BAAA=', 'base64')).toString('utf8'));

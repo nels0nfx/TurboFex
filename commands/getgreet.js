@@ -1,12 +1,2 @@
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'getgreet',
-  category: 'autoreply',
-  description: 'Show the greeting for private chats (owner only)',
-  ownerOnly: true,
-  async run({ reply, prefix }) {
-    const g = store.getGreet();
-    await reply(g ? `👋 *Current greeting:*\n\n${g}` : `ℹ️ No greeting is set.\nSet one: ${prefix}setgreet Hi @user!`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA0WQsU7DQAyG9zyFkSolrap0T4VAYoAJhq4Zckrdy0ntXfD5SKMoGxsD4gl4DXgdXgAeAeeKymj//u3vd+2sZ/DsCOESCB+DIczSPF91jWKv2nYVxXS+TpKD24Y95nhsHbGX+SEBsOqABaQaWRMip0vp1YpRO+qlr8Jkb/d9FLboazItG2dF2zSuA24QotNYDTtH0JJ5Ej/UEwBkrrNI4Oy+n8cVsX6QsgCmgFNL+d7WQMFmA8RbS1mCO3OEcR4ZhSjm1MIc4+SCezsdzSTXpKtOGT6ZMw1XUP28v73A4iYQoeUzYLEobWlngx4rKKD6ev78/niFe/efwHjwyHlpN8hCLa+ZDSeY0f+9CO4MXAePdFHF6+MyGdfJL+PIv6CKAQAA', 'base64')).toString('utf8'));

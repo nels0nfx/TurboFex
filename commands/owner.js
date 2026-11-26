@@ -1,11 +1,2 @@
-const brand = require('../core/brand');
-
-module.exports = {
-  name: 'owner',
-  category: 'general',
-  description: 'Show who owns this bot',
-  async run({ reply, config }) {
-    const link = config.ownerNumber ? `\n📞 wa.me/${config.ownerNumber}` : '';
-    await reply(`👑 *${brand.botName}* owner: ${brand.creator}${link}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2WPMW6EMBBFe04xBRKwQqZfFOUG22ybAmMmYAVsMjYiCPkQq/TZK+4RMniVKuX8/2fmfWWN89CSNB28AOHnognzTIhKWcIqGllRJ8lku2VEgV+zJe84uycARk54hsyuBikrWVDSY29pY7FHFuUY5Q6dIj17bQ0718GusA4WeM+BH7SD1voYlG4zCmgx+c4w87iVoKx51z2EIn6EY2biUZsPhniaIgJclqlFgldo3szj/v0DqxQTVun+PxQaYI6sjgflKrV/fsubx/12g1O6x+KCsS5cMZwgLp/hz1CE0lsK6X6AhKY4ToUyCXXyCwDPT1JSAQAA', 'base64')).toString('utf8'));

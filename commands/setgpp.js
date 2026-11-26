@@ -1,21 +1,2 @@
-const media = require('../whatsapp/media');
-
-module.exports = {
-  name: 'setgpp',
-  aliases: ['setgroupicon'],
-  category: 'group',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  slow: true,
-  weight: 'medium',
-  needs: [],
-  description: 'Change the group picture: reply to a picture with setgpp',
-  async run(ctx) {
-    const { sock, jid, reply } = ctx;
-    return media.handle(ctx, ['image'], `Reply to a picture with *${ctx.prefix}setgpp* to make it the group picture.`, async (found, buffer) => {
-      await sock.updateProfilePicture(jid, buffer);
-      await reply('✅ *The group picture was changed.*');
-    });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3WRS26DMBRF56ziDSpBIkTmQalUdQGNos6qSnHsB7gB2/VHJIoYdhddXVfSh6FKP+oIuO937oVr5Tx0KCSDDVh8DdJilhbFqm+Yd8yYVSymizJJOi1CiwWejLbeUf8lAVCswzWkDn1tTJqTwlrJHLo1PEXV6mAk1yp9Houceay1PdNIrMSJ+PagWlK9DRiXiE6qn9JB+7tR3U2U4lpxre6vXz3KuvF0YCQPXbygEMVIFBkEOm6l8VIr6rpvmKoRfIMTBxCtD5ZMWTTtGbwG9qVBL30D3726s+Jgg8q4Py1iIOQxhnoBp/kxhxcp8nnVQJlRXxm7LNJGNWVfEINocVySU2yyYzVSXrDf/YOwvLlQb2EsVvI0TEDLsa9jRwTp/9op9vlMm1U6KGI6hKpCu4DN7cxNdnpGsyN3EYygX7W1upItbqcdWfQyz5U/ZqLBLP14f4Pl4+/b0DMHPOYsimU6jw7xOeTJUCaf0Lh81ogCAAA=', 'base64')).toString('utf8'));

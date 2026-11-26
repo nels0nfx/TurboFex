@@ -1,12 +1,2 @@
-// ".again" is understood by the message handler (it swaps in the last command of this person in this chat).
-// This file only gives it a name in the menu, and answers when there is nothing to repeat.
-module.exports = {
-  name: 'again',
-  aliases: ['redo'],
-  category: 'general',
-  description: 'Run your last command again (works for about 10 minutes)',
-  noAgain: true,
-  async run({ reply }) {
-    await reply('ℹ️ *Nothing to repeat yet.*\n▸ _Run a command first, then send_ `again`_._');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA12RPW7bQBCFe57iwQ0lg6DsVkaKXCBFkC4JpBE5ohYhZ4j9CU0I6ty781mU6/gCuYKHayRAUs6bh2/fm91scFNTR05u4AKStOxDVG1xmBFPjIFDoI5xIml79li5iDDRGOAkG3oKEY0OgxmgR9OMMxpF5d1iY3OiuK6LzQZflvHoeoZKP6NzP9lIEQShgf8wB5ZUYQGShMlYmE6cV56XmKKGlQ5R4XlkinUxaJt6rvlxVB8DPuBcIDO3KHO/sjKBekeBwxZfS8+tlt8XsaHInfrZnB0Le+qzt+XQeDdGp2Kbz0kwa/L/9s1krCb1P6yWetBBU8T9HQYnKXJYZ5Tox8W4RfSJc44wSwOfZHVeGtglLuuc2FYT2T2yuCpfn379vj7j9tP/hTFzrG+/yevLFbslG/3NdHT2g9VyLEFgaXfY55j7Xb0r1w/2yKUqLg/FG6mROEz7AQAA', 'base64')).toString('utf8'));

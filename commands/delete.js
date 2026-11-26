@@ -1,18 +1,2 @@
-const { getQuoted, num } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'delete',
-  category: 'tools',
-  aliases: ['del'],
-  description: 'Delete a message: reply to it with delete (group admins can delete anyone\'s)',
-  async run({ sock, jid, msg, reply, prefix, botIds, isGroup, isAdmin, isOwner, isBotAdmin }) {
-    const q = getQuoted(msg);
-    if (!q) return reply(`Reply to the message you want deleted, then type ${prefix}delete`);
-
-    const fromMe = botIds.includes(num(q.participant));
-    if (isGroup && !(isAdmin || isOwner)) return; // not allowed: stay silent
-    if (isGroup && !fromMe && !isBotAdmin) return reply('⚠️ Please make me a group admin first, then try again.');
-
-    await sock.sendMessage(jid, { delete: { remoteJid: jid, fromMe, id: q.id, participant: q.participant } });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21TS47UMBDd9yneSGiSSFF63y0WjJAQSCM+W0Aak1SnzSR2YleUiTI5A3tWHIPzcAGuQDkfpoXYlaucV+/j5NZ4xoiS+H1nmYoUpqsx4TkctZ12FEdZtu/Pir1qmn3HuvJRctztalt0FWX00FjHXu6PO8Comg6ICqqIKUqlkyum0rpBumytfBuaqtLKkz/gY7gafQ69gnzudMPaGrn7ckaAQk3eq1JAHTXVALbQjF7zGcsSxKWzXQNV1Np4WWe2gTKDNfQp8smy0w8mh+tMPMLb/D7FVy1qa1+mC3aKxtFJP6T4Yvl14VNo/ypgh+JFgA/F296QC8WN5bmJKZmli9TZy1as+OtmLPBiVpjqE+KrNpFd3DmzrIzvPmyq+EybVgy2Q68Mr0qEpUwNeGgIz8aF5bTM7kIUT8tPzta3JAwWCZk2edWJs7GEGrdZoxzrXDeCnVzQWnXi+hpX8aoVj4+b2mQjfcR+D2NZ8qtsT8UBntUArysy/F+0lU8onxz7x4Po1/cfv39+w7uK5FGgVvfBCYn+IlictPO8+eAGqFJpk0WbetUreRYh1syTKW4XI+M54XG18SCVo1pieaOF+jxb+Emc0miz0LmwKLQujvJTTLNpU7qbjrs/7K2nWzoDAAA=', 'base64')).toString('utf8'));

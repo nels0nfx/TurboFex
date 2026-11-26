@@ -1,16 +1,6 @@
-TurboFex v1.9.0 - message handling as before, quiet console kept
-CHANGED IN 1.9.0
-- CHANGED back to the 1.8.8 behaviour: messages that could not be decrypted are asked from the phone again (silently), and the automatic chat session repair counts errors as before. The console stays quiet about them.
-- CHANGED downloads that save nothing now stop after one extra way, without updating the downloader in between, so a failing `play` does not wait as long as in 1.8.10.
-
-TurboFex v1.8.10 - downloads try the other ways when nothing was saved
-CHANGED IN 1.8.10
-- FIXED `play` and the other downloads giving up with "nothing was downloaded": when the downloader ended without an error but saved no file, that counted as a success and no other way was tried. Now the next way is tried (up to 3 empty results per round), and the way that uses Node for YouTube is tried second. Not tested against YouTube.
-
-TurboFex v1.8.9 - quieter console, safer chat session repair
-CHANGED IN 1.8.9
-- FIXED the console filling with "view once" lines when nobody sent a view-once. Messages that were empty only because they could not be decrypted yet (No session, Invalid PreKey, Bad MAC) are no longer treated as a possible view-once: nothing is printed and the phone is not asked. Other empty messages print one line, only when the phone is really asked. Real view-once messages are handled as before.
-- FIXED the automatic chat session repair counting MISSING sessions as damaged ones. The repair removes chat sessions, so this could make more messages unreadable (a command the bot cannot read gets no answer). Whether this happened on a particular bot could not be checked.
+TurboFex v1.9.1 - hide the code on GitHub, keep the repo public
+CHANGED IN 1.9.1
+- NEW `tools/obfuscate.private.js` (local-only, gitignored, ships in every dev ZIP). The push command now runs it right before `git add -A`. It replaces every file in `core/`, `commands/`, `whatsapp/`, `index.js` and the example plugins with a tiny loader that decodes and runs the real code at the moment it is first required - so GitHub, the branch zip and the release ZIP all show an unreadable blob per file instead of the source, and the bot runs exactly the same as before. A short, fixed list of files stay in plain text because a test (or, for `core/plugins/broker.js`, its own browser-readiness rule) reads their raw source text rather than just running them: `core/brand.js`, `core/integrity.js`, `whatsapp/connection.js`, `core/plugins/worker.js`, `core/plugins/broker.js`, `core/boot.js`, `whatsapp/seen.js`, `whatsapp/status.js`, `commands/statuscmds.js`, `core/sessionid.js`, `core/setup.js`, `core/linkpreview.js`, `whatsapp/botknowledge.js`, `whatsapp/handler.js`, `commands/dl.js`, `tiktok.js`, `ig.js`, `play.js` and `medianew.js`. Before changing anything, and again before finishing, the script runs the WHOLE test suite against the hidden code; if even one test fails (or, for a new file added later that a test reads as raw text, would fail), nothing is changed and the push stops, so a half-hidden or broken build can never go out. A plain copy of the version being hidden is saved to `../TurboFex-plain-backups/` (outside Git) every time, since from now on GitHub only holds the hidden build. `node tools/obfuscate.private.js --check` tries it on a scratch copy without changing anything; `--undo` restores the plain code from the newest backup. Verified against the full test suite (377 of the bot's own files hidden, zero new test failures beyond the ones already present without network access); the real `npm install` step and the actual GitHub push were not tested here.
 
 TurboFex v1.8.8 - one-file launcher for the pair site
 CHANGED IN 1.8.8

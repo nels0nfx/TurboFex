@@ -1,11 +1,2 @@
-const { resolveTarget } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'jid',
-  category: 'tools',
-  description: 'Show the WhatsApp ID of this chat, or of a tagged person',
-  async run({ jid, msg, args, reply }) {
-    const target = resolveTarget(msg, args);
-    await reply(target ? `🆔 ${target}` : `🆔 ${jid}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WPvUrEQBDH+zzFFEJysOT6Ow4RbKwVbLMkY7KS7Kw7E2MI2/oE9r6ij+AkkQPL+TH/r5o8CywQkal/xycbWxRIcFHyNrqIRV6Wx6mzwjaE4yiu5/xwzrKBmrHHEj8CRWH9XzIAbwc8Qf7qmtzoWVvBluKsSIhUuMIGuY4uiCOv/LGjCaRDeF4j7kKAh3ugF0WOoVZmgOIKLIhtW2wgYGTym5Xl2dcQR18soJkGBm4N6AQ2Wj/0M6TD1kurbDtln3f5P7e4ynTY+mwn62R3KP4kt1D9fH9+wc2yg1TB6Yo0O1WbNpksnbNfaQ78GFUBAAA=', 'base64')).toString('utf8'));

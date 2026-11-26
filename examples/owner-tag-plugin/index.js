@@ -1,6 +1,2 @@
-// Answers when the owner is tagged (@) in a group. c.mentionsOwner is set by the bot (needs TurboFex 1.6.5 or newer).
-tfx.on('message', async (c) => {
-  if (!c.mentionsOwner) return;
-  if (c.sender.isOwner) return; // the owner tagging himself needs no answer
-  await c.quote(String(c.settings.reply || 'The owner is busy right now.'));
-});
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA12QwU7EMAxE7/2K4dREQqk4wGUFggtXDuwPpK2bRto6S+yqW7H8O6GAtNqDJUsez/i5afDCslAWLCMxdCSkhSkjCtSHQD3Ms0VkeISc5qND5yZijYnl7V8ppGjXbbtNCsNEvWA/5za90gl37sHdI2UwlSjrKh1OLrGpJxLxgepbeFm5g+ksHp/wWQFxgLm5irLIpHPm3d+8c0LcU3bxao6muUD54YgcMMZJ6DDg9zpO8Bt6MfOLj1rAPuakZN41F/nmrlo6cZmOhxXnM+r95YPaWVbkGEYtbourrd1VX6W+Aect3+dWAQAA', 'base64')).toString('utf8'));

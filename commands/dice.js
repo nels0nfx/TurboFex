@@ -1,23 +1,2 @@
-module.exports = {
-  name: 'dice',
-  category: 'fun',
-  aliases: ['roll'],
-  description: 'Roll dice: dice, dice 20, or dice 2d6',
-  async run({ args, reply }) {
-    let count = 1;
-    let sides = 6;
-    const m = /^(\d{1,2})?d(\d{1,3})$/i.exec(args[0] || '');
-    if (m) {
-      count = Number(m[1] || 1);
-      sides = Number(m[2]);
-    } else if (/^\d{1,3}$/.test(args[0] || '')) {
-      sides = Number(args[0]);
-    }
-    if (count < 1 || count > 10 || sides < 2 || sides > 100) {
-      return reply('⚠️ Use 1 to 10 dice with 2 to 100 sides, e.g. dice 2d6');
-    }
-    const rolls = Array.from({ length: count }, () => 1 + Math.floor(Math.random() * sides));
-    const total = rolls.reduce((a, b) => a + b, 0);
-    await reply(`🎲 ${count}d${sides}: ${rolls.join(' + ')}${count > 1 ? ` = *${total}*` : ''}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA12SQY7TMBSG9z3FW0SyU6I0KdIsMjOMOAAskFiVjuombmvk2JXtaKgyvgLs2cAZWHEeLgBH4NnOtDAby/79/P2//dzrbpC85J+O2jgLtzDOABTreQOkEy0nBa5b5vhemxNqu0FFiUnBLLcNrIjRUpJ1EDtuWyOOTmiFpe9Qh8Bo4ljEEZZVAdpM8+4qwexJtWAGRUdgZm8LMPwoT+DzGAdAcgetHpTDgPX1WbICHVG6SlKrlXXQo7C4px+6sS6WPr/r0vSlz7OFwIvylgaPVbWGx0cgJE+HxQ5o/+QHZ7e3Q7/lhvarOpbXUzWcvc8Fy/W054FLyyNwcT95Z4vSceueOV/sntGmsifgOWBKdQN1AKTFK6irsEqEG1heFmGrungY7gaj0tNS8uvr998/v8B7TFqD04ESe/Ig3AEhUakSqABe7stLy/6LlR49/IGQ/7Ux7FTujO6xlZKrvTs0U1BfAM3hFkPBC3jD3KHcSa0NjVPDVIdncpgnyzz/t6VOOyaRHl1Kw7uh5ZSyArYRyBC4LaCazrAHJtx0zc2fb59/QDbGCL7Lxkj3DUoJ9lELRQkCSO6nsvBucAcbNJxnY/T28w3gjyZ+Ez18MfPXs79ryXBcOwMAAA==', 'base64')).toString('utf8'));

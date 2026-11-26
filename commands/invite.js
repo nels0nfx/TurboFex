@@ -1,13 +1,2 @@
-module.exports = {
-  name: 'invite',
-  category: 'group',
-  aliases: ['link'],
-  description: 'Get the group invite link (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  async run({ sock, jid, reply }) {
-    const code = await sock.groupInviteCode(jid);
-    await reply(`🔗 *Group invite link*\nhttps://chat.whatsapp.com/${code}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA12PMU7EMBBF+5xiCqQkqyjps6JAFCsqJFpAWmOPNt51bGOPWaIot0Ci5IocAWe2AZqR/P3m//mjU8lgi+/eBYpwDXMBYMWIPZTavmnCssmKFIQHF6asHoJLnkVhtIgYe3gsjban8nkVFUYZtCftbIZ3SEADAi/BxRBWGCqhRm0jOGummu2Yuc/PHigk5ISV+Su9OLpZ1Qd8TTqg+gXHyUoIyVYzRCdPDRy1aiCgNxMsNTfLTZyNlKfCXFachSaGW06/4wNv82eVd+stb1wgtqn2318fn7DZ/a+zebIDkY9918lBUHvOIwrvW+nG7mpe45Y9+y1NsWyLHwtSGpJ3AQAA', 'base64')).toString('utf8'));

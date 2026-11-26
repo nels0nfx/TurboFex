@@ -1,17 +1,2 @@
-const store = require('../whatsapp/store');
-const { listText } = require('../whatsapp/filtercmd');
-
-module.exports = {
-  name: 'filters',
-  category: 'autoreply',
-  description: 'Show the auto-replies set up in this chat',
-  async run({ jid, reply, isGroup }) {
-    const own = listText(store.peekFilters(jid), isGroup ? 'Auto-replies in this group' : 'Auto-replies in this chat');
-    const extra = [];
-    const p = Object.keys(store.getPrivateFilters()).length;
-    const g = Object.keys(store.getGlobalFilters()).length;
-    if (!isGroup && p) extra.push(`📩 ${p} for all private chats (set by the owner)`);
-    if (g) extra.push(`🌍 ${g} for every chat (set by the owner)`);
-    await reply(own + (extra.length ? `\n\nAlso active:\n${extra.join('\n')}` : ''));
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA31RQW7bMBC86xVbIAhJ1FHuDooil+bYAMmtLmCaXkt0aJIlKTuCoB+0pz6g5/6uT+iKjGGjgHvd2Zmd2VHOxgQxuYDwAQJ+63RAzur69tDKFKX3txlk4q5SeXcAo2N6xtcE4yXKRpuEQe3WE63auXVnsMZX70KKxBkqACt3OAdWNiOb0UjJhI0LPY1lNx31ps/AGqMK2iftLGFPrTtAahGmpZtpS2OEiAk6D9oSpCMospK5MvZWQegsH2Cr1zPIsjPQ8SE4Iowi26HrOZ07WDJ4TMhz9tojvnwqRjlpiBP7I7D7cxfH882EMphfgLM7es3pLh0Lki5/+Xo+9TT5vNqiSvUL9vHNToPpMeg9fetoSojaoG1Se05uLpEfjFtJc4GrN8DfHeNdX4MXxVvtu9jy5Z9fP3/D1eBH2LgA0hjwxUrOFIFPPaz63A/9EoNYipNw86/Y9x8k1hQx3GPos8x/VORB6lQ65FNX74EXxZKBClku7MLem+hAqqT3OF/Yq6HsbJ22nC0sE+Ny6oaJrDrOqvGu+guXT0eICgMAAA==', 'base64')).toString('utf8'));

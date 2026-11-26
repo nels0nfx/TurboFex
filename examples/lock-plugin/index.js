@@ -1,18 +1,2 @@
-// Example plugin: needs the group management permission, so the install screen shows it with a red mark.
-// It only works where the bot is an admin, and only for admins.
-tfx.command('lockgroup', async (c) => {
-  try {
-    await tfx.group.close();
-    await c.reply('🔒 *The group is closed.*\n▸ _Only admins can write now._');
-  } catch (e) {
-    await c.reply('⚠️ *I could not close the group.*\n▸ _Make me a group admin and try again._');
-  }
-});
-tfx.command('unlockgroup', async (c) => {
-  try {
-    await tfx.group.open();
-    await c.reply('🔓 *The group is open.*\n▸ _Everybody can write again._');
-  } catch (e) {
-    await c.reply('⚠️ *I could not open the group.*\n▸ _Make me a group admin and try again._');
-  }
-});
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA62QMU7DMBSG95zi35pWKNlBsHXogFgYkSrXeU2sOHZkO6QR6hmQADGwwDF6nl4AjoDjSKFFYqmYLNm/3/+9L00x37CqloRaNrlQ51BEmYUrCLnRTY2KKZZTRcqhJlMJa4VWZ7A6ZISyjkkJyw2Rgi10ayEcWuEKMBjK/ABTJlGaYuGglezQalNatAUZCjNW2kFYMAWWVcLPZiobkmtthjubRG69SbiuPE4WT6TmZcCb+LTtFEfMp7i8wkMEONOFE2At8yz9zxBOuNSW4unFwSNPDNWyiydf7y9PmN2Oe3uiEM+S2Z3av+6wvOmRBhxwT9sa4QhKt8lyEmZu/bXjBWKaHgGMHfu3j8/dI2YLcN3IzP91Q8mP77HtmpWEirzEgScUBzX9fixnQo290dafR4IadaIiXZP629DzL0N9eiSe35PpVjrrDuwcc57ip6/4Dz3fIkaOm+sCAAA=', 'base64')).toString('utf8'));

@@ -1,11 +1,2 @@
-// Remembers the ids of messages the bot itself sent, so it never answers its own messages
-const ids = new Set();
-
-function remember(id) {
-  ids.add(id);
-  if (ids.size > 300) ids.delete(ids.values().next().value);
-}
-
-const has = (id) => ids.has(id);
-
-module.exports = { remember, has };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAAz2OQQrCMBRE9znFLFuQKrgsegg9QTRTDbSJ9P+2onh3k1RczuS9P9luceLA4cJRoHfCO0HsMFDE3rh2l6jwKuw7CINuIDFlBM4cYYMsWU4A4hL+prnGIFruHRK64Eyt6taYbgpX9TFg/A1X3tV4G2S2sc7l3ObYocqV+BdxxH63qwvi2FNZnmbbT5SqbgKf6fqak/wxv/m7zfNl4XAsdmrWATNEN/Vs+HzEUTP2/n9pU8RPa76erYHkIAEAAA==', 'base64')).toString('utf8'));

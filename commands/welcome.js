@@ -1,10 +1,2 @@
-const { toggleSetting } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'welcome',
-  category: 'group',
-  description: 'Welcome message for new members on/off (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  run: (ctx) => toggleSetting(ctx, 'welcome', 'Welcome message'),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2WPsW7DMAxEd30FN9mAYe8x3F/IkKGzItOqAEtUKQp2EOTfK7tLg473cHc8WopZ4AlCzq14QxEfHbxgAsbv4hkb3ffD9mUkm5QGY8XXhG5HpQLNZcUe90QsuSaeCiCagBfQG66WAuquImsEHfGjYsdU0glnzJZ9Otoq//y1Q8CcjUNYiCHiVnW4I2egONCyQGPm4OMh10d71pyF1yovIFzwQKfnHXGpRxorewvTx/urB+3+7P23Rbedeo3qBxfUzSgoAQAA', 'base64')).toString('utf8'));

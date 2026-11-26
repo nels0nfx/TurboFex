@@ -1,15 +1,2 @@
-const media = require('../whatsapp/media');
-
-module.exports = {
-  name: 'mp3',
-  category: 'media',
-  slow: true,
-  aliases: ['tomp3'],
-  description: 'Get the sound of a video (or a voice note) as an MP3: reply to it with mp3',
-  async run(ctx) {
-    await media.handle(ctx, ['video', 'audio'], 'Reply to a video or voice note with this command.', async (found, buffer) => {
-      const mp3 = await media.ffmpeg(buffer, 'mp3', (i, o) => ['-i', i, '-vn', '-t', '900', '-acodec', 'libmp3lame', '-b:a', '128k', o]);
-      await ctx.sock.sendMessage(ctx.jid, { audio: mp3, mimetype: 'audio/mpeg' }, { quoted: ctx.msg });
-    });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA02RwW7bMAyG734K3uQAjtMtl81Fd+2pQLFr0QMj0bFWS1QluWlQ5N1HyQm2iyRS+smPvzT7lMGRsQgPEOl9sZFa1fe704Q5YQi7eqk2903j2Cwz9fQZOOYk778aAI+OBlAu7FUnocZMR47nkqrCkkwznwbIcaES4WwxURrgRWUuuteSNZR0tCFb9qJ9pAx5Iki8eAM8AsKHNcTQcixntprAc6YNYAL08PS8H4Q/zGfIDDbDyeYJblSYzl5DXHyr8+emckvyhPY6ez+hNzOV206waivVgcLFWBY+UL9vpW8gwvGPYu2WJ5tAs3NSrBf52rUdywwdHJZxpLiBh1/X/mLW6n7Yi5f/04yjC3RsV0V3NRda2wFX/YvaWklIrLYfvoBuc1l/3t3VADUb0uU424OIZ/mjenEYsOzfvv94k51f5VdXkrW7jN8n1m99Im+eKCU8Vk/6P1YG+IJqx1CAO3DWUT6H8vc1vSvICi7l3fsinpih1nPpCJdrn3W/dM3lvvkLBmV8yXoCAAA=', 'base64')).toString('utf8'));

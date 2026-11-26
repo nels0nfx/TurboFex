@@ -1,21 +1,2 @@
-const DARES = [
-  'Send a voice note singing the chorus of your favourite song.', 'Change your profile picture to a funny face for one hour.',
-  'Write a short poem about the person above you in the member list.', 'Do 10 push-ups and send a video, or say "I did it" honestly.',
-  'Send the 5th photo in your gallery (if it is safe to share!).', 'Talk in rhymes for the next 5 messages.',
-  'Send a voice note doing your best animal impression.', 'Compliment every admin of this group.',
-  'Type your next 3 messages using only emojis.', 'Tell the group your most unusual talent.',
-  'Say the alphabet backwards as fast as you can in a voice note.', 'Set your status to "I love Mondays" for an hour.',
-  'Describe your day using only movie titles.', 'Send a selfie making your silliest face.',
-  'Pretend to be a news reporter and announce what you had for lunch.', 'Tell a joke. If nobody laughs, tell another.',
-  'Speak in a funny accent for your next voice note.', 'Draw something with your finger and send a screenshot.',
-  'Say something nice about each of the last 3 people who sent messages.', 'Dance for 20 seconds and tell us how it went.',
-];
-
-module.exports = {
-  name: 'dare',
-  category: 'fun',
-  description: 'Get a random dare for a party game',
-  async run({ reply }) {
-    await reply(`😈 *Dare*\n${DARES[Math.floor(Math.random() * DARES.length)]}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11UzYobRxC+6ykqi2GlZS2cBF+y5BAiY3wwhKwhB8fg0kyNuq3urqa7R/Kw7D2P4FteMY+Qr3vGXiUgkNQ9Vd9f1XQacqHdL7+/uqef6f2K6PpeQk9MJ7WdUNAilG044EPFCHVG05hJB5p0TDTwCV+2PqThsL2+petfDYeDzNcx6WCdULRdGZNQUXQexhAmVKL9oIk0CBk8jOIK/0frxpQBVCiqeOK9jqWhR0nAqQenhkA2tHMvfi+JnM2lcdgpff+C4pjN8zFmYijKiyzbi94ScDNPdPWGetuTLVegECQXNy00mgu19ctiKBoFc2A1UQd2TtJEazugkmxGq6Fpy4aTfLdpFN6xO9aSZCYvuSmt7YJ8LvQShHPmg+RLtP943mt1vOHtwQsSrGdH1seEUqth9lp9dNZLKCSnyol7D0ykUwx4HZKOcYF4N8UllEbhx28UaKz5IgY3kXj9ZPPMX5xrjFuTudIrmIxhzCOoFHbA/SoAZtaH2UXDeym05+545tTDfIjnqiC3xDoO1ZZLsQ3vHkUNJBcumDDYiXRcDfqthp6nfNVMRPnFtOwkd8nuF2V46lKN15NFLrY4yQtGszmLG3Dh+fjN42yds9XnOpZL79+SlDYFighQFuScKUnEXEpqM8Uh6Big4my4sSfDfWPpcGyefGT6pEfZ0psBgvfaT+R4PJh8S6VdwwUjXzXdR+Hj7NG8Ktx1NeHa9ynA/9m3S3zGDnpB8BB1thjbeUPxd6G7rAAcEwnYr8vwnkpD7TuvnHBn5mESEM51aqJodFWw1nblcpBBgsOy1D+8wHWH3OblayoRqtFzXZnzMjgf7lYrr/3oZCufq68ZL6EHUArs5Se67rFOjWLHRQ6aJpzBknbUt+RjwSrg9DWmhykBSz3VsnlWKHIqEzbWz304T6GjNIb1Q00SM/K4aYC4OjOYtcP1x3/+/vIX3ezQ5+bP8OyhvR/fv+VitoNTTev2c0Zbb+hmfoFusQ+HYjYfHj9u7tDz8Xb1eLf6F2mLCMhiBQAA', 'base64')).toString('utf8'));

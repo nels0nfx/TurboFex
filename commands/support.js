@@ -1,15 +1,2 @@
-const brand = require('../core/brand');
-const { linksText } = require('../whatsapp/welcome');
-
-module.exports = {
-  name: 'support',
-  category: 'general',
-  aliases: ['links', 'about'],
-  description: 'Support group, channels and source code',
-  async run({ reply }) {
-    await reply(
-      `⚡ *${brand.botName}* by ${brand.creator}\n\n${linksText()}\n\n` +
-        `Ask questions, report problems and get news there. Thank you for using ${brand.botName}! 🙏`
-    );
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA12QTU7DMBCF9znFQ6qUtETpvhULLsCG7ihSHWdIozq26x+lUZQzsIYN4mqcgCPgOMCi22/mvXlvuJLWoTRMVriDobNvDGVpUay5MrSOg3S5TXjcGyAaebI7ujiMV/vdkTnLtF53JLhqaVIlraq8oIIuWhlng2JIAMla2iC1Xk80zQPizFGtTB9wTZIMExEz0TBLdoOnNB5Oc6SsVN6lz9O4IstNo12jZBA+zn6ojfI6Bz8yKUlYTNWs8oYTuKpoNra95DBeZkMooUWPcRmzhVHHGjfDLALg8PX+idViiN8oSuUeQoNxhbLHH+SGmFNm3Mu9XAz/X8qWkRxw+2sVzO7tCWdPdopt8+nSlFobVQpq57g1OUjqLNyRDBXYhS4n9MrjRRl428ga13Fu8P3x9nqId8LrgTFPxm3yAwjxQePhAQAA', 'base64')).toString('utf8'));

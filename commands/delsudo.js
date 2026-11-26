@@ -1,17 +1,2 @@
-const store = require('../whatsapp/store');
-const { resolveTarget, num } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'delsudo',
-  category: 'owner',
-  description: 'Take owner rights away from someone (main owner only)',
-  realOwnerOnly: true,
-  async run({ msg, args, reply, prefix }) {
-    const target = resolveTarget(msg, args);
-    if (!target) return reply(`Tag the person, reply to them, or type their number.\nExample: ${prefix}delsudo 27821234567`);
-    const done = store.removeSudo(target);
-    await reply(done ? `✅ @${num(target)} no longer has owner rights.` : 'ℹ️ That person is not on the list.', {
-      mentions: [target],
-    });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VSy27UQBC8+ysaKZK9kuUoyyNoo4hccs4hewOkHexe74iZadMzzq5l+QZnfoAPgd/JD/AL9IxNFA4cXV01XVXtmpwP4AMxwjUwfuk1Y5FX1fnxoIJXXXeehvnqKqsTdxSWJ/OAW8UthhJcb2H6n7gP2vgoziw1vcEKTx1x8MIfMwCnLG4gb9D4vqG8FKhWAVviQWA6OuQENuhr1l3Q5ATfqs8IaQis24O8po5qgD2TBU8WySEUVmm3kMiZYZXeYVTmLmJ3Am0gcI8RVn5wNXDvihGsb0uQaL4UdmeGEjrGvT7BtEqWxWHqIaT4KfezOoonuWSOZL2H4sXMXQk19Ozmd4vdVrUQDggdsie3rINAEbQlEEMYOoxfmmPLn5CrD+72pGxnpLWzcTY2Le3B+vLt+mL98tXrN5e7ZftstYmFXM9XrhgtPeC9CIrF1kyVCnVYrCXBO9g9/vgGN2ej7P7LncARGHKt1HpQ/p8rVDuQ4zx+/fX753fYyh+wJAPtRRXkDCmu0T5UebmUCWDRxbv6Dbyfl3ws02RKxqYym66yP/52CnKnAgAA', 'base64')).toString('utf8'));

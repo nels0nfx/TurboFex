@@ -1,19 +1,2 @@
-const games = require('../whatsapp/play');
-
-const SYMBOLS = ['🍒', '🍋', '🍊', '🍇', '🔔', '⭐', '7️⃣'];
-
-module.exports = {
-  name: 'slots',
-  category: 'games',
-  adminOnly: true, // only admins start a game, everybody can join it
-  description: 'Slot machine. "slots" opens a lobby (type join, then spin), "slots spin" is one quick spin',
-  async run(ctx) {
-    if ((ctx.args[0] || '').toLowerCase() === 'spin') {
-      const pick = () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-      const [a, b, c] = [pick(), pick(), pick()];
-      const result = a === b && b === c ? '🎉 JACKPOT!' : a === b || b === c || a === c ? '😮 So close! Two match.' : '😅 No match. Try again!';
-      return ctx.reply(`🎰 *Slots*\n\n| ${a} | ${b} | ${c} |\n\n${result}`);
-    }
-    return games.fromCommand(ctx, 'slots', { defaultRounds: 3 });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11STY/TMBC991e8VqtNUkUpEgekrgqC3mCXItoL6lZa13XbQGIH22E3anNCCAHiQ2gP3DhwBnHk9+wfgJ/A2G1XhYufPX7zPDPPXEljsWC5MOhBi+dlqkUYJEnnfMmsYUXRKTJWBdFRo8E9d/jk5N7geEjscfDn6/vPQQyH77b4douvN3h56fDq+ycHt37/+nj18lswIbFczcpMJOKiUNq6t1cNQFIdXQQmU9YEMQU4s2KhdEVBX6MPslmeyoHMKGp1KWJ0OlB03FwYGMu0BfNdxRAvhK6malaRmMRTlUqkllRmwnCdFjZVktSH9CRyxpepFAlavoIWVCFIjyFT02mF0FaF8Aox7FJImCKVUbxl+1MLqaFaBGiO/JkPbUo2leTQpQy5vYh8r0A6R+jOCdMLM74xwXqNIIgSq47VudB9ZkQYodfr0USc0C6PxuKdKNwTPTjO7Z0t4xNml8k8U0qHfquZnKmcOO0dJcmEXNhlRC7sq41ZjGkMPnHOOumQWvsX/8vQwpSZJTrzRU5xeEiL23LcceZ/eIP7d/sPHg1GzQDdaxq1uaPRlu1nfPmBoQLPlBFNjM4VWWL5MnHZ7vYVHu5CGGkyfMFS2Qx2ZWlhSy3hRqpFkVXhGdXwE21nrmmfylO5xsGK1XAw3QAncDcHq0079Vm0kasbe5L+8yVzrfK+ynMaqfMtvv6pWNF3mjNKf6xKOTNd3ETtdeq4UR81/gK5h1JBZgMAAA==', 'base64')).toString('utf8'));

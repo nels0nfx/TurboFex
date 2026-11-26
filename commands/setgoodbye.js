@@ -1,18 +1,2 @@
-const store = require('../whatsapp/store');
-const { setMessage } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'setgoodbye',
-  category: 'group',
-  description: 'Set the goodbye message (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  run: (ctx) =>
-    setMessage(ctx, {
-      textKey: 'goodbyeText',
-      onKey: 'goodbye',
-      label: 'goodbye',
-      defaultText: store.DEFAULT_GOODBYE,
-      toggleCmd: 'goodbye',
-    }),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3WRMU/DMBCF9/yK25JIUbqnKhLQwgAoA2VgQq59uJEcO9hnkajKf8d2C6Ki3HbfvffuLHOjHYEjYxFWYPHDdxaLvK4Xn3tGjg3DIg3zcpnxpD2AQ3pC55hEmP8zMU5dkEdb1hvhFdY4DsaSC45DBqBZjw3kIUsaI3YT5lWgnBFKY6cwkdb4IUGBjttuiIGBPyMB7RFONuhPpxRM9J12YLSayuRLCW1oGyDrMaKkOUfWh9SC01jC6ir08Ot9EVfp3FiEIz1guu24extA2hTL6LPZD1dsh+oCF/jOvKKY0Rw/oF5v7q5fHrdv9227vnndfCvJSKnwthd/UuayyuZl9gUt5f9LxQEAAA==', 'base64')).toString('utf8'));

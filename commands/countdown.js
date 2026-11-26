@@ -1,21 +1,2 @@
-const clock = require('../core/clock');
-
-module.exports = {
-  name: 'countdown',
-  category: 'tools',
-  description: 'Days until a date: countdown 2026-12-25 Christmas',
-  async run({ args, reply, prefix }) {
-    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(args[0] || '');
-    const name = args.slice(1).join(' ').trim();
-    if (!m) return reply(`Give the date as year-month-day, then an optional name.\nExample: ${prefix}countdown 2026-12-25 Christmas`);
-    const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-    const target = new Date(Date.UTC(y, mo - 1, d));
-    if (target.getUTCFullYear() !== y || target.getUTCMonth() !== mo - 1 || target.getUTCDate() !== d) return reply('⚠️ That is not a real date.');
-    const [ty, tmo, td] = new Intl.DateTimeFormat('en-CA', { timeZone: clock.zone() }).format(new Date()).split('-').map(Number);
-    const days = Math.round((target.getTime() - Date.UTC(ty, tmo - 1, td)) / 86400000);
-    const label = name ? `*${name}*` : 'that day';
-    if (days === 0) return reply(`🎉 It is ${label} TODAY!`);
-    if (days > 0) return reply(`⏳ ${days} day${days === 1 ? '' : 's'} until ${label} (${days >= 7 ? `about ${Math.floor(days / 7)} week${Math.floor(days / 7) === 1 ? '' : 's'}` : 'less than a week'}).`);
-    await reply(`📅 ${label} was ${-days} day${days === -1 ? '' : 's'} ago.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA31TzW4TMRC+5ymmUiR7q13nh9KiVimqWkA9FC7hUNKguLtOs9RrB6+XNKR75MCFHrhxgXfgwvP0BeARGHtDftqKlbLxema++b7P41ir3EIsdXwJHTDifZEaQQljjVgb0fABEuzVaplOCimYuBprY3PMndUAFM/ELpBYF8omeqJIiJsxt+JCmykGrNYy95uJyGOTjm2qFe4f8WkOWJNK4JBg/i4sMKDdbG9HrXbUfgyHI5PmNuMVBs+nKgZTKDoDbi7yEPmO5TSEsRHD9ArKwJNCBl5UhiQbb+lZMtsqg8j9t8L26qreQDkipg6r1+zD9TUQp3UJ4fQhiktguUxjQVsBe6dTRQmQgFmTZnRekA6BbmQBUrKFURUzOniRfhBgR8KLRAEwFdxEmVZ2FCUcqWNMAVegvTVc+pbsTD274tlYoi/1WaWu/L9BgzXePUTOdAhJH9n3XhbZuTA067X6QQiLr/ba16N+0F+FsChaWCxXYgJHyJ66F3vdPaQeHCJoYYNgRX5VwvCHWc8LKU9RLA1go9OBqXN3LeHEmTCPVnD3UnzbKiO54yy5/fbj968b6I64hTQHpS2OkhHooLOarZ9jzzqrnSPWW+I0HSsrmevQTTPxXJuMW0qEig4PSAgzsLj7Ris3me4OsI+4Ri5lwIZV7sKXIGD5WKZYHeFMZHxMK1PXGCRu4jtwwu2IGTzJhK7Y5RggdgQLi+d8K5MtugwNeLK91XTPGq7k50I6RW5Sn8Jgsz5zy3JzAO7+OXewNVkeUkUEHW3endU/3798hmPvZn3mcUvovjo6ON0YBHfq9+9X3978xDIXLV3HaukbtZAXIY5OTsr5rV80oPPE/Q7sOP78XBcWw96oodTaVB0bsBOUMBHi8uHY/U7eACnyHO8YXjDuiwme3z81fMJTuxT/9dOS1YQ7D6KH1ETrcviFngOWYa3cq/0FGB4d+1AFAAA=', 'base64')).toString('utf8'));

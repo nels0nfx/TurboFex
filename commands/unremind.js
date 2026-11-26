@@ -1,15 +1,2 @@
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'unremind',
-  category: 'tools',
-  description: 'Remove one of your reminders: unremind 3',
-  async run({ jid, args, myIds, reply, prefix }) {
-    const id = parseInt(args[0], 10);
-    if (!Number.isInteger(id)) return reply(`Which one? See ${prefix}reminders for the numbers.\nExample: ${prefix}unremind 3`);
-    const item = store.reminders().find((r) => r.id === id && r.jid === jid && r.ids.some((i) => myIds.includes(i)));
-    if (!item) return reply('ℹ️ I could not find that reminder of yours in this chat.');
-    store.removeReminder(id);
-    await reply(`✅ Removed reminder #${id}.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11SQY7UMBC85xWNWG0cKfIu4rargROHuXBYDhwAaU3cmfEotkPbZica5QZnPsBD4Dv7Ab5Ax8lkEYcocXV3uao6jXchQoieEDZA+CUZQlFKefWwVzGovr/KxbK6LQrrdepQ4rH3FAP3nwoApyzeQJkcoTVOlzVjjYq48zQwHr3vQgY1hoZMH413jN+h9V8RvOOnhcEngpkAKdzAmQ1e5lEVBtcAJSdOcDC6BkW7UIMdtppfhH031NATtuYIY5VlsYhszWjW2SsKuHVRTHMfrj/V8OKaDU1dpgXx7G2yn5GkCdyDOyRhdFUxb0zkZnpx/35vmv2k9zW8Q4SL03zfuKqG1hPEPYLLbEF+dG+OyvYdx7N2Pxm7XwQsMiNaFpqzliulqGTLX0JQBZtXwArZzWYzmbq85ONhOR/OgNFBBm9RCJMnckLSuKZLHD+D1b+2p0v/s1k+fvv959cP2LKu1GlwPsIkgY2puG7ovLIAxnHFBGi4LMuFfHXBG75bRqZI56p6UCaeU338+R3mX0E/sT+/OBk9yjmhsS7G2+IvT1xKcagCAAA=', 'base64')).toString('utf8'));

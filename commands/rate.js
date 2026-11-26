@@ -1,9 +1,2 @@
-module.exports = {
-  name: 'rate',
-  category: 'fun',
-  description: 'Rate anything out of 100: rate my cooking',
-  async run({ rest, reply, prefix }) {
-    if (!rest) return reply(`What should I rate?\nExample: ${prefix}rate my cooking`);
-    await reply(`⭐ I rate *${rest.slice(0, 60)}* a solid *${Math.floor(Math.random() * 101)}/100*`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA12PPU7EMBCF+z3FQ1pp7SgK2YZiV4iKgoKGhoZircTZWDieyD8iUeQ7cBEuxUlwHGhorPGbN9+bGagNWlZyGsl6h3ssO8CIQZ5wsMLLQ5n+TSquZOekdcFkqZWusWr0ikxSX5IBwsy+V+YKCh7U4VjXJ6wMDDMaovfUy7PCzaaBDYYtsNL5Mr2jnkuMVnZqQuR5C0B1YDergyeHD9ZsRnZ57YWH6ynoFk854+HNPE5iGHVafL9soPgv/MLPGSs+hPJ/qO+vz18Eiv2yhlVOq0ayusRdzWMBAUdatWv7Wfi+6jSRZbm0wrQ0MI4iXXvk8TbdXGwxsdzF8+4Hybk7jl8BAAA=', 'base64')).toString('utf8'));

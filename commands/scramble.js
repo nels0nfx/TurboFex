@@ -1,9 +1,2 @@
-const games = require('../whatsapp/play');
-
-module.exports = {
-  name: 'scramble',
-  category: 'games',
-  adminOnly: true, // only admins start a game, everybody can join it
-  description: 'Unscramble the word. Players type join, first to type it wins (scramble 5 = 5 rounds)',
-  run: (ctx) => games.fromCommand(ctx, 'scramble', { defaultRounds: 5 }),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA02QMW7DMAxFd5+Cm23AsKcsCdKlB2hQoAdQLCZRYYkqRdUxgty9tIwWHfXJ//i/RgpJ4Go8JjgC41d2jE3d98N8M5JMjEOczFK3h6ryZPOEPd4jsazrjwogqHUPdRrZ+POEdafaaASvxIvqhVxEY70Lb2FSVThjB8MApM9tkCCJYQFTsnSA38jLmeyisACf5AI4UYpFveSiOApK/wi/d0FuCDOx7eGkeZETyBKxODu4ONaWQpvmBOb1YvNn3mmZHTDlYFNb0nJWfjPKvYXjy/Y//YXJv5L3Jth10v1vDQ+NdjF5kvdC2Svv2XbV81D9AKixVC1jAQAA', 'base64')).toString('utf8'));

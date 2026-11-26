@@ -1,18 +1,2 @@
-const reset = require('../whatsapp/settingsreset');
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'undo',
-  category: 'owner',
-  ownerOnly: true,
-  noAgain: true,
-  description: 'Stop a settings reset that is counting down, or bring back the settings from before the last reset (for 10 minutes)',
-  async run({ reply, prefix }) {
-    if (reset.cancelCountdown()) return; // the countdown says that it was stopped, in its own message
-    const snap = reset.undoable();
-    if (!snap) return reply(`ℹ️ *There is nothing to undo.*\n▸ _A settings reset can be undone for 10 minutes. ${prefix}resetsettings starts one._`);
-    reset.restore(snap);
-    reset.clearUndo();
-    return reply(`↩️ *Your old settings are back.*\n▸ The prefix is [ ${store.effectivePrefix() || 'none'} ] and the mode is ${String(store.getMode()).toUpperCase()} again.\n▸ \`${store.effectivePrefix()}settings\` shows them.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VSzY7TMBC+5ykGaaU4q8qFKxWH1Z4RSMseEEVb15mkFokdbIdu1c0NceXGO/AGu6+zL8ArMOM0LYu0l6b+Zsbz/Vg7GyJ4DBjhDX2/9sajyKWcbzcqBtV1cypFY+uQmvJikek0E6Lz+OwMF7k3a13ZNyjxtnM+BurfZwBWtfga8t6WLp/RWauItfM7wtzWok9g+vfONoRG3yND1l3UytgTUGLQ3nTROALzq+g6UDARPsiKRApMAO16yziUdPMMnIe15+Na6S/UhKe5yrsW1lixQC406uiRIBBevYTW2D5iKBJTFXZWg++t2FNb1+xm0HmszC0MRdILYCoQ6QapldXYXDIZJiKKgmZi7+0C5vO0Tk81CGoXDvwjbFVg07sOyxkYS1Bgj6DFEFSNac0hGqu6lAzvY5PVukFBaUxMXnDHtHekLFaP3x/+3P+E8w8bJN1kmHVxwwZFB3yJPF/ax1/3cHPxv8MkiexKTRbhqUMSzvajGUNqPo6GqPhB0IS8WR24jYzpl5+PSCT/LegGlb+mLeIIPxHw43cS8NH1HlxTnmgqEsQxTxJI4pQQ6fxEFNNGiVWFOppv+D4VRQF3d5Bb4pgP8BmULVNA9KaTQWf7q8hPSIzTNca3VKFEZXTXlJO/VIGOAyh+tXLcvVw9u22YCC9XEDZuy9ljK0d3hlk2LLK/6FBIjLADAAA=', 'base64')).toString('utf8'));

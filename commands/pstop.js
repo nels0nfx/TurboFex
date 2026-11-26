@@ -1,10 +1,2 @@
-const store = require('../whatsapp/store');
-const { removeFilter } = require('../whatsapp/filtercmd');
-
-module.exports = {
-  name: 'pstop',
-  category: 'autoreply',
-  description: 'Remove an auto-reply that applies to all private chats: pstop hello (owner only)',
-  ownerOnly: true,
-  run: (ctx) => removeFilter(ctx, store.getPrivateFilters(), () => store.saveNow()),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3WQvW7EIAzH9zyFt4CU5vacrmPHtuobIOLeIRFMwSQXne7da8jUoaP/H/xsLIXMkJkSwgUS/hSXUPXjeNpuhrOJ8dTMXp8727IPSS204pvzjAme/9W+m2+XuVa7hebiccR7pMRZOo8OIJgFJ+ijEGI/iGAN45XSLqIpFRv93owZs00usqMg3ldbAEyAmnppMWABg4C9wwxMYLyHmNwqT4KtS03QQHBD7wkUbUHWp+B33RBt/pBxAk4Fq5SK0JTlu4bL65+zqzgc3zZekT8PzuFlpQdQrXIEslnxnTal9dA9z90v423/wnMBAAA=', 'base64')).toString('utf8'));

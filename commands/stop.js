@@ -1,13 +1,2 @@
-const store = require('../whatsapp/store');
-const { removeFilter } = require('../whatsapp/filtercmd');
-
-module.exports = {
-  name: 'stop',
-  category: 'autoreply',
-  aliases: ['unfilter'],
-  description: 'Remove an auto-reply from this chat: stop hello (group admins in groups)',
-  async run(ctx) {
-    if (ctx.isGroup && !(ctx.isAdmin || ctx.isOwner)) return; // not allowed: stay silent
-    return removeFilter(ctx, store.getGroup(ctx.jid).filters, () => store.update(ctx.jid, () => {}));
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VRu27DMAzc/RXXJbYA195jpECXdizQteggyEyiQpZUPZoYif+9kpwMHTqSd8c7ksJoH+CDcYQdHH1H6aipu64/HXnw3Nq+gDUbKlG4l8SazA+9SBXIYflPti+4mMYsrSYzRkUdna1xwSfNpQI0n2iLOhnYuk214IEOxs2px2N2tWouAFeSe/JbfNRRr4PrzwyM5IWTNkijk+i9BAPXyPLHosfemQnhKD1EirbNu1ocSSmD5uBMtODjJLWH1Ci1Z6unn7WAi7oR4cxKXkDukctO+tci3WzwcGs85ym4XrGWbydNjrF0mxCdHtD30CakTZQ50Zhj8BleKtKhTF55f26bB7frb7oDheJYzL7kyLr1DL5Fw7B7utGiHdMN76Q7dllY+gGwtNUyVL/aKduQ8wEAAA==', 'base64')).toString('utf8'));

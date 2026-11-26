@@ -1,17 +1,2 @@
-// A fatal error that nobody caught ("uncaughtException") used to be only logged, and the bot kept running, maybe half broken.
-// One such error is survived (it is usually a one-off from a library). When it keeps happening (3 times in 10 minutes) the bot
-// is not healthy any more, so it restarts cleanly: everything is saved first, and the login is kept.
-const WINDOW_MS = 10 * 60 * 1000;
-const LIMIT = 3;
-const times = [];
-
-// records one crash; returns true when it is time to restart
-function record(now = Date.now()) {
-  times.push(now);
-  while (times.length && now - times[0] > WINDOW_MS) times.shift();
-  return times.length >= LIMIT;
-}
-
-const reset = () => { times.length = 0; };
-
-module.exports = { record, reset, WINDOW_MS, LIMIT };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1VRTWvcMBC9+1c8cgh2cbwOgR5qvFBIDwtNc2hhDyEU2TteiciS0cduTMh/76h2WHIRmpk3772Z2WzwHYMIQoOcsw5BigBjO3uY0Yt4lAH5VTTL98drT1NQ1lwViJ4OCBYdwRo9Q9vjkQ4lhOG0JHQ24IXRcNEYZY4lRjEzWAo9oHP2hUyVbTZ4NAQfe7nqK8+RO6kTs+cqpDj6KDQrCBaiGzsMGJwdOdSqc8LNRYW9JAOVBGnyLDFNlDSR3yGokTyUwW2NUZkYyBcfBpM+Cxi2KknoIFnEzBitoxLeJkZHPggXPHpNguf8BjqRm4NM9MmsSE4H5Xy4zM67YEGupgVUWW+ND9jvft0/7v8+/EabvHzB1/Tc1nXdrIifu4fdH67efSQW7y2enpsseXXUW3fwaQ/onfCy4VSIzngEFwnndQ2snFrTeVb/2cA3TJdbOXJjz0x8LwJV/M2LAm8ZFsFqil4mQNFw6iyVJuRLRZM5Bonra6T+mwX/VD9jexmvWFm8VEPI/3MsJvGJY9su8zbZe7aOy14psKu8QLvF22d8i7rBO+9htIeoqaLXyaa7tAxcZioXgvJipVxXym3/AJDKSp7pAgAA', 'base64')).toString('utf8'));

@@ -1,15 +1,2 @@
-const { restartBot } = require('../core/restart');
-const bootnote = require('../core/bootnote');
-const brand = require('../core/brand');
-
-module.exports = {
-  name: 'restart',
-  category: 'owner',
-  description: 'Restart the bot (owner only)',
-  ownerOnly: true,
-  async run({ reply, jid }) {
-    bootnote.write({ type: 'restart', chat: jid });
-    await reply(`🔄 Restarting ${brand.botName}... I will message you here when I am back.`);
-    restartBot();
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA22RTW6EMAyF95zCi0qAhDJ7UDfdddNKPcFkggVpIaaOEUWIXY/Qfa/YIzRkmP5Is/R7n51nx5DzAgswetEsdySwwm0oX0fLmKVKHQwxHnY/zavExJYTkTgSvAZfvD80a1dfRTdj45Ke6rFDhW8DsfjALgmA0z2WkF5eL4JktGBDPAeZJoccxRq9YTuIJRf0pzMO0mLIKZBFEMh1cx7xWD+GsgThETdJ+9kZ4NFl2zGGbi7g2daw5jEH/OyrJraCAZJ5+BcNTKul3Juq2KMnbeU8LTt+fX68w57MugZulri7CgEfwparUgruYbJdBz16rxuEmUZokRGmFl0wdQ8nbV7UcZ//+2lZVNYiWavkG2R0UgjTAQAA', 'base64')).toString('utf8'));

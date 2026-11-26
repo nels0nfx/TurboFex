@@ -1,16 +1,2 @@
-const { resolveTarget, num } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'pp',
-  category: 'tools',
-  description: 'Get someone\'s profile picture (tag them, reply, or type their number)',
-  async run({ sock, jid, msg, args, reply }) {
-    const target = resolveTarget(msg, args) || msg.key.participant || jid;
-    try {
-      const url = await sock.profilePictureUrl(target, 'image');
-      await sock.sendMessage(jid, { image: { url }, caption: `🖼️ @${num(target)}`, mentions: [target] }, { quoted: msg });
-    } catch (err) {
-      await reply('⚠️ No picture found. They may not have one, or they hide it.');
-    }
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA01RMW7dMAzdfQoOBWwDgrP/jwLdMrXokE5tgSg2YyuxJYWikhiOz9CtQ5f2GB16ml4gPUIp2fnIIkhP5ON7j62zgWEBwuDGe7zQ1CMrsHGCFd4KfBcNYVU2zdnDoDlo788imzGU9bEoJtfFERt89I44SP1SAFg94QFK70slr1Yz9o5mQdg56Utgh6El49k4K/g5MgQ3obP4pQzgyV2bEcGbliMhVKx74AEnJXL8OCtwBDx7TKChpPUKqc7EOsy2BYq2WoSyvVVwYzoFU+gViLWwU8BaZ6kiL/vnbDv7fRVDdWqr4ekpkTS3ODdeE5vWeG05wTLgmKmY5p30hTbSKJz6QRvOaprd2sfN2ScaK94DL82ke0yhbgSvmgLa7j2GIP9VdrNALj7IJU1YlYS8Z3n57+f3P8+/v8G7N4vkstPX66VkgDbVhAN83tCvqXOBu+gYu0OyJ7Fs89e0tnaAConqk6lNUw6wKv/++JXmfHCnPV27aLsGLgacYdIzWMcw6HsE2eu2s/QzmA7BcPNidZVzVcV6LP4DwSkM1osCAAA=', 'base64')).toString('utf8'));

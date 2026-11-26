@@ -1,18 +1,2 @@
-module.exports = {
-  name: 'qr',
-  category: 'tools',
-  slow: true,
-  description: 'Make a QR code: qr https://example.com',
-  async run({ sock, jid, msg, rest, reply, prefix, isOwner }) {
-    if (!rest) return reply(`Type the text or link.\nExample: ${prefix}qr https://example.com`);
-    if (rest.length > 500) return reply('⚠️ That is too long for a QR code (max 500 characters).');
-    let QR;
-    try {
-      QR = require('qrcode');
-    } catch (err) {
-      return reply(isOwner ? '⚠️ QR codes need the "qrcode" package, which is not installed on this server yet. Restart the bot with npm install enabled.' : '⚠️ This feature is not available on this server right now.');
-    }
-    const buffer = await QR.toBuffer(rest, { type: 'png', margin: 2, scale: 8, errorCorrectionLevel: 'M' });
-    await sock.sendMessage(jid, { image: buffer, caption: `🔳 QR code for:\n${rest.slice(0, 200)}` }, { quoted: msg });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21TzY7TMBi871MMq5WSSlG2WgkJZVWQQNxYIVZ73ENd52ti6tip7fRHVZ6BCycu8A5ceB5eAB6Bz0lbxIpDotiab2Y8njS27DTltGutCx4zHC4AIxoqkKxdkvFKikCVdXveCdZqP2x6bbcFgusorkry0qk2KGsYdSdWBIEP95C2ZKK1Qx1C64vra9qJpmU9aZuBRvi9kXCdSQ/wVq4yfFRlhsZXGRz5EN+t3mdoHS3VLoPy77eGHPrJ4BRQS6TPInTC0NA5M06k84d9Swg1P7QLsA5amVX+aN6OFgpcHUbS/v/+5pPbs0DkzzWZKtR4iefT6ROx5OeXb79+fMJDLQJbBOcEbU2FJeuek0DaiF2chqyFEzKQ85M8OepoCgwcv4PbH4+HODxjmXWnHKV8J5HpNNPHy5E1UnJucp74x9opsFc4mTy68TBE5ZDQ5ch6iVbIlagow7ZWTMsnMZYPZHwQWjPYGsbzrie3Yc49hRz3nI1wYSBaMHqrOCTTNqcxkBELHs4TFPgbFLMsSbBROsmIjVA6Qp/KOFXVgSHbc1b98JaWFbDolksGzSC2QsUI82BfD3vp2KADAleBtVtTJdwt4SrFNb3J4KWIRXiRgfOz7o11jmQs8TvakI5NTrhoo+TIHjuaezLlHXnPSaVDXQ9QDS+Ko5eMb+X4L8x/f/38/Xz/3Ibi0Vwdhjp5rSSl0ww3XKd+jj7yrDsbqCziD3BU7rOL/vbiD2s0n5mnAwAA', 'base64')).toString('utf8'));

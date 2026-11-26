@@ -1,7 +1,2 @@
-// Where the bot keeps its saved data. TURBOFEX_DATA can point somewhere else (the tests use a temporary folder).
-const path = require('path');
-
-const ROOT = path.join(__dirname, '..');
-const DATA = process.env.TURBOFEX_DATA ? path.resolve(process.env.TURBOFEX_DATA) : path.join(ROOT, 'data');
-
-module.exports = { ROOT, DATA };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3WPT0+EMBTE73yKuQGJ6d7dbMwa9UqyweiNVDoGVmixr6DG+N1twYMevL0/895vZrfDQ0dPhI54cgEv5CTog0D0QgOjg1ao70/X1d3tY3NzrI9otcXkehsgbuTbes9BiCJ9CZR4PcdWx3qcnNf+A89uMPSlylpnJWDSocMBnq9z71nkqc/LffazPlVVHddpqs6RVDSN6b3VIy+QK5WUm3D1E4XetRRRtIv66/Vqe+IpblhY/CsscfkLl/iRlMKvrkZn5oGK7zFNDHfAJzbJyvjaZ98Ca8GaSAEAAA==', 'base64')).toString('utf8'));

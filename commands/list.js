@@ -1,14 +1,2 @@
-const { smallcaps: sc } = require('../core/fonts');
-const { groupByCategory, mark } = require('../whatsapp/categories');
-
-module.exports = {
-  name: 'list',
-  category: 'general',
-  description: 'List every command with a short description',
-  async run({ reply, commandList, isOwner }) {
-    const text = groupByCategory(commandList, isOwner)
-      .map((s) => `┌─ *${s.meta.title}*\n${s.cmds.map((c) => `│ ${s.meta.symbol} ${sc(c.name)}${mark(c)}\n│    _${c.description}_`).join('\n')}\n└──────`)
-      .join('\n\n');
-    await reply(text);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA22QTW7CMBCF9znFLJDiVJHZg+ii3VbqBZDANVNw67/aTkMUWaq67pITcpLaCSBEa2Xjl++N3zxutA/Qg1dMSs6sn4HnEGEBDj8a4ZCUlE65cTh9NTr4spoX/OTZOtPYh+6RBdwa19WgmHv/4213LHhm7ZSPnMBhSKHMppFIcW+NCz6Z+gJAM4UzKKXwoazT/eTpkrZFjY7JQd6g507YIIxOf54SDfiJrgNulGJ6A60IO2Dgd2n2NT24me80B9do0qekVqbkJ1+eVIPwz216C2I1ZEophoUD7kOKebM1+c9aDTYAqpglxFewuIf18fBzPHzB3aT3VGFgNIggMd4tdVa42vgR52f8Gy6o79SLkTELnHCaa6ripM+FJz4udabTWU16Tq/2jat1Rd+M0KRc6nIEDynFzbe+BD6zmZ4PImuZCGNPJFcwyLEu4rz4BTaku889AgAA', 'base64')).toString('utf8'));

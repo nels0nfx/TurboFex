@@ -1,20 +1,2 @@
-const groups = require('./groups');
-
-// Understands: here | me (back to the default) | a number | a group id | a group number from !gjids | part of a group name
-// returns { jid } (null = default owner chat) or { error }
-async function parseDestination(sock, text, currentJid) {
-  const t = String(text || '').trim();
-  if (!t) return { error: 'empty' };
-  const low = t.toLowerCase();
-  if (low === 'here') return { jid: currentJid };
-  if (['me', 'reset', 'default', 'owner'].includes(low)) return { jid: null };
-  if (/@(g\.us|s\.whatsapp\.net|lid)$/.test(t)) return { jid: t };
-
-  const digits = t.replace(/\D/g, '');
-  if (/^\+?\d[\d\s-]{6,}$/.test(t) && digits.length >= 7 && digits.length <= 15) return { jid: `${digits}@s.whatsapp.net` };
-
-  const g = await groups.resolve(sock, t);
-  return g ? { jid: g.jid, name: g.name } : { error: 'not-found' };
-}
-
-module.exports = { parseDestination };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2WSTU/cMBCG7/kVg4RwVgRHPbSVlm5BKqeqt6onQoWJJ1mXxE7tcReUzX+v7f2EPdmZmTzzzuupjXYErTV+cLAAi3+9spgzXm5ibHadZWUJv7RE60ho6eawRIuwhh4hfxL1M5ABWiJIbITvaBZSArTvn9CmayKBkkcf22xjTQ9n7R8lXUgOwhKY5lAkeoy9LZK32sEIoRAmyLXvuiB22w/MSgdWvRShtbGhDK0N55QJ96praLyuSRkd+Q7v0JHSIgZyZ+rnAghfqIDaW4uavis5gzEDqJMxFNr8JKt0m8cyWK+BsRkPkT4PzgCoBvKz0Hejcdd7Dgz7gV4ZTNd7VmdWgUaczA+zQvtNODwwUnKxABa9ZUe8MPL8SNwGGP+4Zz2yAphFhxQvWzviNTnCHrjSdecluoifvYcmF/e48jZvK+7d2lV8Fax0YhgqrpHWXbDkvOQUjMvphEIRsZ9RqlaRS2NaHDpRY15Wd2VbRNv2rX5XlzeVvK9k5a4exk/FdMDDxcUWwjvULS3h6wI+n0a/LODDx/daHs/HTdV06/ZDxBke34hsgz6xEmq390GqM90/3O1DErolt3Czo7c8HEXayvgRz7CM86M314auGuO1TO8+ZVlvpO+Q48tgbLJlPFnCWPkf9mD7VoUDAAA=', 'base64')).toString('utf8'));

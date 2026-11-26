@@ -1,23 +1,2 @@
-const JOKES = [
-  'Why don\'t scientists trust atoms? Because they make up everything!',
-  'I told my computer I needed a break, and now it won\'t stop sending me vacation ads.',
-  'Why did the scarecrow win an award? He was outstanding in his field.',
-  'What do you call fake spaghetti? An impasta!',
-  'Why did the bike fall over? It was two-tired.',
-  'I only know 25 letters of the alphabet. I don\'t know y.',
-  'Why can\'t you give Elsa a balloon? Because she will let it go.',
-  'What did the ocean say to the beach? Nothing, it just waved.',
-  'Why do bees have sticky hair? Because they use honeycombs.',
-  'I used to hate facial hair, but then it grew on me.',
-  'What do you call a sleeping bull? A bulldozer.',
-  'Why did the math book look sad? It had too many problems.',
-];
-
-module.exports = {
-  name: 'joke',
-  category: 'fun',
-  description: 'Tell a random joke',
-  async run({ reply }) {
-    await reply(`😂 ${JOKES[Math.floor(Math.random() * JOKES.length)]}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VTTYsTQRC951e8BSGJxBwELy5LUFgwinpQ8LAubM10JdObnq6huyfjuOTir/DmX/QnWN1Z1/ULwqSp6Xrv1Xs1tfiY8PLtq/N3OMPFBJh+aEYY8R+nCbG27JONKSKFXi9Skjau8Jxr6iMjNTyipR2j78B7DmNqrN+eTBcZaI0kzqAdUUvb9YkD1vDMhg0IVWDaLUDewMsAmzDckibpENkbRULL2FNNyYoHmbg8IheJ1mR+1UiB66AQg9U7+hsomBVeMAaKkD7FREcwfd/YiI1lZ+6QKOm0GKVHTc5hk6eJHW0bTsmu8MzDth0pxsnf3JXVy5vcJjr8CutUONMgj5IN/JNkDfFuxC7P+fgJnCJzUGmbAkKua6jitFR3bn0vN8d7w9ZU6lnl1u4Z5y5S9lCpRfyvQKLiDVb1KEe2dCu/zXkrW2pWnyKNGtBxDqa6WeGNlPgWufM6xz3Qns19z0WvckSjdc3J1rtRzzb8sRH50IjnUXOv4p0JWjaZUaVk12pLrnQvUPUpd/oiOfCgfmny/4uIEB1zlxOteuc0o/Jv5DOHfyxIS6lBJbKDy49IpgTVUBYj+tqP6IJUjtui9fJ0MmnF9I6X/KmToMt/hhtF9dTyU0yvZceFRdeStxJGrW16X0qGYx1sl9dVq++5qA26ftLiro/i6GuE3s9uELjTzTjMCwHy7qoFpTi7+v7t6xc8uCkf58VrnWK50QnCrByPoLM5Hh6/3qVjv03N/PJwNT9VrMNicjid/ACS9z453wMAAA==', 'base64')).toString('utf8'));

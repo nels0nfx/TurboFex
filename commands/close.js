@@ -1,13 +1,2 @@
-module.exports = {
-  name: 'close',
-  category: 'group',
-  aliases: [],
-  description: 'Only admins can send messages (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  async run({ sock, jid, reply }) {
-    await sock.groupSettingUpdate(jid, 'announcement');
-    await reply('🔒 Group closed. Only admins can send messages.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA32QMU7EMBBF+5xiOidSlANkRUFFiQSiQhTGHkWGeMZ4bO1Gq1wC0XNFjoBtKJaGcv7898ffnm1eccJT4JgEruDcAZD2OIMyKwuqsQhGJ1w4bkVcIufQRL06LSgzPD7V0aKY6EJyTMV2S+sG2npHUmgCQbLgUUQvKND/bri4hhbWYis0Q4oZW371/JWeOV1X9Q7fsotoL8yykYGYqT+DsHkd4cXZESKG8o59aLWK66hdavupHbzHlBwtD8GWgn0jlCbiTAY9UlLD4YJrYb36+vx4h5uKQ/shO8G/baeflH3s9kP3Dfr47PZwAQAA', 'base64')).toString('utf8'));

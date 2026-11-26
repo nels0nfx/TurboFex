@@ -1,24 +1,2 @@
-const meta = require('../whatsapp/metadata');
-
-const OPTIONS = { off: 0, '24h': 86400, '7d': 604800, '90d': 7776000 };
-
-module.exports = {
-  name: 'disappear',
-  category: 'group',
-  description: 'Disappearing messages: off / 24h / 7d / 90d (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  async run({ sock, jid, args, reply, prefix }) {
-    const choice = (args[0] || '').toLowerCase();
-    if (!(choice in OPTIONS)) {
-      return reply(`Choose one: ${prefix}disappear off | 24h | 7d | 90d`);
-    }
-    try {
-      await sock.groupToggleEphemeral(jid, OPTIONS[choice]);
-      meta.invalidate(jid);
-      await reply(choice === 'off' ? '✅ Disappearing messages are now *OFF*.' : `✅ Messages will now disappear after *${choice}*.`);
-    } catch (err) {
-      await reply('⚠️ I could not change that. Make me a group admin and try again.');
-    }
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21TzWrbQBC++ymmEFjJCFkUY6cqpoe0gUBTF5pbCHiQxvI28q66u6pjbB1z7r300Mfo8+QF+gqdXdluCb0szM9+833fzhZaWQdrcggzMPSllYYikaajzQqdxaYZ+VqJDkX8ejAoQvv8483V/MMnvrEDvVzmkCUgXo5XIofzyTjz0bTkYJKNz0P0KvPhdDqdZFkGHQOtddnWlNJDo42zHmkAoHBNOYhS+sGERiScLNBRpc2WC5XRbROSJdnCyMZJrTj/9nhBqoq1WIsV2dxTgxEwLz6nJR9MAyIs11JZ0KrexgEroM45zMGZlnwq9DxL2a0qwLQq2oHVxX0Cn2WZAJrKJmxcU28TaAwt5QN0cVDD1INbxUrLglhi5JtvszvY70GIOHX6vd6QuUBLEZvrb8glRC+iww2pjk7HR0TgUa41qp8YLS5WWltiMezb2a6f3538Cw7sgwN778DeO7A4jOrC6cz2BI0blC6IS4MnN7qqanrXrGhNBusoCD4wuu053h3AIKxQKtVXrCVvC/nmU60H7ikf3ZjNQDA9AW9APP14hP++IdtLoPQGhvPLy2EqIIeFb74+1jeyrkPDX824dGRgeLbrJ3XD9KTY71KxgoiMiZ+p7smJp+8/f//6Blf8dG1dMrJ/PlQVgeP/kMI13hOzA+y3pl8UQFUGI7FCqVLxj8FdMuBt/wNjwDmjZQMAAA==', 'base64')).toString('utf8'));

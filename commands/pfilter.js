@@ -1,14 +1,2 @@
-const store = require('../whatsapp/store');
-const { addFilter, listText } = require('../whatsapp/filtercmd');
-
-module.exports = {
-  name: 'pfilter',
-  category: 'autoreply',
-  description: 'Auto-reply in ALL private chats: pfilter hello | Hi! (no text = show the list) (owner only)',
-  ownerOnly: true,
-  async run(ctx) {
-    const set = store.getPrivateFilters();
-    if (!ctx.rest) return ctx.reply(listText(set, 'Auto-replies for all private chats'));
-    return addFilter(ctx, set, () => store.saveNow());
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VRy07DMBC85yumpzhSSO+titQL4lABB37AcraNJdcO9qZpVPrv2E5AcODoncfOrJWzgRHYecIOnj4G7UmUTbMeO8lB9v06g2W1LVTm3iDb9kkbJl/D6MDvdGXc/1MfM1Od2+RQnF07GGro2jvPIWpuBWDlmTYo+5la1nGkJNPJ+SmO5ZD292bKQEtBed2zdjZi+4g9ZBDaYn84oPf6ErVQaf8Giyc6MsbhE896BWEdOGXeIXRuBHeUe1QQbrSR7KyZqrwtv1/jcwP2A6WRDJNV8IMViq9Vzh/jzlek7JniNifitznKfKogYv1E1UeIVZQ2ntJKTzx4i3kQe4jvi4roVv9qqCng6DykMX9LltXivFj9/E4KWCPbiAq7xyVZkBd6caOYZfe6uG+LLyJRRG0GAgAA', 'base64')).toString('utf8'));

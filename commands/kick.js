@@ -1,12 +1,2 @@
-const { changeMembers } = require('../whatsapp/actions');
-
-module.exports = {
-  name: 'kick',
-  category: 'group',
-  aliases: ['remove'],
-  description: 'Remove a member (tag them or reply to their message)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  run: (ctx) => changeMembers(ctx, 'remove', 'Removed'),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WQTWrDMBBG9z7F7GSDcfYJKfQApZBt6WIiDbKIZamjUZMQcvdIKqFkOW9+3ifpsCaBG+gZV0sf5I/ECe6wB6af7Jh6NU2b84ySMMYNanFlQw27rvPB5IUmusTAksrGrQNY0dMW1MnpkxpLrVHIBr4WZjnk2CAuDhOlLXwpJh9+SX1XbChpdrEayvihdQDBt1DQC1qQmTwELuHicgUJFTguIymhpaFdb57PdSlO4UxNaLxbX9ExyHulh79nmv8O56LvtVwG2L+9fkylIzxDj8+QRg1jd991D7g8B/RNAQAA', 'base64')).toString('utf8'));

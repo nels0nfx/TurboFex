@@ -1,19 +1,2 @@
-const store = require('../whatsapp/store');
-const { resolveTarget, num } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'ban',
-  category: 'owner',
-  description: 'Stop the bot from answering a person: ban @user (no name = show the list) (owner only)',
-  ownerOnly: true,
-  async run({ msg, args, reply, prefix, config }) {
-    const target = resolveTarget(msg, args);
-    if (!target) {
-      const list = store.getBanned();
-      return reply(`🚷 *Banned from the bot* (${list.length})\n${list.length ? list.map((n, i) => `${i + 1}. ${n}`).join('\n') : 'Nobody.'}\n\nTo ban: ${prefix}ban @person\nTo unban: ${prefix}unban @person`);
-    }
-    if (num(target) === config.ownerNumber) return reply('⚠️ I will not ban the owner.');
-    store.addBanned(target);
-    await reply(`🚷 @${num(target)} is now banned from using the bot.`, { mentions: [target] });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3WTzY7TMBDH732KP1KlOEvkFdeuCituXJYDe6NIdRs3NUrGwR9kq8jPwH0v8BbwPLwAPAK2ky70wNEz//n6zXivyTpYp43EGkZ+8spIVnB+PRyFs6Lvr7OzKG8W+6wdo8rq9rO8F6aRrgL5DuF/wd6p1qbgRadr30ouH3ptnI36cQGQ6OQKxU5QUcXnXjjZaHOKJj2QNNlYS7s3qndKU7S/c7qHO0rstMPB6A6C7CCNogYCvTQ2yWJC3HorDRjpXCUWtEc95NBWWVeC5RLQ1J7KXCi/38bnCs54mUzCnmgP44mN6GxTIc5sqzhq354q9EYe1EOFCOagGoQyzwRMoFzmk8H8w4s9pYlQklgdwJ5N2nP8OUPqM/WdFsCj/7UgkjWbAxETO29o6oZtf399/I6rSTORmTFdgS3HlIu3khp3DOWGLgx4lUvxTvSMUQVVYv0S2+Wo8BwvAsdypLAt+UetiBUbKkrETdzpna5PvAgb2tC9TsxXUTlBCXkD0zqy19OlP7/Piu08UngiEo+KnaGs1+sZMc8ruvPdTprycvzi5+O3Xz++4A0G1bageB2pQEKQg3gx15hoirqeac5VJqcYhHIXQG/j7H97CVA25h5S7ifM3qbjm2HzbRW/SCcp3atd4f0U+SFeRyoRqkW4WfwBsBuJ8HYDAAA=', 'base64')).toString('utf8'));

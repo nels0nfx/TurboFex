@@ -1,7 +1,2 @@
-// The emojis the bot uses to like statuses until the owner picks their own (statusemoji command). Duplicates are removed.
-const RAW = '💓,🔥,🤗,🫳,👀,🫶,🤝,🐒,🤌,🌝,😳,🙄,🙆‍♂️,😂,😅,🤣,🥲,😍,🤩,🥳,🌚,🌝,🌷,☑️,💞,💓,💗,💖,🗿,🔥,✨,🎉,🎊,🙈,⭐,😳,😭,💔,🤩😏,💀,☠️,🌈,🍸,✍️,🌼,🍀,😐,🍂,🙏,🔥,🦋,🥴,🥵,🥺,🐬,😎,🦄,🦅,😯,😇,💎,👀,🥰';
-const seg = new Intl.Segmenter('en', { granularity: 'grapheme' });
-// splits a text into single emojis (keeps joined emojis like 🙆‍♂️ whole)
-const split = (text) => [...seg.segment(String(text || ''))].map((s) => s.segment).filter((g) => /\p{Extended_Pictographic}/u.test(g));
-const DEFAULT_STATUS_EMOJIS = [...new Set(split(RAW))];
-module.exports = { DEFAULT_STATUS_EMOJIS, split };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21SbWvTUBT+3l9xviWBkHy3VCiswkRRTIcfVEpMju3dkpuQ3NjKVihD3dS22+pwragTtEPRofg6RPC/9A+4n+A5aSMIfrgP95z73Oc+59xj21BvIWAYrYoUFG1vRgqyFCmIIBBrCKlyVZ7IpBJBzonaEhOIhbeW3xEJZ0BfMFkLvCgMXekbFixlcSA8V5GCmyAkdH4bfavkRTJVcKV6FSqgnR6OHpunh/tTgtcHBO8+E+z1ePeNc88Jdke86xP0ORwzZXKX4f6sN5hNNn+f7HB+k+Eec18RTD9xOODwLYd8q/+0EOl/N2fjvfnF0Qtz4WPEFkZPCA5+zW3Nnr2hzfABw0N+ctucHe8WLsbHzN/P36AoF+uR8Mu5cH+bYHBCIoNF4icnuLoxawzY8WSnaMDRI/b5heErww+u/T2Th3zKFR9xeeMPDFv82LDo1vSjVl60NsUmtVZiG5alCiwHmyFKhYmuodRMWIdm4soscBOh7pwBjaK4hSFq0DXKJduGlP5N0aeBwo4CIWkgUiGbwd9x0dcQ4xRWIyHRL5L5zPzzJdBuRQEahStWJV86qxpQOQvXLMsir7zYoO6ohJ7Jz2FjAzTNMG5YoRvreprz04JpWLdEwAXpzfzAvh6v1zoKpY9+47LwVJTXJLyunVk0f4p4RtGdpdq56sqFesOpV+srTqN28dL5ZYd8sRvumYNKz73qNKLkoFwKIz8L0MJOHCXUlwp18L8i5qLGbrn0B8VVYzRfAwAA', 'base64')).toString('utf8'));

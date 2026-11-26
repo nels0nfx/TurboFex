@@ -1,15 +1,2 @@
-const meta = require('../whatsapp/metadata');
-
-module.exports = {
-  name: 'unlock',
-  category: 'group',
-  description: 'Let all members edit the group name, picture and description (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  async run({ sock, jid, reply }) {
-    await sock.groupSettingUpdate(jid, 'unlocked');
-    meta.invalidate(jid);
-    await reply('🔓 Group info is now unlocked. All members can edit it.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1VQS07DMBDd5xSzSyJF7r4Vi67YICEVcQDXHlKDMzb2mBJVPQXsuSJHwHZaqSz95n38nnIUGSZkCXcQ8D2ZgF0rxOp4kByl96ty05Jl22+aZnI6WRT46V3gmCWnBoDkhGtoE1mn3tohI0oyji7MGR2DS76CGqMKxrNxlPEHZJDW5uhpjyECasPAB4QqqJ4DeKM4BQRJ+lYOndSToQiO7NxX86p6zM81cEhYoMr5D+0dbwu6W4rqG3KcSUFI1J0g5hoDvBo95EW8neHc156ZdZT5l+UuauATMhsan30eCLuquMyAuuxVNGU/YehDWnNlXS6LW43o2t+f7y+4r90NvTgwEcgd4eomYHszlpK0DGZYLDnnoTlvmj9HfjwBzgEAAA==', 'base64')).toString('utf8'));

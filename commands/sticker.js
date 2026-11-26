@@ -1,17 +1,2 @@
-const media = require('../whatsapp/media');
-
-module.exports = {
-  name: 'sticker',
-  category: 'media',
-  slow: true,
-  needs: ['sharp'],
-  weight: 'medium',
-  aliases: ['s'],
-  description: 'Make a sticker from a picture, GIF or short video: reply to it with sticker',
-  async run(ctx) {
-    await media.handle(ctx, ['image', 'video', 'sticker'], 'Reply to a picture, GIF or short video with this command (or send one with the command as its caption).', async (found, buffer) => {
-      const webp = await media.toSticker(found.kind, buffer);
-      await ctx.sock.sendMessage(ctx.jid, { sticker: webp }, { quoted: ctx.msg });
-    });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA31RsXLCMAzd8xXaAnc5s4ejY3sdWNqxx2AchbjEdrDsBo7Lv1eOQ4+pk+Wn96QnSTlLAQw2WsIOPF6i9rgqhdiMnQwkh2EzJ8v1tiiMa2KPAq+D84GYfy8ArDRYQ0lBqzP6smJIyYAn528MZ3ECqXdjDcFHTD+L2FANXyV10g/lIWEj6lMXFlE0s0r2WhJmZmY1SMrrIWhnmbqXZwQJS3dovTP8HbQK0WMFb++v4DxQx4bhRzfoah5y6G8QHOgAow4dPFuXdLMKfLQrFa7reUAGR6mXJYlO2qbHlK3YkzbyhGUF5Vw7BY9iB44/Hp3+dZRNhE4TKGcM14dVYiAHzuIjjX9ZSWydyXJewlpw22x71bpomwqOsW3Rr2H3sgzAJ5nvPOJx4LM9zxPcZ3acxeKsnypsF3UW8MyCnDqLZG2PRDx7WoT41iy5P/ZY5zZTgi7RBWzqWWroBNNSMr9TVUzb4heV56dYgwIAAA==', 'base64')).toString('utf8'));

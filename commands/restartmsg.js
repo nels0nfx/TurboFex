@@ -1,16 +1,2 @@
-const store = require('../whatsapp/store');
-
-module.exports = {
-  name: 'restartmsg',
-  category: 'owner',
-  ownerOnly: true,
-  description: 'Message sent when the bot is back after a restart (short menu and links): restartmsg on / off. "Update complete" is always sent.',
-  async run({ args, reply, prefix }) {
-    const c = (args[0] || '').toLowerCase();
-    if (c !== 'on' && c !== 'off') {
-      return reply(`🔄 Restart message is *${store.getRestartMsg() ? 'ON' : 'OFF'}*.\nUse ${prefix}restartmsg on  or  ${prefix}restartmsg off\n\n(After an update you always get an "update complete" message.)`);
-    }
-    store.setRestartMsg(c === 'on');
-    return reply(`✅ Restart message is now *${c.toUpperCase()}*.`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA22RzWrbQBSF93qKUxMyUjBy1wmmlEJWTQ0Fr+pCJvKVLCLdmc4doQhHu/YNuiz03foEeYSOfkxxyUZI91zuOedTZlg8xBtHWMPRt6Z0FKs0XbUH7UVbuxpFldxEUW32TUUpPVnjvIT9YwSwrukaypF47XwthVqGaaY9FcZ1QTEtkxuH49uGqzD1rqFhtCfJXGl9aTis3pGILghC7NEeiOEPhAfjUQoedPYInXty0JjtEMshZEFN3EDzHlXJj5Jc418cGMYKJs9TLLZ2H3IhM7WtyNNiOKurVncyWqZjSi0dZ3ANx0doV8gyHLNVt4R1lJdP6JOxd+g4sssCh3jY+/L2K56foVSSevPRtOQ+aKE4gBuWyxxxhjfrdQDCCpeXOH3luTpdRLDyjePJMb5/+f3zOz7PVesZTsh8dXEc/0pakJ/lOyniBO+gNp8UAsrN7a3qr9Idb4VwcZyy9+dYYBxe1/J8xzuO30+0Gc0ErjPNiVdwHoRF8z/SOWaa3M/N+/E55ZWzvAHdzGNePW//59eP18qzaQcAWaC8tfZEOXSdDPtl1N9EfwHGJ2Z/2AIAAA==', 'base64')).toString('utf8'));

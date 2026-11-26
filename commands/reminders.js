@@ -1,14 +1,2 @@
-const store = require('../whatsapp/store');
-const clock = require('../core/clock');
-
-module.exports = {
-  name: 'reminders',
-  category: 'tools',
-  description: 'Show your reminders in this chat',
-  async run({ jid, myIds, reply, prefix }) {
-    const mine = store.reminders().filter((r) => r.jid === jid && r.ids.some((i) => myIds.includes(i)));
-    if (!mine.length) return reply(`⏰ You have no reminders here.\nAdd one: ${prefix}remind 10m call mom`);
-    const lines = mine.sort((a, b) => a.at - b.at).map((r) => `#${r.id}  ${clock.stamp(r.at)}  ${r.text.replace(/\s+/g, ' ').slice(0, 50)}`);
-    await reply(`⏰ *Your reminders* (${clock.zone()} time)\n\n${lines.join('\n')}\n\nRemove one: ${prefix}unremind <number>`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11RS27bMBDd+xRTxIjIVKWcRTdJHaDLbttVAC9MU2OLKT8qSdVWDZ2hV+mZepIOqThIuiLw+GbeZ5R3MUFMPiCsIeCPQQdklRDNsZMpyr5vymfF7xeqcJXx6vt/XEWMpnxk3sL6djAo8NT7kCJxzwsAJy3eQRXQatdiiFVNoJIJDz6M9JG8NzPYYlRB90l7R/i3zh9h9EOAl1HQDlKnIyjyWEZkHJ2CMDh2hifd1mDHL22saaQ3Yw19wL0+wcSLE5ItSWhbDl3yiZfljIu9NgkDY4HD+gGCoI2wXq/zZri+JkC3UURvkTFdKEVNaKfMQOYJ5FRDFtJ7YO+yjjDoDqnj5CgNwc3G2Pbv7z/w6Afo5E8E519F7JBMbdzntgXvqLjleQ4xzRS4XVlqzxiw3m6f1eZYhuRy6UU20gUYkzXsilEpZIIPsKOHCyv7S8bt1fKcY01AQuWQIiZpexYys6BBJDwlkY1LhazZxPfNoYYKKi6i0QStavi44tPFjTxKnV4HvXl8c8UbYBetXxSRkUzSFvnGbdzyXFKIJ68dqzau4lOGv6L1VNTbQgb3XMknN9gdhofZwFQvpvvFP2DR/YXgAgAA', 'base64')).toString('utf8'));

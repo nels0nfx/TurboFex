@@ -1,26 +1,2 @@
-// Understands "10m", "2h", "1h30m", "1d", "45s" and clock times like "18:30"
-const clock = require('./clock');
-
-const MIN_MS = 30 * 1000;
-const MAX_MS = 30 * 24 * 3600 * 1000;
-
-// returns the moment (ms since 1970) or null
-function parseWhen(token, now = Date.now()) {
-  const t = String(token || '').trim().toLowerCase();
-
-  const hhmm = clock.parseHHMM(t);
-  if (hhmm) {
-    const cur = clock.parts(new Date(now)).hhmm;
-    const toMin = (s) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3));
-    let diff = toMin(hhmm) - toMin(cur);
-    if (diff <= 0) diff += 1440; // that time already passed today: tomorrow
-    return Math.floor(now / 60000) * 60000 + diff * 60000;
-  }
-
-  const m = /^(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(t);
-  if (!m || !t) return null;
-  const ms = ((+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0)) * 1000;
-  return ms >= MIN_MS && ms <= MAX_MS ? now + ms : null;
-}
-
-module.exports = { parseWhen };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11TbW+bMBD+zq+4RlNjNxmYwLIuLI2m7UMnjX6ppk3amxg4AxXbrW2UVW3/+84GSjR/MPfy3N1z5yOK4LOsuDa2kJWBWczEbAmzVe3uuE56Na7cnb4yM0AYlK0qb8A2ghtomxuOgPNNwmZBqaSxg3sLmt91jeZkHkbeNKdZMEDyj1e/8mvEJAzOIGaMZaPn3dcjzyrFK1mzCRVEESa2nZYGbM1BKMGlBSIMmEaWHOI3rxkFpUF2bRvsO1naRkm4LbThX2ouiVU3XC5BqgNW+VBYHqJIKIWHAKAnYdFzbXUj//RoeHyE+ZyGaBIEP+qTOnD9vjCcuJ7GsLoWAiN9s6EveHmZ58QiBqDZA3GAvs4YUnb6OMIaIvnBsyLIitLQhWRHAVbljcQQYihsL+CqE7+5JiY0bVNywpawwk7OYM1g8b8zobTP1HILVbPfYxqfbuD1ctCQ0wB0nD3w7RZwqF5cbCFOU5YBPoStC+v3AIpW86K6xzEbwytMVBX3G/wIpbU6+GT9q0Fe2Drct0pp1yFESBVPzxkP0vZlBtXxeJom7MYb/SS7DfleLWhFd6NYT6KYREN3L6KQ/+Xl0SOcCPecJ5aOjNyiZFMJ46ZLFuJb/MMBPbXzdeqpOfNqMvvN7K3JZF2PtnSw0eftfZ4CVrnYjr/B6anTccbD8u/8ci6ccTOwwxkIVXUtx25uFe4JknyYlhqesuAfHPdRoMsDAAA=', 'base64')).toString('utf8'));

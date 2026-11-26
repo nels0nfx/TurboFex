@@ -1,12 +1,2 @@
-module.exports = {
-  name: 'setbio',
-  category: 'owner',
-  description: 'Change the bot\'s WhatsApp About text (owner only)',
-  ownerOnly: true,
-  async run({ sock, rest, reply, prefix }) {
-    if (!rest) return reply(`Type the new text.\nExample: ${prefix}setbio Powered by TurboFex`);
-    if (rest.length > 139) return reply('⚠️ That is too long. WhatsApp allows up to 139 characters.');
-    await sock.updateProfileStatus(rest);
-    await reply('✅ About text updated.');
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11QzUrEMBC+71OMILSFUhBPrigsolcXXPCyh03b2TaYzYRkQluWHj17Fw8+hs/jC/gKpu36ewnMl2++n9lR6RVm2Bqy7OAC9jMALXY4h8gh55KiNCCFYKzIdgGlRqMdwRJdYaVhSTrgV7XQFQLXCDnxOnJwXwt2C2NgkZNnYGwZ4nEdSKsuGUXG+TaMc2DrcYCE63QB1ut4D46KhxQsOh5eo7oUjMWtbKFPxqwAcgvx0cBIAoO91RMx3qw6M+XR2Izu2Vpft2JnVGh3vJ90+qklLKlBiyXkHay8zekG201y/m0w6GcKdcU1XMLJ6dk/s+j9+fXj7QlWoTNIB0wEinSV/VxBKEWNA2/C56AARS2sKBity6KDlWiE5LF05k0Zjr60tJUK71iwd2OKP8wv85fH30eeVsuDap/O+vPZJy3wUbfpAQAA', 'base64')).toString('utf8'));

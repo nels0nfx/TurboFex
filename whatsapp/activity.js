@@ -1,24 +1,2 @@
-// Counts messages per member in each group (used by !msgs and !inactive)
-const { num } = require('./utils');
-const jsonstore = require('../core/jsonstore');
-
-// message counts per member (data/activity.json). Safe store: atomic writes, backup copy, written again on stop or restart.
-const js = jsonstore.open('activity', {}, { delay: 1000 });
-const db = js.data;
-
-function saveNow() {
-  js.flush();
-}
-
-function count(group, sender) {
-  if (!sender) return;
-  const g = db[group] || (db[group] = {});
-  const k = num(sender);
-  g[k] = (g[k] || 0) + 1;
-  js.touch();
-}
-
-const get = (group) => db[group] || {};
-const total = (group) => Object.values(get(group)).reduce((a, b) => a + b, 0);
-
-module.exports = { count, get, total, saveNow };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1WRMXOjMBCFe/+KdWUxxwinjcdp0ueKKzNXCGlNiEHipJUTD+G/ZyUMFxeMhtV7+75dVRU8u2gpQI8hqAYDDOj5p6/5aC2g0m/QeBcHEDGggfoK2z40AZQ1sG2t0tResNhoZwPBCDb2MMERPP6LrUexk1Wktgu74nDTvId0OI93KllpLlXrZdJvqmrhAj1j/qATRpGqcn5LV5mchYQ/6oSQOzyCIte3Gj58SxhKqJU+8xzaDdcyFwktqEbxmM4mzwDOM1Ig5UmutIy5Ukk3oBW7JXRXwjjxBwY7dX2Eh/1+D9M6qamzVyZQnuYULftSlLrgi/sQBYwbSIJTF8ObYN/0Q5UnFnn3JQS0Bv1saE8gtkvBI0VvD1yeMxuONPVrtv2Fry9e0/p3ZNriv/TMBX4ucWuVLprXc5KJfLJ5X8AveDjMlOSiXihvYUhZndoXcHy6Tx6nZRHkSHX3yt/1O2qSF9VFDIIb3e4K6dFEjUIofrEsVcxQl8zCO+ydiR1K/Bycp/Q047ynMrGUc1C5LBgY4Bu/U62V4gIAAA==', 'base64')).toString('utf8'));

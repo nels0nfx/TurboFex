@@ -1,27 +1,2 @@
-// When the bot reconnects, WhatsApp may re-deliver messages that arrived while it was offline.
-// For a short time after connecting, messages older than 2 minutes are ignored.
-const WINDOW_MS = 20000;
-const STALE_SECONDS = 120;
-let until = 0;
-
-function open() {
-  until = Date.now() + WINDOW_MS;
-}
-
-// true during the first seconds after connecting
-const inWindow = () => Date.now() < until;
-
-function timestampOf(msg) {
-  const t = msg.messageTimestamp;
-  if (t == null) return 0;
-  if (typeof t === 'object') return Number(t.low ?? (t.toNumber ? t.toNumber() : 0)) || 0;
-  return Number(t) || 0;
-}
-
-function isReplay(msg) {
-  if (Date.now() >= until) return false;
-  const ts = timestampOf(msg);
-  return ts > 0 && Date.now() / 1000 - ts > STALE_SECONDS;
-}
-
-module.exports = { open, isReplay, inWindow, timestampOf };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2VS0W7aQBB891fMUwIqsQmPJYCikEqVWpBKJB6jI17DRec7625dihL+vWvs2G56b7ezNzM7t0mC7YEs+EDYOYanF2ctvXAYCaA43BcFcnUS4CYlo3+TR04hqD0FeaQYynuppjgetCFoxlEFuCwz2lIcJQm+OQ+FcHCewTonqIyFpdHRdj/qGJ1JBRJeiwlybUuWovLCu7fOUxpH8iwwtt9Xy/X2+ecGM0zGcqYNsHm6//H4vHl8WK+WFXg7EcgQo7SsjRTkGmWlFWFn4QqygyHeIrT4UjHF1h2l/KWTmUbnqJqFfUlISy+uL5Fl2otoqEJLw3+DNZ603WqbuqOwC+ts3te4q4X7pqqMAqu8WGeDPOxrezUTC4WU4iavp4/OqXToDAPBZ7ClMUP5Ly69rcZtoFNBLqsYpOXa7V7F4nXbtirzHfkBx0ZsLhbSHrOri1igu4jjrxgPh3h/r6k/vf8Azr15dPhFhVGnbpjKTy+D+awOoXWTKRNo2k0dZOzPqfTEBZ9jjKurfrAJbmUtcFOj/6zFxV7u0tJQTH8K2ctK4O2yDaPW7qj9t1FfHOdp9Be+FPkZNQMAAA==', 'base64')).toString('utf8'));

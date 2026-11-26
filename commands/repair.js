@@ -1,17 +1,2 @@
-const config = require('../config');
-const repair = require('../core/repair');
-const { restartBot } = require('../core/restart');
-const bootnote = require('../core/bootnote');
-
-module.exports = {
-  name: 'repair',
-  category: 'owner',
-  description: 'Fix "Bad MAC" decryption errors: clears old chat sessions and restarts (you stay logged in) (owner only)',
-  ownerOnly: true,
-  async run({ reply, jid }) {
-    const n = repair.clearSessions(config.sessionDir);
-    bootnote.write({ type: 'repair', chat: jid });
-    await reply(`🛠️ Cleared ${n} old chat session files. Restarting now. You stay logged in.\n\nTip: make sure this WhatsApp number is linked to only ONE running bot. Two copies fight each other and cause "Bad MAC".`);
-    restartBot();
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA22STWrcQBCF9zrFwxhGA0N7L5OF7cS7xJAYQsAL97TKUseaKqW7hSwGnSEHyCI5Rm6VHCGtloYJjHfqV6/+vpIR9gFG+MlWeANH3zrrKF8pdTGLq/VlZpLJUautOzE5upgjR+c+WnzQLlxLwPh6RoofU7YigSXQa+ZDbHJnOym7hhS9tOKCj/Z9BrDeUYHVMscmKkYHqsQNUZWeaRZL8sbZNljhqN/aF5xd6xLvr27OYsy4IYVAzonzBUxD2nlIU8LUOsCT9zHuobk8bOiRD9Ihfg9opKqohOU18tQUws2wTq3T+y4+CwTX0SRpP7CB6zifeLXNsMFXW2Jcp5WAGQwnItNeKs3zaRkin8+jlqHeWhfpTGkHWqp3NlCsHYb2fzhpl2JpNafoXtswz5A//v3549ef399xM3WL65zveTxhgCfbkFf4OFOwXIGlV/hywkI98APf27bATj8TfOcIobYen2M5f9W24G63jayi1Fh+jklBEjjcfXg34eGp+laCwn0vkUprycf+VR1A2tSQUMf06SZGd56ON1WPy37HvzFPyrjJxsvsH2i3Dyr7AgAA', 'base64')).toString('utf8'));

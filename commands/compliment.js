@@ -1,20 +1,2 @@
-const { getTargets, num } = require('../whatsapp/utils');
-
-const LINES = [
-  'you light up every chat you walk into.', 'you have a great sense of humour.', 'your kindness really makes a difference.',
-  'you are more talented than you realise.', 'you make hard things look easy.', 'your energy is contagious in the best way.',
-  'you are a great friend to have around.', 'you always know how to make people smile.', 'your ideas are brilliant.',
-  'you are stronger than you think.', 'you bring out the best in people.', 'you have a heart of gold.',
-  'the world is better with you in it.', 'you are doing an amazing job.', 'you have excellent taste.',
-];
-
-module.exports = {
-  name: 'compliment',
-  category: 'fun',
-  description: 'Send a nice compliment: compliment @friend',
-  async run({ msg, reply }) {
-    const target = getTargets(msg)[0];
-    const line = LINES[Math.floor(Math.random() * LINES.length)];
-    await reply(target ? `💐 @${num(target)}, ${line}` : `💐 Just so you know, ${line}`, { mentions: target ? [target] : [] });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11TQW7bMBC8+xV7CGC7MJyeHRTNpYcWbS/pzQiQtbSWWFNclVxGUQ3/oegH+sU+oUtKtlIfLBD0zM4Md7dgFwSOUJF8Q6/fsAIXGzjBO/D0IxpPi/l6fdvVKAHb9jaKsWG+vJvNikz9/PHrhwcFb2cA854jWFPVArEFeibfQ6FESPcd2gMYJ7yerwZkjc8ECJUnhQRygYD3UMeGoz+DPByMKx2FoHbQ2h4aPFBQWmn2e/LkClLsWRw9QcP6EbTkhEqQGl3WT3QT6KKe6qgFnyDGVQEs8wEIQz9pkyNf9WACaFjBynAMmkEZBDvS9B32V+rnPHtvyGltHmN6jq68iKNVZoCD4w5q/Sks+2mJW0sQGmNpsmFKtZWr77yx1qCTK9Ugnl1FfoqbQh0uespzFXCUybrGGNSu+1ETekmdqNiWo05idextmd5iRyIq1Rmps5RWMjJFUzslJzl1gg3+TMfvvPtfhl4KsqlF2qkguYWPOlMNl1Ed0UvLXoKO1VHVHTa0gXnBTWtNo5zsqUChin2v/+yjy1clhcKbVgw7vX1I74/gTEEwcTevznA/dCmTtfGuAB/d4ghNqFY6MK2O22mZPQAM4y55SdTYtDALRS+3b9X+BLPGkYLycmy/oNTrvY6XX+SjR1dys1jCmwGw1neopF6OFbBDI4P6YpR7D09///z+Bfc3R13O8XZ5WsHNMSmdnmAzIj5FVQ+c+5Kma4KsdMtTaH2csIFL4e1wetQK20dNmzycVrPT3ewfR83+UxsEAAA=', 'base64')).toString('utf8'));

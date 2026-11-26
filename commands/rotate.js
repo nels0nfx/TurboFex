@@ -1,17 +1,2 @@
-const media = require('../whatsapp/media');
-
-module.exports = {
-  name: 'rotate',
-  category: 'effect',
-  slow: true,
-  description: 'Turn a picture: reply to it with rotate 90 (90, 180, 270 or -90)',
-  async run(ctx) {
-    const deg = ctx.args[0] ? parseInt(ctx.args[0], 10) : 90;
-    if (![90, 180, 270, -90].includes(deg)) return ctx.reply(`Choose 90, 180, 270 or -90.\nExample: ${ctx.prefix}rotate 90 (reply to a picture)`);
-    await media.handle(ctx, ['image'], `Reply to a picture with ${ctx.prefix}rotate 90`, async (found, buffer) => {
-      const sharp = media.loadSharp();
-      const out = await sharp(buffer).rotate(deg).jpeg({ quality: 90 }).toBuffer();
-      await ctx.sock.sendMessage(ctx.jid, { image: out, caption: `🔄 Rotated ${deg}°` }, { quoted: ctx.msg });
-    });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21SS47UMBDd5xSFhBRbCp7ABjqtAQnEggWbgV0zUkziJB4S2+2Pulut7DgCe67AGTgRR6DsZIaWhk0+L1Xv5zRaOQ+TaCWHa7BiH6QVJGfs6jBw77gxV+ljTrdZNuk2jIKJo9HWO5w/ZwCKT6KC3GrPvcgLRBp86LU9ISq6TjQ+oW7Uhwq8DSK+tcI1VhovtcKxz8Eq4GBk44NFNivMeAKvQXo4SD/Awg6bEsimLOD5K7y8eFmCtvBsU9IkwN1JNWCDIo0/0uQNvaR8rejRLcKM297tylt4A4ZbJz4oTy5gZC4pVKizTduyA/Jkd6lYRL1bJlUzBsxAkJlS9OtjgsiUrJP63aC1i4YfmWVf1Psjn8yIOZ+e44qxopPH+SLjQ/6HTmhNF0v8wOV6YGzgqh1FDFDALpcT70WOGeqbR+tLi/+Xq4u1OtLpoNoCvgY8NUvh+vVa4n2NbuDWYJGL+qh5+ykiZLV2P6aDx6HFaFohKyNbNFNp7M6InpxhH/go/Sl2DjNlXr9Ns/84F55o3OnmG3NCtR+Fc5g1ndydRMdnSOGrKF3g/7f+V/Wfnz++w00SbTE96s6/f9Uwx4190IhWiXlyPYovist9LrJ5m/0FqG7RIR4DAAA=', 'base64')).toString('utf8'));

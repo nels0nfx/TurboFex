@@ -1,13 +1,2 @@
-module.exports = {
-  name: 'random',
-  category: 'tools',
-  aliases: ['rand'],
-  description: 'Pick a random number: random 100, or random 5 20',
-  async run({ args, reply, prefix }) {
-    const nums = args.map((a) => parseInt(a, 10)).filter((n) => Number.isInteger(n));
-    let [min, max] = nums.length >= 2 ? nums : [1, nums[0] || 100];
-    if (min > max) [min, max] = [max, min];
-    if (Math.abs(max) > 1e9 || Math.abs(min) > 1e9) return reply('⚠️ Please use numbers below 1,000,000,000.');
-    await reply(`🎲 Between ${min} and ${max}: *${min + Math.floor(Math.random() * (max - min + 1))}*\n(${prefix}random 5 20 sets your own range)`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1VSS27bMBTc+xSzCCDSUQUpQBdxYBforosW2bsGQtvPChGKFEgKtuHoCu2+m/YMXfU8vUB7hPDjIMmCIN9oMG/eG3VmOyiq6NAb6x3mOE0ALTqaobBCb01XlAHZCE+tsceAemOUS6BQUjhyMywTtVhFcEtuY2XvpdGBfCs3DxDIStBDtyY7ey6bui5h7HP5Hld11nVHvYEdNDtB2NaVsNSrY4ne0k4eMPLkMrgy2vmoGo1HZtWJnjHBMV+gF9bRJ+2ZKEMnzqudVJ4sYzp9/pK8VNIFCrUB15zfJFVFHstO6hKdOKyCcmxQKdKtv8dijit8yD3D4E2Znst6hcfHONAqa8gdWJDAImrwt3LLcIdC6lfcz8LfV2LtWKIv0NB1FHyBpT7DPCzDD1bnnbDi749f//58x62ikAWGcPKWHdakzB5NWYc1n09VnGcUeyH9WeLu/89vv/GR/J5I4+IUeo0IkcSnOIwzTBOGy2xnp4yx2XAOjnFMEY3jHTKv4XycftXs4pQTG18lDEfhPzuawcLsdcy+JX6XbI3lZLyZPAGRnqMFkgIAAA==', 'base64')).toString('utf8'));

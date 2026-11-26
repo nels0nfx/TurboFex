@@ -1,26 +1,2 @@
-const { num } = require('../whatsapp/utils');
-
-module.exports = {
-  name: 'requests',
-  category: 'group',
-  description: 'See join requests, or: requests approve / requests reject (admins only)',
-  groupOnly: true,
-  adminOnly: true,
-  botAdminRequired: true,
-  async run({ sock, jid, args, reply, prefix }) {
-    const list = (await sock.groupRequestParticipantsList(jid)) || [];
-    if (!list.length) return reply('✅ No pending join requests.');
-
-    const action = (args[0] || '').toLowerCase();
-    if (action === 'approve' || action === 'reject') {
-      await sock.groupRequestParticipantsUpdate(jid, list.map((r) => r.jid), action);
-      return reply(`✅ ${action === 'approve' ? 'Approved' : 'Rejected'} ${list.length} request(s).`);
-    }
-
-    const lines = list.map((r, i) => `${i + 1}. @${num(r.jid)}`).join('\n');
-    return reply(
-      `📥 *Join requests* (${list.length})\n\n${lines}\n\n${prefix}requests approve\n${prefix}requests reject`,
-      { mentions: list.map((r) => r.jid) }
-    );
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA4VTzY7TMBC+5ykGqZLtJXLh2qrAihtaASritF0pJvF2XRI72A67VdZHnoArEidejCfgERg7KW3QIi5R/GVmvp9xSqOdhx5010CAFVj5qVNWUsL5/PZGeCfadt55VTvCllnWmKqrJZd3rbHeYX2fAWjRyAWQ2CqddyRHrBRebo3dI761pmsTWElXWtV6ZTTi76SEnVEaDo05GLv4cwJktuazhPkRsnInSw9UVI3SDoyu9yxNThxv8LgAbzsZoVQzhT4Yfx7R9WCyOil2e12C7TTtwZnyYw47VeUg7BZVWdnW+xxaK6/VHQSWTKPFFF2t8LFCSbdC+dTLk5j1oPmtsF6VqhXauwsspTiXMbi/h8urZRqjroE+ilN4LfXW3zDk853VAy0lP799gdcGWqkrpbfTxHhaylGMKGO2SQ4qv3xyFYkIYdybC3Mr7UvhJGVH3kP9agVkjJvEllN8yJwcXGNW/3f6vq1w/zRlmKw1oqXUMlg9A8tjBPnIMYqBqekimp71D8p7DuR8eK8I4DVaJ314CNhxkmM4pEQd48XIE7LJ6rSMd/hEYQ4qiSxmvYLH8DRweDHr8eegg+xQMB43QMlGk3HmRPnopvj1/esPOHt1uqwzoFOBbKM3OkIoIwzvwx0Lf/8DD30a9lLkI2MPjdQxLrf4R+RoPhYm1SHPwjL7DfC+FKv9AwAA', 'base64')).toString('utf8'));

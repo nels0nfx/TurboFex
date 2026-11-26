@@ -1,19 +1,2 @@
-const QUESTIONS = [
-  ['be able to fly', 'be able to turn invisible'], ['never use social media again', 'never watch another movie'],
-  ['have unlimited money', 'have unlimited free time'], ['live without music', 'live without TV'],
-  ['always be 10 minutes late', 'always be 20 minutes early'], ['be the funniest person in the room', 'be the smartest person in the room'],
-  ['have a personal chef', 'have a personal driver'], ['explore space', 'explore the deep ocean'],
-  ['speak every language', 'play every instrument'], ['live by the beach', 'live in the mountains'],
-  ['never eat pizza again', 'never eat chocolate again'], ['have no homework or work for a year', 'get paid double for a year'],
-  ['be famous', 'be rich but unknown'], ['only be able to whisper', 'only be able to shout'],
-];
-
-module.exports = {
-  name: 'wyr',
-  category: 'fun',
-  description: 'Would you rather... get a random either/or question',
-  async run({ reply }) {
-    const [a, b] = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
-    await reply(`🤷 *Would you rather...*\n\n🅰️ ${a}\nor\n🅱️ ${b}?\n\nReply A or B!`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA3VTS24TQRDd+xSFhGQ7ssxnSYQQSCxYAIIEWDiWUjNT42mlu2voj4dJ5CVrjpANB4AV3Iocger2ODEBVjP9qqtevVfVJVsf4M2750fHL16/OoLHsBgBLMYFARaaIDDUuh/PYB8J0VlQdq28EmS8nEmCpTU5iJ7Ac6lQg6FKIeAKlU3p23iHoWwALYdGTobXKqVnxgbXBNFqZVSgSmKWMu8tvHYkPSgz0Gol0U6FhmMAE70qU84f6PH7HQXqDnsPouTBfTDKxkAeNAZKOTfBhzdBQifqM5MEpGmoo7WKxLOWnOdkQ4YdsxlcSkdv0IX/3NrXi8MF8atsqL7Wu4dXTsS4bQ/0qdXspHyLZW56B6TiFVELXBLaHYVvCc8gGd+LTLuKuMpZrcZ+gJWM30VDNuz5WfS5YEFYNtd2DhIMRxtkpn5Hsh0soWhV5+d/TTwFyoZLTj4PwcyUdVqGhg117M6AZT3St5YfhF6sT1VWJIVRVVBxTOu3Fx0aEMtrlLb84L9TsmKFDD7aM8vdQMdW97C3w12jxJ5McTvk09qk6svD0chwFTXNxWh2wcv7uBBSi4YewbjrJV+OpUhbsesFkvXIUEW+dKoNiq2gHzjqCnqO4DBt/nw+hyQM5WwrNkAqwfdE28coayNZuQr63pbgop1cgKNW2txMcwPCmR/uAmdQLKWr6xe8eCkM81ozu0n+3TJMpnBwc2muya5CMxWBqRZ2qMKWYHJ6dfn1Bxz8o+ODE3tiry4/f/v18wvcvcDNiWWXke9bpNg8SVfe5kafpnk+u3M6TRSb2WhzOPoNt3Dd2WwEAAA=', 'base64')).toString('utf8'));

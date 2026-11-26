@@ -1,20 +1,2 @@
-const TRUTHS = [
-  "What is the most embarrassing thing you've ever done?", 'What is a secret talent nobody here knows about?',
-  'Who was your first crush?', "What's the silliest thing you're afraid of?", 'What is the worst gift you have ever received?',
-  'What is your most-used emoji, and why?', "What's a lie you told that got out of hand?", 'What is the weirdest food you like?',
-  'Which song do you secretly love but never admit to?', 'What would you do with a million rand/dollars tomorrow?',
-  'What is the longest you have gone without a shower?', 'What is your biggest pet peeve?',
-  'Who in this group would you trust with your phone for an hour?', "What's the last thing you searched online?",
-  'What is one thing you wish you could change about yourself?', "What's your most useless skill?",
-  'If you could swap lives with anyone here for a day, who?', 'What is the most childish thing you still do?',
-  'What was your worst haircut?', 'What is the nicest thing someone did for you?',
-];
-
-module.exports = {
-  name: 'truth',
-  category: 'fun',
-  description: 'Get a random truth question for a party game',
-  async run({ reply }) {
-    await reply(`🫣 *Truth*\n${TRUTHS[Math.floor(Math.random() * TRUTHS.length)]}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA2VUwW4TMRC95ytGFVKSKpQ7FeqxcOACRRxKpTrr2bWp17PY3iyrKt/CgSM/xyfw7G2SbTk0qmzPe2/mvdlKfEx08+nLzfvP9I5uF0RnX41KZCMlw9QKrrndqhBUjNY3OM2/o/TLHRPvOJAWz1dnG1oeChVFrgInSsqxT+RlK3okw4HpwcuAF1vp09VyAzpUCQ0qZshAtQ0grEIfDa4nLctJSrTOWcbtSQHwVB2U1ST1MwX5/SAZqrF1ym/JqIPewBXbHesj/1RT+HO/r/vIGk3Ld7sh5TUNZpyLUQQdBTOJ0+BCfSOJ0BJ0gMjr/8WwDTqLr0V0qXX2gY8KbGUoCrrSUi6n+bmRnED1FsC+SFe6tRiAZDkT/iC9mwBROthkIK/NkxJPAUreaHFOBaiQVkKQ4UXXWZwDc9Z2HFMDRwtYbgluGhk4nDgPw9raptR1nP8gcOao9dmnSE2QvpupTLA2TUILRmcyVy3ozRP4wkvbnZpbjsmoUBn4I97Zkrt5Nxnr9HawsbBQVegrONPwlL1CHtnVc7pjAggJcBwjxQeM8onjQz3DioPqYOGO49PQ/Zi5S8RLM6TVuEFy5NnYjitVGet0ljfrLIELLs4NOu7FFGajbKjK4jyH9LY6LUaUlrMWjbXIUlCfIe8uF4tWdO/4gn92ElLEvj+CyauW39ISxiRTqCuVuJEw4rDufTlCdKtgu4RU4fSacypyuqSlUkc/egjImZua71RIIzVALuUqjr6i0PvVI7avQ67368KNq0Eh0eVwdf/315/fdH6TEc+/+VeP03fp9qNK5qJ2ImFV/p2YV2s6f/pyXeAz0ySzvtvfry8Bu98s9peLf0jWz7ncBAAA', 'base64')).toString('utf8'));

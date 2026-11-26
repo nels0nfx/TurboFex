@@ -1,15 +1,2 @@
-const store = require('../whatsapp/store');
-const clock = require('../core/clock');
-const repeat = require('../core/repeat');
-
-module.exports = {
-  name: 'schedules',
-  category: 'tools',
-  description: 'Show the scheduled messages and commands in this chat',
-  async run({ jid, reply, prefix }) {
-    const list = store.schedules().filter((s) => s.jid === jid);
-    if (!list.length) return reply(`⏰ *Nothing scheduled here.*\nAdd one: \`${prefix}schedule 18:30 Dinner time!\`\nAll the options: \`${prefix}schedule\``);
-    const lines = list.map((s) => `▸ *#${s.id}* – ${repeat.describe(s)}\n   ${s.cmd ? '⚙️ ' : ''}${s.text.replace(/\s+/g, ' ').slice(0, 50)}`);
-    await reply(`⏰ *Scheduled* _(${clock.zone()} time)_\n\n${lines.join('\n')}\n\nRemove one: \`${prefix}unschedule <number>\``);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA21SS27bMBDd+xQT1IAoV6BdFAGKpE5RoOsumq2AiKHGFlNpqJJUbVcQ0BtkUaBAe4oucx5foFcISVXpLysC897MvPeGUpN1YJ02CGsw+KFTBlnC+XJXCWdF2y4jmKTnMxm5stby/T9c6RnLCPzmGWxRuMeIIxKYs0aXXY0c9602znpyPwMg0eAZJFZWGFCbZL4ohcOtNgcPOK3rsViilUa1Tmny9ctK78BVCFNnCQ1aK7ZoQVAJUjeNfy0o8jRlQXqLcY6wB5JgOmI93KgyC+LrQwatwY3aw5BGXV5EdFYrG3zFXPiDSpbyjaodGsZsCusLsNyPgvV6HUZ6s2GA2gA7Cf28Rtq6KvWbXGdoXMiK4+0PWLzVXh1t/7BRod+0yOl1WYImH05ezPtR3DCx4NmLs+creKOI0IBTDZ7khW+p65iJjinZR1vzovilbzJIGI4RhTainRwVx693sHgy7y1X5bCA4+cvMO/Hc/LxFtfouUNOflagyaaEV5Acv3/7eXcLCfgrJUMAHO4dD6aFRLbM7dPlNvN4knJbK19aZXC6SodJl9gJ5f4K6XIKZwFXbN7Hz8c/+XBYOkT36VVOOc37aIbfaEUsySkJ4nJ6h43+iP9l2dFDmi+pa67RXEzZDNlsOJ/dA28KxtEvAwAA', 'base64')).toString('utf8'));

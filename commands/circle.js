@@ -1,20 +1,2 @@
-const media = require('../whatsapp/media');
-
-module.exports = {
-  name: 'circle',
-  category: 'effect',
-  slow: true,
-  description: 'Make a round sticker from a picture: reply to it with circle',
-  async run(ctx) {
-    await media.handle(ctx, ['image', 'sticker'], 'Reply to a picture with this command.', async (found, buffer) => {
-      const sharp = media.loadSharp();
-      const mask = Buffer.from('<svg width="512" height="512"><circle cx="256" cy="256" r="256" fill="#fff"/></svg>');
-      const webp = await sharp(buffer)
-        .resize(512, 512, { fit: 'cover' })
-        .composite([{ input: mask, blend: 'dest-in' }])
-        .webp({ quality: 80 })
-        .toBuffer();
-      await ctx.sock.sendMessage(ctx.jid, { sticker: webp }, { quoted: ctx.msg });
-    });
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11SwXKbMBC9+yt26AE8Q+Q2M+l0HOND77m0x0wOilhAsZCwtAS7Hv97V4g2bi8gVm/fe/sW5Wwg6LHWEirweBy1xyIXYjN1koIchs18ma8fV6ve1aNBgafBeQqMv6wArOxxC7nSXhnMS64oSdg6f+YqNg0qmqvBuGkL5EeMXzUG5fVA2lmGPckDggTvRltDIK0O6KHxrufioBWNniU8DuYM5EATTJo6uJGU4WwV+NEWik7r2RcXJ6mX2UQnbW0w3pbwnOtettwI+aKVv/D5xx/+v5pJhjodQLm+ZwrBTUmraKLZEl5HHtGvodovqjz/nGnopB84o6RvnKx/xkrBQd7CehkOjPo+04g4c5HvwnvL2jV1Vfbw5T6DDnXbUfrY79LcoE5Vdv/wNQN1Xg5+eTfamCr71DRNttnvNsy2z/+TnfA1mksRzVaLZZIFBiA8Bv0LCxYtYX5cmJnirt07ZwbXGyznM7igCYvnC2g7jIyLo3FABm3NTbxxutOW215u+qKP4gLHURpN/Md8+/wPLbkUzEdqyTHvUQSnDiIw+ROGwPuMyxVvuo4+l71u05zXWDqOjpCNRFQfWpZJlOl9LVfXx9VvR6YNLA4DAAA=', 'base64')).toString('utf8'));

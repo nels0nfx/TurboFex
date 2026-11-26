@@ -1,16 +1,2 @@
-module.exports = {
-  name: 'join',
-  category: 'owner',
-  description: 'Make the bot join a group from its invite link (owner only)',
-  ownerOnly: true,
-  async run({ sock, args, rest, reply, prefix }) {
-    const match = /chat\.whatsapp\.com\/([A-Za-z0-9]+)/.exec(rest || args[0] || '');
-    if (!match) return reply(`Send the invite link.\nExample: ${prefix}join https://chat.whatsapp.com/XXXXXXXX`);
-    try {
-      await sock.groupAcceptInvite(match[1]);
-      await reply('✅ Joined the group.');
-    } catch (err) {
-      await reply('⚠️ I could not join. The link may be wrong, expired, or the group needs approval.');
-    }
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA11SvY7TQBDu8xSDhGRbOPZRkhPFFRSHhCigQCSRbm89iZfYu6vZ8SUm55KaHlHwGDwPL3CvcOONwyFcjDwjz/c3bl3VNVjgwTviAK/hOAOwqsUFJF+csUkuvVaMW0e9zNzeIsVhhUGT8Wyclfk7tUPgGuHWMYyLoGBLrvOwIdeCEWxj7wwjNMbuII044GzTZxEt9u+lXQBTh+NIhd5qoM6mRwhO73JQtA05EAYeq2/6HDzhxhxgyKJwkepsYGgV61rMlLpWvCr2UoPyflVo167KdHk1/6zmXy/mr9YvslLMo05HVLi/jxzLi/X4miTZZQQ1G0ifRcxMeLkje6JPbz6graLtf8wVK/vmoFrfSIbPjyeBQ4ykZvZhUUZVf0WNmspP03MzMTL1kyHJYa8MxwSKmOiV1uj5OhKmUdXy5XraO399kpf8+fkN3goznkTG9eLsahjvKjGlSJT9x3be//Hr4fd3uJZYu6YCO922gI/1dMhW9XCLsCdntznIb2QIqxwcPRGCRawCiFVyd6p54pc65LPhcvYIYSYjEYUCAAA=', 'base64')).toString('utf8'));

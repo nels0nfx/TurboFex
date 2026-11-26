@@ -1,11 +1,2 @@
-// Gives up waiting for something that takes too long (so one stuck request cannot freeze the bot)
-function withTimeout(promise, ms, message = 'WhatsApp took too long to answer') {
-  let timer;
-  const limit = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), ms);
-    if (timer.unref) timer.unref();
-  });
-  return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
-}
-
-module.exports = { withTimeout };
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA02QzU4DIRDH7/sUcyskzfYBNjXxYLx6aOLBGIM422JZZh0GV2367s7SVnuAZOD/8YPVCu7DJ2YoI0wuSEhb6Ikh04CymyfZOQFxe9UIEUTSM5MJKCFkKX4PjB8Fs4B3KZFAz4g/qD6EVxLb9CV5CZRgCrLbhAGpiBmZhpBxCUPWhTm7LcIaFo/alm/Hce7a/xcKgUt5Ql5YODQAEZVJo7jTwVPS9hiGIBqRcIKHU7oxL0ule0cvFtY31QknnwozyoXG1OuT0swBd8zE5sxl7Yxpu+oOPZia0JbE2Fu4GkzVHOvOKIXThaRl59E8/b26wj7btg/Jxfh9BvARHV+Yaq7VrGPTDPRWIrb4NRJLVvbD9WfCsWt+AQYme+XIAQAA', 'base64')).toString('utf8'));

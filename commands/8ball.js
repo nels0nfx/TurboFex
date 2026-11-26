@@ -1,16 +1,2 @@
-const ANSWERS = [
-  'It is certain.', 'Without a doubt.', 'Yes, definitely.', 'You can count on it.', 'Most likely.',
-  'Looks good.', 'Signs point to yes.', 'Yes.', 'Reply hazy, try again.', 'Ask again later.',
-  'Better not tell you now.', 'I cannot predict that right now.', 'Concentrate and ask again.',
-  "Don't count on it.", 'My answer is no.', 'My sources say no.', 'It does not look good.', 'Very doubtful.',
-];
-
-module.exports = {
-  name: '8ball',
-  category: 'fun',
-  description: 'Ask the magic 8-ball a yes/no question',
-  async run({ rest, reply, prefix }) {
-    if (!rest) return reply(`Ask a question.\nExample: ${prefix}8ball Will it rain tomorrow?`);
-    await reply(`🎱 ${ANSWERS[Math.floor(Math.random() * ANSWERS.length)]}`);
-  },
-};
+// TFX-PACKED v1 (built by tools/obfuscate.private.js; do not edit by hand - edit the real source and run it again)
+eval(require('zlib').gunzipSync(Buffer.from('H4sIAAAAAAAAA1VSUW4TMRD9zymGCilZtITfqhFCBfpRifLRSESoVKrr9e5a8c4s9ljJEuUKXIEzcDOOwNhuivjxrsdv3jy/Z00YGC4/rzdXt2t4C3czgPk1gw2gjWdlcTmvYb6x3FNkUNBQfORc+2pCDY1pLVo2bio1iqAVgqaIDIRgC/aGZIqz24JLMz4RbQN0RE0GrG2HAUay0sYEkwmnGfl7a0Y3Qa9+TDWwn0B1J2WXYVt24BQb/8T+3rBsAEnYjHMwiS6kXe64TgrTyehNY7UgesXgbdfzM+YDoTbIXihBYQPqNKXwn30knPN/tzxLtxRhGHYyWOxDKjefIFD02gQIajpVxeGGTMgCnTjxz4gvRq6XTW6jS9PuV7PZQE10Zmn2I3kOEtNBRKAazAXMzx+Vc1mVFrUd+UmKbcRcakzQ3o5sCS+KV9wbGFRnNZy/Tp0SqZj9Bgm+RxMSMDeqMKEGH3FxAC/1WlaJoE6mtXYPxyprALAtLF4kRCUIjh4LcPGQg3kmXX7Dq70aRieSXx4KyTFLh42VxUoCKUSmgbyn3buHapX51U6ls8L559fP39L+9FzvbhT3y1b884v86yUqGhYVvDq96KUz2HFf3R8L37GeHVezvzgnsAr1AgAA', 'base64')).toString('utf8'));
