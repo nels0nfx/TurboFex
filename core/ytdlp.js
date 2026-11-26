@@ -175,11 +175,11 @@ async function runWithRetries(bin, build, limits = {}) {
   const ways = youtube
     ? [
         [],
+        ['--js-runtimes', 'node'], // newer downloaders need a JavaScript engine for YouTube, and Node is only used when asked
         ['--extractor-args', 'youtube:player_client=android_vr'],
         ['--extractor-args', 'youtube:player_client=tv,web_safari'],
         ['--extractor-args', 'youtube:player_client=mweb'],
         ['--extractor-args', 'youtube:player_client=ios'],
-        ['--js-runtimes', 'node'],
       ]
     : [[]];
   if (!wayLoaded) {
@@ -194,11 +194,19 @@ async function runWithRetries(bin, build, limits = {}) {
   let lastErr;
   let cleaned = false;
   let updated = false;
+  let empty = 0; // ways that ended without an error but saved no file
   for (let pass = 0; pass < 2 && out === undefined; pass++) {
     for (let i = 0; i < attempts.length && out === undefined; i++) {
       try {
         if (!dltemp.ensureSpace()) throw Object.assign(new Error('no space'), { code: 'NO_SPACE', stderr: 'No space left on device' });
-        out = await run(bin, build(attempts[i]), 180000);
+        const printed = await run(bin, build(attempts[i]), 180000);
+        // The downloader can end "successfully" without saving anything. That is a failed way: the next one is tried. (Before, it
+        // counted as a success, so no other way was ever tried and this one was remembered as the way that works.)
+        if (limits.dir && !fs.readdirSync(limits.dir).some((f) => !f.endsWith('.part'))) {
+          empty += 1;
+          throw new Error('nothing was downloaded');
+        }
+        out = printed;
         if (youtube) {
           goodWay = order[i];
           const st = readState();
@@ -225,6 +233,7 @@ async function runWithRetries(bin, build, limits = {}) {
         }
         // these cannot be fixed by trying again another way
         if (['LOGIN_REQUIRED', 'UNSUPPORTED', 'GONE'].includes(kind)) throw Object.assign(new Error(String(text.trim().split('\n').pop() || kind).slice(0, 200)), { code: kind });
+        if (empty >= 3) break; // nothing again and again: more ways only make the person wait longer
       }
     }
     // No way worked: the site may have changed. Only NOW is the (slow) update tried, then every way once more. Before, the update ran
@@ -338,7 +347,7 @@ async function downloadAudio(target, { onSetup, source = 'youtube' } = {}) {
   ];
 
   try {
-    const out = await runWithRetries(bin, build, { mb: MAX_MB, minutes: Math.round(MAX_SECONDS / 60), youtube: source !== 'soundcloud' && isYoutubeTarget(target, isLink) });
+    const out = await runWithRetries(bin, build, { dir, mb: MAX_MB, minutes: Math.round(MAX_SECONDS / 60), youtube: source !== 'soundcloud' && isYoutubeTarget(target, isLink) });
 
     const line = out.trim().split('\n').filter(Boolean).pop() || '';
     const [title, uploader, duration, url, file] = line.split('\t');
@@ -384,7 +393,7 @@ async function downloadVideo(target, { onSetup, noWatermark = false } = {}) {
     isLink ? target : `ytsearch1:${target}`,
   ];
   try {
-    const out = await runWithRetries(bin, build, { mb: maxMb, minutes: Math.round(maxSec / 60), youtube: isYoutubeTarget(target, isLink) });
+    const out = await runWithRetries(bin, build, { dir, mb: maxMb, minutes: Math.round(maxSec / 60), youtube: isYoutubeTarget(target, isLink) });
     const line = out.trim().split('\n').filter(Boolean).pop() || '';
     const [title, uploader, duration, url, file] = line.split('\t');
     const filePath = file && fs.existsSync(file) ? file : fs.readdirSync(dir).map((f) => path.join(dir, f))[0];

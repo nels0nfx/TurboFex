@@ -1,3 +1,7 @@
+TurboFex v1.8.10 - downloads try the other ways when nothing was saved
+CHANGED IN 1.8.10
+- FIXED `play` and the other downloads giving up with "nothing was downloaded": when the downloader ended without an error but saved no file, that counted as a success and no other way was tried. Now the next way is tried (up to 3 empty results per round), and the way that uses Node for YouTube is tried second. Not tested against YouTube.
+
 TurboFex v1.8.9 - quieter console, safer chat session repair
 CHANGED IN 1.8.9
 - FIXED the console filling with "view once" lines when nobody sent a view-once. Messages that were empty only because they could not be decrypted yet (No session, Invalid PreKey, Bad MAC) are no longer treated as a possible view-once: nothing is printed and the phone is not asked. Other empty messages print one line, only when the phone is really asked. Real view-once messages are handled as before.
