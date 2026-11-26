@@ -155,3 +155,15 @@ test('v1.8.7 vault: old and surplus items are removed', () => {
   assert.ok(!vault.has('OLD-ONE'), 'older than two weeks: gone');
   assert.ok(vault.has('VOT-A'), 'recent ones stay');
 });
+
+// ------------------------------------------------------------------ the one-file launcher for the pair site
+test('v1.8.8 deploy launcher: it is a valid file with ONE placeholder for the pair site and needs no packages', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'tools', 'deploy-index.js'), 'utf8');
+  assert.strictEqual(src.split('__TFX_SESSION_ID__').length - 1, 2, 'the placeholder is in the constant and in the note that explains it');
+  assert.ok(/const SESSION_ID = '__TFX_SESSION_ID__';/.test(src), 'the pair site replaces exactly this line');
+  const requires = [...src.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]);
+  assert.ok(requires.every((r) => ['fs', 'path', 'zlib', 'child_process'].includes(r)), `only Node's own modules: ${requires}`);
+  new (require('vm').Script)(src.replace(/^#!.*\n/, '')); // compiles
+});

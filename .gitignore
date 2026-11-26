@@ -7,3 +7,4 @@ config.env
 *.private.*
 accounts/
 accounts.json
+.tfx-installed
