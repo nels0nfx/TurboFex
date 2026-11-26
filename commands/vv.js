@@ -5,6 +5,7 @@ const clock = require('../core/clock');
 const { ownerChat } = require('../whatsapp/owner');
 const { getQuoted, num } = require('../whatsapp/utils');
 const { peel, findViewOnce } = require('../whatsapp/unwrap');
+const vault = require('../whatsapp/vovault');
 
 module.exports = {
   name: 'vv',
@@ -22,33 +23,42 @@ module.exports = {
 
     const vo = findViewOnce(q.message);
     const inner = peel(q.message).content;
+    const kept = vault.get(q.id); // what the bot saved when it arrived: works again and again, also after the phone opened it
 
     // a view-once TEXT: the words are in the message (a quote of a view-once may be empty, then the complete message seen lately is used)
     const seen = watchers.recentViewOnce(q.id);
     const voFull = seen ? findViewOnce(seen.message) : null;
-    if ((vo && vo.kind === 'text') || (voFull && voFull.kind === 'text')) {
-      const text = (vo && vo.kind === 'text' && vo.text) || (voFull && voFull.text) || '';
+    if ((kept && kept.kind === 'text') || (vo && vo.kind === 'text') || (voFull && voFull.kind === 'text')) {
+      const text = (kept && kept.kind === 'text' && kept.text) || (vo && vo.kind === 'text' && vo.text) || (voFull && voFull.text) || '';
       if (!text) return reply(`⚠️ I do not have the words of that view-once text.\n${watchers.OPEN_ON_PHONE}`);
       const dest = silent ? watchers.dest(sock, require('../whatsapp/store').watchCfg('viewonce'), jid) : (args[0] || '').toLowerCase() === 'me' ? ownerChat(sock) : jid;
       await sock.sendMessage(dest, { text: `👁️ *View-once text opened*\n🕒 ${clock.stamp(Date.now())}\n\n${text}` }, dest === jid && !silent ? { quoted: msg } : undefined);
       if (dest !== jid && !silent) await reply('✅ Sent to your chat.');
       return;
     }
-    const node = vo?.node || inner.imageMessage || inner.videoMessage || inner.audioMessage;
-    if (!node) return reply('⚠️ That message has no picture, video or voice note in it.');
-    const kind = inner.videoMessage ? 'video' : inner.audioMessage ? 'audio' : 'image';
+    const node = (kept && kept.kind !== 'text' ? { caption: kept.caption, mimetype: kept.mime, ptt: kept.ptt } : null) || vo?.node || inner.imageMessage || inner.videoMessage || inner.audioMessage;
+    if (!node) {
+      // a view-once that was opened (on the phone) before the bot could save it: there is nothing left to fetch
+      if (peel(q.message).viewOnce) return reply(`⚠️ I could not open that view-once.\n▸ It was opened before I could save it.\n▸ _Ask them to send it again._`);
+      return reply('⚠️ That message has no picture, video or voice note in it.');
+    }
+    const kind = kept && kept.kind !== 'text' ? kept.kind : inner.videoMessage ? 'video' : inner.audioMessage ? 'audio' : 'image';
 
     // A reply only carries a short copy of the quoted message, and for a view-once the file details can be missing from it.
     // If the bot saw the complete message lately, that one is used.
-    const full = vo?.empty ? watchers.recentViewOnce(q.id) : null;
+    const full = !kept && vo?.empty ? watchers.recentViewOnce(q.id) : null;
     const source = full || {
       key: { remoteJid: jid, id: q.id, participant: q.participant, fromMe: botIds.includes(num(q.participant)) },
       message: q.message,
     };
     const fullNode = full ? findViewOnce(full.message)?.node : null;
+    // the quote has no file details and the bot never saw the complete message: there is nothing left to fetch
+    if (!kept && vo?.empty && !full) return reply(`⚠️ I could not open that view-once.\n▸ It was opened before I could save it.\n▸ _Ask them to send it again._`);
     let buffer;
     try {
-      buffer = await watchers.fetchMedia(sock, source);
+      if (kept && kept.buffer) buffer = kept.buffer; // the saved copy: no download
+      else if (vo || full) buffer = await vault.obtain(sock, source, { kind, node: fullNode || node }, watchers.fetchMedia); // downloaded now and saved, so the next vv works too
+      else buffer = await watchers.fetchMedia(sock, source);
     } catch (err) {
       console.error('vv failed:', err.message);
       return reply(`⚠️ I could not open that file.\nReason: ${String(err.message).slice(0, 100)}\n${watchers.OPEN_ON_PHONE}`);

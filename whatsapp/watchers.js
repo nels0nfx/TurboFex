@@ -10,6 +10,7 @@ const { num } = require('./utils');
 const { peel, textOf, findViewOnce, editInfo } = require('./unwrap');
 const { withTimeout } = require('./timeout');
 const secretedit = require('./secretedit');
+const vault = require('./vovault');
 
 const MAX_MEDIA = 2 * 1024 * 1024;
 let downloading = 0; // never more than 2 downloads at once (many pictures in a busy group would slow everything) // pictures/videos bigger than this are not kept for anti-delete
@@ -246,7 +247,7 @@ async function viewOnce(sock, msg, isGroup, assume = false) {
   try {
     const [where, buffer] = await Promise.all([
       chatName(sock, jid), // looked up while the file downloads (it used to be one after the other)
-      fetchMedia(sock, msg).catch((err) => {
+      vault.obtain(sock, msg, vo, fetchMedia).catch((err) => {
         problem('View-once download', err);
         return err;
       }),
@@ -350,7 +351,10 @@ function early(sock, msg) {
       if (bare && !msg.messageStubType) chaseHidden(sock, msg, jid);
       return;
     }
-    if (!vo.empty) keepViewOnce(msg);
+    if (!vo.empty) {
+      keepViewOnce(msg);
+      if (!vo.guessed) vault.keep(sock, msg, vo, fetchMedia); // saved at once: after the phone opens it, WhatsApp no longer gives the file to anybody
+    }
     viewOnce(sock, msg, jid.endsWith('@g.us'), assume).catch((e) => {
       problem('View-once', e);
       return warnOwner(sock, `👁️ I could not handle a view-once message.\nReason: ${String(e.message).slice(0, 100)}`, 'viewonce');
