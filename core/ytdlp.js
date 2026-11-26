@@ -233,12 +233,12 @@ async function runWithRetries(bin, build, limits = {}) {
         }
         // these cannot be fixed by trying again another way
         if (['LOGIN_REQUIRED', 'UNSUPPORTED', 'GONE'].includes(kind)) throw Object.assign(new Error(String(text.trim().split('\n').pop() || kind).slice(0, 200)), { code: kind });
-        if (empty >= 3) break; // nothing again and again: more ways only make the person wait longer
+        if (empty >= 2) break; // nothing twice: stop, so the person does not wait longer
       }
     }
     // No way worked: the site may have changed. Only NOW is the (slow) update tried, then every way once more. Before, the update ran
     // after the very first failure, before the quick ways (other clients) had been tried at all.
-    if (out === undefined && !updated && (await selfUpdate(bin))) {
+    if (out === undefined && !updated && empty < 2 && (await selfUpdate(bin))) {
       updated = true;
       continue;
     }

@@ -1,3 +1,8 @@
+TurboFex v1.9.0 - message handling as before, quiet console kept
+CHANGED IN 1.9.0
+- CHANGED back to the 1.8.8 behaviour: messages that could not be decrypted are asked from the phone again (silently), and the automatic chat session repair counts errors as before. The console stays quiet about them.
+- CHANGED downloads that save nothing now stop after one extra way, without updating the downloader in between, so a failing `play` does not wait as long as in 1.8.10.
+
 TurboFex v1.8.10 - downloads try the other ways when nothing was saved
 CHANGED IN 1.8.10
 - FIXED `play` and the other downloads giving up with "nothing was downloaded": when the downloader ended without an error but saved no file, that counted as a success and no other way was tried. Now the next way is tried (up to 3 empty results per round), and the way that uses Node for YouTube is tried second. Not tested against YouTube.

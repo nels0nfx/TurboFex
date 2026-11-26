@@ -279,7 +279,7 @@ async function viewOnce(sock, msg, isGroup, assume = false) {
 // at all, so the phone was never asked and nothing was opened.
 const hiddenStub = (t) => t == null || t === 2 || t === 'CIPHERTEXT'; // 2 = could not be read; any other stub is a group event, not a file
 // A message that arrived empty only because it could not be decrypted yet (very common, mostly right after a start). It is NOT a
-// view-once: the library asks the sender to send it again by itself, so the phone is not asked and nothing is printed.
+// view-once, so nothing is printed about it. The phone is still asked for it (within the hourly limit), as before.
 const NOT_DECRYPTED = /no session|no matching sessions|invalid prekey|bad mac|no senderkey|key used already|messagecounter|into the future/i;
 const notDecrypted = (msg) => (msg.messageStubParameters || []).some((p) => NOT_DECRYPTED.test(String(p)));
 const chased = new WeakSet(); // the same delivery is looked at twice (connection and handler): it counts once
@@ -290,18 +290,19 @@ function chaseHidden(sock, msg, jid) {
   if (!id) return;
   const mode = store.watchCfg('viewonce').mode;
   if (!inScope(mode, isGroup)) return;
-  if (chased.has(msg) || notDecrypted(msg)) return;
+  if (chased.has(msg)) return;
   chased.add(msg);
+  const silent = notDecrypted(msg);
   if (voAsked.has(id)) {
     // the same message again: if we already asked, this is the phone's answer and it is STILL empty
-    console.log(`👁️ Message ${id.slice(0, 8)} arrived again and is still empty (stub ${msg.messageStubType ?? 'none'}, params ${JSON.stringify(msg.messageStubParameters || [])}). The phone did not hand over the file.`);
+    if (!silent) console.log(`👁️ Message ${id.slice(0, 8)} arrived again and is still empty (stub ${msg.messageStubType ?? 'none'}, params ${JSON.stringify(msg.messageStubParameters || [])}). The phone did not hand over the file.`);
     return;
   }
   if (voWait.has(id)) return;
   const sender = isGroup ? msg.key.participant : jid;
   const timer = setTimeout(() => {
     voAsked.delete(id);
-    console.log('👁️ The phone did not send the hidden message back. WhatsApp is not giving this view-once to this device.');
+    if (!silent) console.log('👁️ The phone did not send the hidden message back. WhatsApp is not giving this view-once to this device.');
     // Many ordinary messages arrive empty (could not be decrypted yet, group events, reactions), so this is only a GUESS about a
     // view-once. It stays in the console and is NOT sent to the owner, otherwise normal chats trigger it. EMPTY_NOTICE=1 turns it on.
     if (process.env.EMPTY_NOTICE === '1') warnOwner(sock, `👁️ A message from ${tagOf(sender)} arrived without its content (probably a view-once) and I asked your phone for it, but WhatsApp did not send it to this bot.\n${OPEN_ON_PHONE}`, 'viewonce', [sender]).catch(() => {});
@@ -310,7 +311,7 @@ function chaseHidden(sock, msg, jid) {
   voAsked.set(id, timer);
   stats.viewOnceChased = (stats.viewOnceChased || 0) + 1;
   askPhoneAgain(sock, msg, true).then((ok) => { // quiet: over the hourly limit is normal here and is not printed
-    if (ok) console.log(`👁️ A message from ${num(sender)} came with no content (it may be a view-once). Asked the phone for message ${id.slice(0, 8)}.`);
+    if (ok && !silent) console.log(`👁️ A message from ${num(sender)} came with no content (it may be a view-once). Asked the phone for message ${id.slice(0, 8)}.`);
     if (!ok && voAsked.get(id) === timer) {
       clearTimeout(timer);
       voAsked.delete(id); // a later delivery may try again

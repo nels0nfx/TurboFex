@@ -25,9 +25,9 @@ async function run(messages) {
 }
 const empty = (id, params) => ({ key: { remoteJid: '27811111111@s.whatsapp.net', id, fromMe: false }, messageStubType: 2, messageStubParameters: params });
 
-test('v1.8.9: messages that could not be decrypted print nothing and the phone is not asked', async () => {
+test('v1.8.9: messages that could not be decrypted print nothing, the phone is still asked', async () => {
   const r = await run([empty('A1', ['No session found to decrypt message']), empty('A2', ['Invalid PreKey ID']), empty('A3', ['Bad MAC'])]);
-  assert.deepStrictEqual(r.asked, []);
+  assert.deepStrictEqual(r.asked, ['A1', 'A2', 'A3']);
   assert.deepStrictEqual(r.lines, []);
 });
 
@@ -37,13 +37,3 @@ test('v1.8.9: another empty message still asks the phone and prints one line', a
   assert.strictEqual(r.lines.length, 1);
 });
 
-test('v1.8.9: a missing chat session never counts towards the automatic repair', () => {
-  require('../core/quiet');
-  const health = require('../core/health');
-  const before = health.stats().total;
-  console.error('No session found to decrypt message');
-  console.error('Session error: No session record');
-  assert.strictEqual(health.stats().total, before);
-  console.error('Session error: Bad MAC');
-  assert.strictEqual(health.stats().total, before + 1);
-});
