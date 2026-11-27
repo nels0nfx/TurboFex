@@ -9,10 +9,11 @@ const { RESTART_CODE } = require('./restart');
 const bootnote = require('./bootnote');
 const { DATA } = require('./paths');
 
-// A flood of "Bad MAC" errors means the saved chat sessions are broken. Clear them and restart (at most every 3 hours).
+// One chat that keeps failing with real "Bad MAC" errors gets its own keys cleared and the bot restarts (at most every 3 hours).
+// Only that chat is touched; all the other chats keep their keys.
 function installAutoRepair() {
   const marker = path.join(DATA, 'last-repair.txt');
-  health.onStorm(() => {
+  repair.onChatStorm((chat) => {
     let last = 0;
     try {
       last = Number(fs.readFileSync(marker, 'utf8')) || 0;
@@ -26,10 +27,12 @@ function installAutoRepair() {
     } catch (err) {
       // not important
     }
-    const n = repair.clearSessions(config.sessionDir);
-    bootnote.write({ type: 'repair' });
-    console.log(`🛠️ Too many decryption errors ("Bad MAC"). Cleared ${n} old chat session files and restarting. This is safe, you stay logged in.`);
-    setTimeout(() => process.exit(RESTART_CODE), 1000);
+    require('./flush').flushAll().catch(() => {}).finally(() => {
+      const n = repair.clearChat(config.sessionDir, chat);
+      bootnote.write({ type: 'repair' });
+      console.log(`🛠️ One chat keeps failing to decrypt ("Bad MAC"). Cleared ${n} old key file(s) for that chat only and restarting. This is safe, you stay logged in.`);
+      setTimeout(() => process.exit(RESTART_CODE), 1000);
+    });
   });
 }
 
@@ -48,6 +51,7 @@ async function start() {
       require('./restart').restartBot(1000);
     }
   });
+
   installAutoRepair();
 
   // One bot per data folder: a second copy would overwrite the first one's saved settings and records

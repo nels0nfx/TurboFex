@@ -1,5 +1,15 @@
-TurboFex v1.9.2 - simpler README
+TurboFex v1.9.5 - languages, step 1
 CHANGED IN THE NEXT VERSION
+- NEW (languages: the bot can now speak English, French, Spanish, Portuguese, Arabic and Indonesian. The owner picks one with `language fr` (or es, pt, ar, id, en), or `language auto`. Until the owner picks one, the bot chooses by the country code of its own number, so a Nigerian number stays English. Step 1 translates the menu header and tips, the help guide, and the common messages (not allowed, group only, make me admin, slow down, server busy, something went wrong). Everything else stays in English until the next steps, and nothing breaks when a message has no translation yet.)
+
+TurboFex v1.9.4 - repair only the chat that failed
+CHANGED IN THE NEXT VERSION
+- CHANGED (`.repair` now clears the old keys of ONLY the chats that had real decryption problems, and the bot no longer goes quiet in every other chat afterwards. If no chat has failed, it says "Nothing to repair" and does not restart. It also saves the pending keys first, so they cannot come back after the clean-up.)
+- FIXED (the automatic repair is back, but only for one chat: after 5 real "Bad MAC" type errors from the same chat within 10 minutes, that chat's keys are cleared and the bot restarts, at most once every 3 hours. Errors spread over many chats no longer start a repair, and "No session found" no longer counts as an error, so a repair can no longer cause the next one.)
+
+TurboFex v1.9.3 - no more automatic repair
+CHANGED IN THE NEXT VERSION
+- FIXED (the bot no longer clears its chat sessions and restarts by itself after many decryption errors. That automatic repair left the bot unable to read messages, including commands, until WhatsApp set up the keys again, and it counted its own "No session found" errors as new errors. The owner's `.repair` command is unchanged and still works when you send it.)
 - CHANGED (README: new clean layout with a centred title, buttons, short tables and tidy sections. The long hosting guides, plugins, several accounts and owner shortcuts now open and close with a click, so the page is short but nothing was removed. The numbers, links and steps are the same.)
 
 TurboFex v1.9.1 - hide the code on GitHub, keep the repo public

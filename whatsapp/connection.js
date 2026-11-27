@@ -469,6 +469,7 @@ async function startWhatsApp() {
     if (!alive()) return;
     const prefix = store.effectivePrefix();
     for (const msg of messages) {
+      require('../core/repair').noteMessage(msg); // notes which chats cannot be decrypted (for .repair)
       // WhatsApp statuses (auto view / like / save)
       if (msg.key.remoteJid === 'status@broadcast') {
         status.handleStatus(sock, msg).catch((e) => console.error('Status error:', e.message));

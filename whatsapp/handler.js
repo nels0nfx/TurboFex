@@ -16,6 +16,7 @@ const watchers = require('./watchers');
 const stickercmd = require('./stickercmd');
 const ownername = require('./ownername');
 const statusreply = require('./statusreply');
+const i18n = require('../core/i18n');
 const cmdreact = require('./cmdreact');
 const { withTimeout } = require('./timeout');
 const watermark = require('./watermark');
@@ -290,7 +291,8 @@ async function handleMessageInner(sock, msg) {
   const cmd = commands.get(cmdName);
   // run by a sticker and marked silent (vv): nothing is answered or reacted in this chat; problems are told in the owner's own chat
   const silent = !!sticker && !!cmd?.silentOnSticker;
-  const rawReply = (t, extra = {}) => sock.sendMessage(silent ? ownerInfo.ownerChat(sock) : jid, { text: t, ...extra }, synthetic || silent ? undefined : { quoted: msg });
+  i18n.noteBot(sock);
+  const rawReply = (t, extra = {}) => sock.sendMessage(silent ? ownerInfo.ownerChat(sock) : jid, { text: i18n.translate(t), ...extra }, synthetic || silent ? undefined : { quoted: msg });
 
   if (!cmd) {
     // a command file that failed to load: tell the owner why instead of staying silent (nobody else is answered)
@@ -422,7 +424,7 @@ async function handleMessageInner(sock, msg) {
         const sc = store.stickerCfg();
         if (sc.on) content = { ...content, sticker: addExif(content.sticker, { pack: sc.pack || brand.botName, author: sc.author || brand.creator }) };
       }
-      if (styled && typeof content?.text === 'string' && !content.edit) content = { ...content, text: fmt.format(content.text, (n) => !!prefix && commands.has(n), prefix, styled) };
+      if (styled && typeof content?.text === 'string' && !content.edit) content = { ...content, text: fmt.format(i18n.translate(content.text), (n) => !!prefix && commands.has(n), prefix, styled) };
       const sent = sock.sendMessage(to, mark ? watermark.mark(content, mark) : content, opts);
       pending.add(sent);
       Promise.resolve(sent).then((m) => { if (m?.key?.id && !cleanup.keeps(content) && to === jid) answers.push(m.key); }).catch(() => {}).finally(() => pending.delete(sent));
