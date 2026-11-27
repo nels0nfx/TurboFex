@@ -1,3 +1,7 @@
+TurboFex v1.9.8 - languages, step 4
+CHANGED IN THE NEXT VERSION
+- NEW (languages, step 4: games and fun are now in French, Spanish, Portuguese, Arabic and Indonesian: hug, slap, kiss, love meter, fortune cookie, advice, bored ideas, cat and dog facts, never have I ever, two truths and a lie, hot seat, story chain, virtual pet, the "no game running" messages and the descriptions of the games in the menu. Names and command words in `code marks` never change. The joke, pick-up line and roast lists stay in English because they are wordplay. Tools, lookups, downloads, AI, owner and plugin commands come in the next steps.)
+
 TurboFex v1.9.7 - languages, step 3
 CHANGED IN THE NEXT VERSION
 - NEW (languages, step 3: the rest of the group commands are now in French, Spanish, Portuguese, Arabic and Indonesian too: anti group status, who is online, new members, birthdays, rank and top members, rules, group stats, catch-up, the private welcome text and the other group extras. A plural "s" after a number ("7 days") now follows the language. Games, tools and the other categories are still English and come in the next steps.)

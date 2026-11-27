@@ -9,7 +9,7 @@ const code = async (p) => { try { await p; return 'resolved'; } catch (e) { retu
 const run = (host, c, extra, name = 'go') => host.call('command', name, { ...CTX, ...(c || {}) }, extra || {});
 
 test('the version and the new permissions and events are known', () => {
-  assert.strictEqual(require('../package.json').version, '1.9.7');
+  assert.strictEqual(require('../package.json').version, '1.9.8');
   for (const p of ['user.dm', 'group.members', 'media.read', 'group.invite']) assert.ok(manifestLib.PERMISSIONS.includes(p), p);
   assert.strictEqual(manifestLib.EVENTS['member.promote'], 'events.members');
   assert.strictEqual(manifestLib.EVENTS['member.demote'], 'events.members');

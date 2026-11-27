@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ TurboFex v1.9.7
+# ⚡ TurboFex v1.9.8
 
 **A WhatsApp bot that runs your groups and gives your chats tools, games and fun.**
 
