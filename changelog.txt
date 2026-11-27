@@ -1,3 +1,7 @@
+TurboFex v1.9.7 - languages, step 3
+CHANGED IN THE NEXT VERSION
+- NEW (languages, step 3: the rest of the group commands are now in French, Spanish, Portuguese, Arabic and Indonesian too: anti group status, who is online, new members, birthdays, rank and top members, rules, group stats, catch-up, the private welcome text and the other group extras. A plural "s" after a number ("7 days") now follows the language. Games, tools and the other categories are still English and come in the next steps.)
+
 TurboFex v1.9.6 - languages, step 2
 CHANGED IN THE NEXT VERSION
 - NEW (languages, step 2: the group management commands and the automatic protection messages are now translated into French, Spanish, Portuguese, Arabic and Indonesian. This covers add, kick, promote, warn, lock, welcome, goodbye, giveaway, group info, slow mode, requests and the other group commands, their short descriptions in the menu and in `.list`, and the messages from anti-link, anti-spam, raid protection, admin guard, captcha and the welcome DM. Names, numbers and links stay as they are. Games, tools and the other categories stay in English until the next steps. A short word inside a sentence, like "10 minutes", can still show in English.)
