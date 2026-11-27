@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ TurboFex v1.9.5
+# ⚡ TurboFex v1.9.6
 
 **A WhatsApp bot that runs your groups and gives your chats tools, games and fun.**
 
@@ -33,7 +33,7 @@ Members can use **321 commands in 13 categories** (the bot owner has even more, 
 | 👥 **Group management** | Welcome and goodbye messages, rules, warnings, kick / promote / demote, open and close the group, tag everyone, polls, giveaways, scheduled messages, birthdays, chat levels (`.rank`, `.top`) |
 | 🛡️ **Protection** | Anti-link, banned words, anti-spam, anti-bot, anti-raid, slow mode, verification questions for new members. All of them are **off until an admin switches them on**. |
 | 🎮 **Games and fun** | Wordle, hangman, trivia, tic-tac-toe, connect four, slots, riddles, quizzes, jokes, truth or dare, and more |
-| 🌐 **Languages** | English, French, Spanish, Portuguese, Arabic and Indonesian. The bot owner picks one with `.language`, or the bot chooses by the country code of its number. The menu, help and the common messages are translated; the rest is being added step by step and stays in English until then. |
+| 🌐 **Languages** | English, French, Spanish, Portuguese, Arabic and Indonesian. The bot owner picks one with `.language`, or the bot chooses by the country code of its number. The menu, help, group commands and group protection messages are translated; the rest is being added step by step and stays in English until then. |
 | 🧰 **Tools** | Weather, dictionary, Wikipedia, currency, translation, QR codes, calculator, reminders, timers, notes and to-dos |
 | 🎨 **Media** | Stickers, picture editing, audio and video effects, downloads (`.play`, `.dl`, `.tiktok`, `.ig`) and PDFs (`.pdf`). Some of these need extra tools on the computer or host that runs the bot; if one is missing, the bot says the feature is not available. |
 

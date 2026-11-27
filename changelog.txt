@@ -1,3 +1,7 @@
+TurboFex v1.9.6 - languages, step 2
+CHANGED IN THE NEXT VERSION
+- NEW (languages, step 2: the group management commands and the automatic protection messages are now translated into French, Spanish, Portuguese, Arabic and Indonesian. This covers add, kick, promote, warn, lock, welcome, goodbye, giveaway, group info, slow mode, requests and the other group commands, their short descriptions in the menu and in `.list`, and the messages from anti-link, anti-spam, raid protection, admin guard, captcha and the welcome DM. Names, numbers and links stay as they are. Games, tools and the other categories stay in English until the next steps. A short word inside a sentence, like "10 minutes", can still show in English.)
+
 TurboFex v1.9.5 - languages, step 1
 CHANGED IN THE NEXT VERSION
 - NEW (languages: the bot can now speak English, French, Spanish, Portuguese, Arabic and Indonesian. The owner picks one with `language fr` (or es, pt, ar, id, en), or `language auto`. Until the owner picks one, the bot chooses by the country code of its own number, so a Nigerian number stays English. Step 1 translates the menu header and tips, the help guide, and the common messages (not allowed, group only, make me admin, slow down, server busy, something went wrong). Everything else stays in English until the next steps, and nothing breaks when a message has no translation yet.)
