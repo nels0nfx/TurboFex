@@ -1,3 +1,7 @@
+TurboFex v1.9.9 - languages, step 5
+CHANGED IN THE NEXT VERSION
+- NEW (languages, step 5: the tools are now in French, Spanish, Portuguese, Arabic and Indonesian: notes, to-do list, crypto price, prayer times, Bible verse, slang dictionary, time in any city, morse, binary, BMI, bill split, QR reader, timer, UUID, word count, text styles, roman numbers, colours, tip, percent, discount, timestamp, calendar, date add, loan, savings, fuel cost, teams, shuffle, habits, shopping list, grade calculator, lyrics, text to voice, text from picture, remove background, picture search, website screenshot and short links. Names, numbers and the command words in `code marks` never change. Lookups, downloads, AI, owner and plugin commands come in the next steps.)
+
 TurboFex v1.9.8 - languages, step 4
 CHANGED IN THE NEXT VERSION
 - NEW (languages, step 4: games and fun are now in French, Spanish, Portuguese, Arabic and Indonesian: hug, slap, kiss, love meter, fortune cookie, advice, bored ideas, cat and dog facts, never have I ever, two truths and a lie, hot seat, story chain, virtual pet, the "no game running" messages and the descriptions of the games in the menu. Names and command words in `code marks` never change. The joke, pick-up line and roast lists stay in English because they are wordplay. Tools, lookups, downloads, AI, owner and plugin commands come in the next steps.)
