@@ -1,3 +1,7 @@
+TurboFex v2.0.1 - languages, step 6
+CHANGED IN THE NEXT VERSION
+- NEW (languages, step 6: the lookups are now in French, Spanish, Portuguese, Arabic and Indonesian: movie, TV show, rhyme, synonym, word of the day, name meaning, dial code, postcode, hadith, Quran, emoji meaning, news, GitHub, IP address, horoscope, country, Pokémon, anime, recipe, cocktail, book, npm, space station, earthquakes, holidays, sunrise and sunset, moon phase, is a site up, and DNS. The quote and fun fact lists stay in English. Downloads, AI, owner and plugin commands come in the next steps.)
+
 TurboFex v1.9.9 - languages, step 5
 CHANGED IN THE NEXT VERSION
 - NEW (languages, step 5: the tools are now in French, Spanish, Portuguese, Arabic and Indonesian: notes, to-do list, crypto price, prayer times, Bible verse, slang dictionary, time in any city, morse, binary, BMI, bill split, QR reader, timer, UUID, word count, text styles, roman numbers, colours, tip, percent, discount, timestamp, calendar, date add, loan, savings, fuel cost, teams, shuffle, habits, shopping list, grade calculator, lyrics, text to voice, text from picture, remove background, picture search, website screenshot and short links. Names, numbers and the command words in `code marks` never change. Lookups, downloads, AI, owner and plugin commands come in the next steps.)
