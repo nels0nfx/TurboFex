@@ -1,3 +1,7 @@
+TurboFex v2.0.5 - languages, step 10
+CHANGED IN THE NEXT VERSION
+- NEW (languages, step 10: schedule, ignore, privacy, leave all groups, maintenance, menu heading, blocklist, group list, group status, send to group, broadcast, API keys, rate limit, login backup and session cleanup are now in French, Spanish, Portuguese, Arabic and Indonesian. Plugins and the remaining commands come in the next steps.)
+
 TurboFex v2.0.4 - languages, step 9
 CHANGED IN THE NEXT VERSION
 - NEW (languages, step 9: the automation, status and watch commands are now in French, Spanish, Portuguese, Arabic and Indonesian: typing and recording, always online, phone notifications help, auto read, delcmd clean-up, auto bio, auto react, private message blocker, auto view, like and save status (with delay and daily limit), status info, auto view-once, anti-delete and anti-edit. Schedule, ignore, privacy, owner tools, broadcast, plugins and the remaining commands come in the next steps.)
