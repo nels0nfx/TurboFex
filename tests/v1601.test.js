@@ -79,4 +79,4 @@ test('bot: a collection with a bad signature is not trusted; without collections
   assert.match((await run('plugin collections')).join('\n'), /No collections yet/);
 });
 
-test('the bot version is 2.0.1', () => { assert.strictEqual(require('../package.json').version, '2.0.1'); });
+test('the bot version is 2.0.2', () => { assert.strictEqual(require('../package.json').version, '2.0.2'); });

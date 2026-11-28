@@ -1,3 +1,7 @@
+TurboFex v2.0.2 - languages, step 7
+CHANGED IN THE NEXT VERSION
+- NEW (languages, step 7: the AI, media and download commands are now in French, Spanish, Portuguese, Arabic and Indonesian: ai, chatbot (including teach and notes), imagine, memegen, quotecard, summarize, grammar, explain, rewrite, describe, solve, caption, story, poem, brainstorm, persona, quizme, Spotify, SoundCloud, Pinterest, Facebook, Twitter, TikTok, Instagram, dl, play, ytsearch, ytthumb, emojimix, collage, resize, trim, compress, mute, vreverse, gif and the audio effects. Texts that are sent to the AI are never translated. Stickers, owner, plugin, automation and the remaining commands come in the next steps.)
+
 TurboFex v2.0.1 - languages, step 6
 CHANGED IN THE NEXT VERSION
 - NEW (languages, step 6: the lookups are now in French, Spanish, Portuguese, Arabic and Indonesian: movie, TV show, rhyme, synonym, word of the day, name meaning, dial code, postcode, hadith, Quran, emoji meaning, news, GitHub, IP address, horoscope, country, Pokémon, anime, recipe, cocktail, book, npm, space station, earthquakes, holidays, sunrise and sunset, moon phase, is a site up, and DNS. The quote and fun fact lists stay in English. Downloads, AI, owner and plugin commands come in the next steps.)
