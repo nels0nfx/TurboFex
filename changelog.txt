@@ -1,3 +1,7 @@
+TurboFex v2.0.6 - languages, step 11
+CHANGED IN THE NEXT VERSION
+- NEW (languages, step 11: the plugin commands are now in French, Spanish, Portuguese, Arabic and Indonesian: the store, install and remove, collections, ratings, anonymous statistics, updates and going back a version, test codes, options, group choices, plugin check and menu category. Plugin names and what plugins send stay as their developers wrote them. The remaining commands come in the next steps.)
+
 TurboFex v2.0.5 - languages, step 10
 CHANGED IN THE NEXT VERSION
 - NEW (languages, step 10: schedule, ignore, privacy, leave all groups, maintenance, menu heading, blocklist, group list, group status, send to group, broadcast, API keys, rate limit, login backup and session cleanup are now in French, Spanish, Portuguese, Arabic and Indonesian. Plugins and the remaining commands come in the next steps.)
