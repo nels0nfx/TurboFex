@@ -1,3 +1,7 @@
+TurboFex v2.0.3 - languages, step 8
+CHANGED IN THE NEXT VERSION
+- NEW (languages, step 8: sticker and everyday tool commands are now in French, Spanish, Portuguese, Arabic and Indonesian: sticker commands, Telegram sticker packs, sticker credit, sticker, attp, take, photo, circle, translate, fancy text, PDF maker, photo effects (blur, pixelate and more), QR code, weather, unit converter, currency, Wikipedia and dictionary. Owner, plugin, automation and the remaining commands come in the next steps.)
+
 TurboFex v2.0.2 - languages, step 7
 CHANGED IN THE NEXT VERSION
 - NEW (languages, step 7: the AI, media and download commands are now in French, Spanish, Portuguese, Arabic and Indonesian: ai, chatbot (including teach and notes), imagine, memegen, quotecard, summarize, grammar, explain, rewrite, describe, solve, caption, story, poem, brainstorm, persona, quizme, Spotify, SoundCloud, Pinterest, Facebook, Twitter, TikTok, Instagram, dl, play, ytsearch, ytthumb, emojimix, collage, resize, trim, compress, mute, vreverse, gif and the audio effects. Texts that are sent to the AI are never translated. Stickers, owner, plugin, automation and the remaining commands come in the next steps.)
